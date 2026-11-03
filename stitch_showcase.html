@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SubhaLagnam UI/UX Design System &amp; Screen Showcase | Google Stitch</title>
+  
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            obsidian: '#0B0B10',
+            charcoal: '#131318',
+            surfaceCard: '#191921',
+            surfaceHigh: '#24232D',
+            goldPrimary: '#F5B82E',
+            goldChampagne: '#F6D98B',
+            goldDim: '#E0C478',
+            crimsonRoyal: '#7A1C2E',
+            emeraldFree: '#10B981',
+          },
+          fontFamily: {
+            serif: ['Playfair Display', 'serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Phone frame simulation */
+    .phone-mockup {
+      width: 390px;
+      height: 844px;
+      border-radius: 46px;
+      box-shadow: 
+        0 0 0 10px #1E1E26,
+        0 0 0 12px rgba(245, 184, 46, 0.25),
+        0 30px 60px -15px rgba(0, 0, 0, 0.9);
+      position: relative;
+      overflow: hidden;
+      background: #0B0B10;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .desktop-mockup {
+      width: 100%;
+      max-width: 1100px;
+      height: 720px;
+      border-radius: 16px;
+      box-shadow: 
+        0 0 0 8px #1E1E26,
+        0 0 0 10px rgba(245, 184, 46, 0.2),
+        0 30px 60px -15px rgba(0, 0, 0, 0.9);
+      position: relative;
+      overflow: hidden;
+      background: #0B0B10;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .phone-notch {
+      width: 110px;
+      height: 24px;
+      background: #000;
+      border-radius: 14px;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .camera-lens {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #111;
+      border: 1px solid #222;
+    }
+
+    .device-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #0B0B10;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0B0B10;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #24232D;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #F5B82E;
+    }
+
+    .active-screen-btn {
+      background: linear-gradient(135deg, #F5B82E 0%, #E0C478 100%) !important;
+      color: #0B0B10 !important;
+      font-weight: 700 !important;
+      box-shadow: 0 4px 14px rgba(245, 184, 46, 0.35);
+    }
+  </style>
+</head>
+
+<body class="bg-obsidian text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-goldPrimary selection:text-obsidian">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-charcoal/90 backdrop-blur-md border-b border-goldPrimary/15 sticky top-0 z-40 px-6 py-3 flex items-center justify-between">
+    <!-- Brand & Project Badge -->
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-goldPrimary/20 to-goldChampagne/5 border border-goldPrimary/40 flex items-center justify-center shadow-inner">
+        <span class="material-symbols-outlined text-goldPrimary text-2xl">temple_hindu</span>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-goldChampagne to-goldPrimary">
+            SubhaLagnam
+          </h1>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-goldPrimary/10 text-goldPrimary border border-goldPrimary/30">
+            Google Stitch 23-Screen Master Project
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-400">
+          Premium Video Invitation Maker • Project ID: <code class="text-goldChampagne font-mono">465892756345255125</code>
+        </p>
+      </div>
+    </div>
+
+    <!-- Center Flow Group Indicators -->
+    <div class="hidden xl:flex items-center gap-1.5 p-1 bg-obsidian/70 rounded-xl border border-white/5 text-xs">
+      <button onclick="filterGroup('all')" id="grp-all" class="group-pill px-3 py-1 rounded-lg font-medium text-goldChampagne bg-surfaceCard border border-goldPrimary/30">All 23</button>
+      <button onclick="filterGroup('auth')" id="grp-auth" class="group-pill px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white">1. Auth (4)</button>
+      <button onclick="filterGroup('discovery')" id="grp-discovery" class="group-pill px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white">2. Discovery (4)</button>
+      <button onclick="filterGroup('custom')" id="grp-custom" class="group-pill px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white">3. Customize (4)</button>
+      <button onclick="filterGroup('generate')" id="grp-generate" class="group-pill px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white">4. Video Gen (3)</button>
+      <button onclick="filterGroup('user')" id="grp-user" class="group-pill px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white">5. User Hub (3)</button>
+      <button onclick="filterGroup('admin')" id="grp-admin" class="group-pill px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white">6. Admin Console (5)</button>
+    </div>
+
+    <!-- View Mode Switcher -->
+    <div class="flex items-center gap-2">
+      <div class="flex items-center bg-obsidian p-1 rounded-lg border border-white/10">
+        <button onclick="setViewMode('simulator')" id="btn-view-sim" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-goldPrimary text-obsidian shadow-sm transition-all">
+          <span class="material-symbols-outlined text-[16px]">smartphone</span>
+          <span>Simulator</span>
+        </button>
+        <button onclick="setViewMode('gallery')" id="btn-view-gal" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-white transition-all">
+          <span class="material-symbols-outlined text-[16px]">grid_view</span>
+          <span>All Screens Grid</span>
+        </button>
+      </div>
+
+      <a href=".stitch/DESIGN.md" target="_blank" class="px-3 py-1.5 rounded-lg bg-surfaceCard hover:bg-surfaceHigh text-goldChampagne text-xs font-medium border border-goldPrimary/20 flex items-center gap-1 transition-all">
+        <span class="material-symbols-outlined text-[15px]">palette</span>
+        <span>DESIGN.md</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Horizontal Screen Quick Switcher Bar -->
+  <div class="bg-charcoal/50 border-b border-white/5 px-6 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar" id="screenBar">
+    <!-- Populated by JS -->
+  </div>
+
+  <!-- Main Viewport Area -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+
+    <!-- SIMULATOR VIEW -->
+    <div id="simulatorView" class="grid lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- Center: Device Frame Container (Col 8) -->
+      <div class="lg:col-span-8 flex flex-col items-center justify-center">
+        
+        <!-- Simulator Controls Bar -->
+        <div class="w-full max-w-2xl flex items-center justify-between mb-4 px-3 py-2 bg-charcoal/80 rounded-xl border border-white/5 text-xs text-slate-400">
+          <div class="flex items-center gap-3">
+            <button onclick="prevScreen()" class="p-1.5 rounded-lg bg-surfaceCard hover:bg-surfaceHigh text-goldChampagne hover:text-white transition-all" title="Previous Screen">
+              <span class="material-symbols-outlined text-base">arrow_back</span>
+            </button>
+            <span class="font-mono text-white" id="screenCounter">01 / 23</span>
+            <button onclick="nextScreen()" class="p-1.5 rounded-lg bg-surfaceCard hover:bg-surfaceHigh text-goldChampagne hover:text-white transition-all" title="Next Screen">
+              <span class="material-symbols-outlined text-base">arrow_forward</span>
+            </button>
+            <span class="text-slate-500">|</span>
+            <span class="font-medium text-white" id="currentScreenTitle">Loading...</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <!-- Toggle between HTML iframe vs high-res PNG -->
+            <button onclick="toggleRenderSource()" id="toggleSourceBtn" class="px-2.5 py-1 rounded bg-surfaceCard hover:bg-surfaceHigh text-[11px] text-goldChampagne border border-goldPrimary/20 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">code</span>
+              <span id="sourceLabel">Live Code (HTML)</span>
+            </button>
+
+            <!-- Reload iframe -->
+            <button onclick="reloadFrame()" class="p-1.5 rounded bg-surfaceCard hover:bg-surfaceHigh text-slate-300" title="Reload Canvas">
+              <span class="material-symbols-outlined text-[15px]">refresh</span>
+            </button>
+
+            <!-- Open current screen in new tab -->
+            <a id="openTabBtn" href="#" target="_blank" class="p-1.5 rounded bg-surfaceCard hover:bg-surfaceHigh text-slate-300" title="Open in Full Window">
+              <span class="material-symbols-outlined text-[15px]">open_in_new</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Dynamic Device Container -->
+        <div id="deviceContainer" class="phone-mockup">
+          <div class="phone-notch" id="phoneNotch">
+            <div class="camera-lens"></div>
+          </div>
+          
+          <iframe id="screenIframe" class="device-iframe" src=".stitch/designs/05_home.html"></iframe>
+          <img id="screenImage" class="device-iframe hidden object-cover object-top" src="" alt="Screen Screenshot" />
+        </div>
+      </div>
+
+      <!-- Right: Screen Inspector & Specifications (Col 4) -->
+      <div class="lg:col-span-4 flex flex-col gap-4">
+        
+        <!-- Current Screen Metadata Card -->
+        <div class="bg-charcoal rounded-2xl p-5 border border-goldPrimary/20 shadow-xl">
+          <div class="flex items-center justify-between mb-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-goldPrimary/10 text-goldPrimary border border-goldPrimary/30" id="badgeCategory">
+              Home and Discovery
+            </span>
+            <span class="text-xs text-slate-400 font-mono" id="badgeDevice">MOBILE (Android)</span>
+          </div>
+
+          <h2 class="text-xl font-serif font-bold text-white mb-2" id="infoTitle">
+            SubhaLagnam - Home
+          </h2>
+          <p class="text-xs text-slate-400 leading-relaxed mb-4" id="infoDescription">
+            Dynamic luxury home screen with brand header, language selector, occasion categories, trending video cards, and bottom navigation.
+          </p>
+
+          <div class="space-y-2 border-t border-white/10 pt-3 text-xs">
+            <div class="flex justify-between py-1">
+              <span class="text-slate-400">Stitch Screen ID:</span>
+              <span class="font-mono text-goldChampagne text-[11px]" id="infoScreenId">projects/...</span>
+            </div>
+            <div class="flex justify-between py-1">
+              <span class="text-slate-400">Design System:</span>
+              <span class="font-mono text-goldChampagne text-[11px]">assets/9e5c1efea4ac4080afe48a34bbf6aa77</span>
+            </div>
+            <div class="flex justify-between py-1">
+              <span class="text-slate-400">HTML Asset:</span>
+              <a id="linkHtmlFile" href="#" target="_blank" class="font-mono text-goldPrimary hover:underline text-[11px]">05_home.html</a>
+            </div>
+            <div class="flex justify-between py-1">
+              <span class="text-slate-400">PNG Asset:</span>
+              <a id="linkPngFile" href="#" target="_blank" class="font-mono text-goldPrimary hover:underline text-[11px]">05_home.png</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Journey Navigation Checklist -->
+        <div class="bg-charcoal rounded-2xl p-5 border border-white/5 shadow-xl">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-goldChampagne mb-3 flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">route</span>
+            <span>Navigable User Journey Flow</span>
+          </h3>
+
+          <div class="space-y-2 text-xs" id="journeyList">
+            <!-- Journey stages -->
+          </div>
+        </div>
+
+        <!-- Design System Quick Tokens -->
+        <div class="bg-charcoal rounded-2xl p-5 border border-white/5 shadow-xl">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-goldChampagne mb-3 flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">palette</span>
+            <span>Design System Palette</span>
+          </h3>
+          <div class="grid grid-cols-4 gap-2 text-center text-[10px]">
+            <div class="p-2 rounded bg-[#0B0B10] border border-white/10">
+              <div class="w-full h-4 rounded bg-[#0B0B10] border border-white/20 mb-1"></div>
+              <span class="text-slate-400">Obsidian</span>
+              <div class="font-mono text-[9px] text-slate-500">#0B0B10</div>
+            </div>
+            <div class="p-2 rounded bg-surfaceCard border border-white/10">
+              <div class="w-full h-4 rounded bg-[#131318] border border-white/20 mb-1"></div>
+              <span class="text-slate-400">Surface</span>
+              <div class="font-mono text-[9px] text-slate-500">#131318</div>
+            </div>
+            <div class="p-2 rounded bg-surfaceCard border border-white/10">
+              <div class="w-full h-4 rounded bg-goldPrimary mb-1 shadow-sm"></div>
+              <span class="text-goldPrimary font-bold">Gold</span>
+              <div class="font-mono text-[9px] text-goldPrimary">#F5B82E</div>
+            </div>
+            <div class="p-2 rounded bg-surfaceCard border border-white/10">
+              <div class="w-full h-4 rounded bg-goldChampagne mb-1 shadow-sm"></div>
+              <span class="text-goldChampagne font-bold">Champagne</span>
+              <div class="font-mono text-[9px] text-goldChampagne">#F6D98B</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- GALLERY GRID VIEW (HIDDEN BY DEFAULT) -->
+    <div id="galleryView" class="hidden flex flex-col gap-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-serif font-bold text-white">Complete 23-Screen Design Gallery</h2>
+          <p class="text-xs text-slate-400">High-resolution designs generated with Google Stitch and unified design system tokens.</p>
+        </div>
+        <div class="text-xs text-goldChampagne font-mono">23/23 Screens Ready for Review</div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6" id="galleryGrid">
+        <!-- Gallery cards populated by JS -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Interactive Logic -->
+  <script>
+    const screens = [
+      {
+        key: "01_splash",
+        title: "Screen 1: Splash Screen",
+        category: "auth",
+        categoryLabel: "Authentication",
+        device: "MOBILE",
+        html: ".stitch/designs/01_splash.html",
+        png: ".stitch/designs/01_splash.png",
+        id: "23ce281f0f0f43ef933a09c6d2791809",
+        desc: "Ornate golden Kalash & coconut centerpiece emblem with concentric royal jali halo, Playfair Display branding, and smooth shimmer."
+      },
+      {
+        key: "02_signup",
+        title: "Screen 2: Sign Up",
+        category: "auth",
+        categoryLabel: "Authentication",
+        device: "MOBILE",
+        html: ".stitch/designs/02_signup.html",
+        png: ".stitch/designs/02_signup.png",
+        id: "beb936659cc14b5d9eca68215de55ae8",
+        desc: "User registration with Username, Phone (+91), Full Name, Password with visibility toggle and strength meter, and primary CTA."
+      },
+      {
+        key: "03_signin",
+        title: "Screen 3: Sign In",
+        category: "auth",
+        categoryLabel: "Authentication",
+        device: "MOBILE",
+        html: ".stitch/designs/03_signin.html",
+        png: ".stitch/designs/03_signin.png",
+        id: "058b57b801d640149bcb14f4458fde1b",
+        desc: "Phone/Username login, remember me, forgot password, biometric login shortcut, and social logins."
+      },
+      {
+        key: "04_forgot_password",
+        title: "Screen 4: Forgot Password",
+        category: "auth",
+        categoryLabel: "Authentication",
+        device: "MOBILE",
+        html: ".stitch/designs/04_forgot_password.html",
+        png: ".stitch/designs/04_forgot_password.png",
+        id: "c77306230468405f9e27dc41a3a76c3a",
+        desc: "Phone verification, 6-digit square OTP verification boxes, resend timer, and password reset form."
+      },
+      {
+        key: "05_home",
+        title: "Screen 5: Home Screen",
+        category: "discovery",
+        categoryLabel: "Home & Discovery",
+        device: "MOBILE",
+        html: ".stitch/designs/05_home.html",
+        png: ".stitch/designs/05_home.png",
+        id: "de4d62d820f04d78af86ebfd99cc81d1",
+        desc: "SubhaLagnam flagship home with greeting, English/Telugu language switcher, occasion carousel, trending 9:16 video cards, and bottom nav."
+      },
+      {
+        key: "06_categories",
+        title: "Screen 6: Occasion Categories",
+        category: "discovery",
+        categoryLabel: "Home & Discovery",
+        device: "MOBILE",
+        html: ".stitch/designs/06_categories.html",
+        png: ".stitch/designs/06_categories.png",
+        id: "0fb665c7dfed4206938a4d859b654ba0",
+        desc: "Occasion catalog cards: Wedding, Half Saree, Birthday, Engagement, Gruhapravesam, and other traditional ceremonies."
+      },
+      {
+        key: "07_template_gallery",
+        title: "Screen 7: Template Gallery",
+        category: "discovery",
+        categoryLabel: "Home & Discovery",
+        device: "MOBILE",
+        html: ".stitch/designs/07_template_gallery.html",
+        png: ".stitch/designs/07_template_gallery.png",
+        id: "0cb821efd8f743e49e4d054ff96e7014",
+        desc: "2-column vertical 9:16 template cards with play icon, duration badge, photo requirement indicator, and Free/Premium labels."
+      },
+      {
+        key: "08_filter_bottomsheet",
+        title: "Screen 8: Filter Bottom Sheet",
+        category: "discovery",
+        categoryLabel: "Template Filtering",
+        device: "MOBILE",
+        html: ".stitch/designs/08_filter_bottomsheet.html",
+        png: ".stitch/designs/08_filter_bottomsheet.png",
+        id: "c44ab68d61c44456aff448cba6ba0001",
+        desc: "Bottom sheet with Religion (Hindu/Christian/Muslim), Video Format (9:16/16:9), Photo Type (With/Without), and Apply/Reset."
+      },
+      {
+        key: "09_template_details",
+        title: "Screen 9: Template Details",
+        category: "custom",
+        categoryLabel: "Template Preview",
+        device: "MOBILE",
+        html: ".stitch/designs/09_template_details.html",
+        png: ".stitch/designs/09_template_details.png",
+        id: "5452de46fd62462598a23d9c37c7817f",
+        desc: "Full video player preview with play controls, duration 0:45s, 4 required photos pill, pricing ₹499, and 'Create Invitation' CTA."
+      },
+      {
+        key: "10_personalization_form",
+        title: "Screen 10: Personalization Form",
+        category: "custom",
+        categoryLabel: "Customization",
+        device: "MOBILE",
+        html: ".stitch/designs/10_personalization_form.html",
+        png: ".stitch/designs/10_personalization_form.png",
+        id: "9994ea1146bf4ffe85c9370d1ecff028",
+        desc: "Grouped form: Couple Details, Family Parents Lineage, Ceremony Date & Muhurtham Venue, and 4 Photo Upload slots."
+      },
+      {
+        key: "11_review_details",
+        title: "Screen 11: Review Details",
+        category: "custom",
+        categoryLabel: "Review & Preview",
+        device: "MOBILE",
+        html: ".stitch/designs/11_review_details.html",
+        png: ".stitch/designs/11_review_details.png",
+        id: "d60aede552f0468daf881aaa92ad3b24",
+        desc: "Summary cards of entered bride/groom names, parents, date/venue, uploaded photo strip, and 'Confirm & Preview Video' CTA."
+      },
+      {
+        key: "12_video_preview",
+        title: "Screen 12: Personalized Video Preview",
+        category: "custom",
+        categoryLabel: "Review & Preview",
+        device: "MOBILE",
+        html: ".stitch/designs/12_video_preview.html",
+        png: ".stitch/designs/12_video_preview.png",
+        id: "a5dc4feabca64ce98a44bd15946b78c4",
+        desc: "Full-bleed 9:16 vertical video simulator with animated gold calligraphy, framed couple portrait, timeline seeker, and continue CTA."
+      },
+      {
+        key: "13_processing",
+        title: "Screen 13: Processing Screen",
+        category: "generate",
+        categoryLabel: "Video Generation",
+        device: "MOBILE",
+        html: ".stitch/designs/13_processing.html",
+        png: ".stitch/designs/13_processing.png",
+        id: "2260f1e766a84d808168e0625077de8f",
+        desc: "Circular gold progress gauge at 68%, status checklist (names, photos, 3D mandap transitions), time estimate 25s, and safety warning."
+      },
+      {
+        key: "14_generation_completed",
+        title: "Screen 14: Generation Completed",
+        category: "generate",
+        categoryLabel: "Video Generation",
+        device: "MOBILE",
+        html: ".stitch/designs/14_generation_completed.html",
+        png: ".stitch/designs/14_generation_completed.png",
+        id: "882dc7611bb842cd89a53a4e16638257",
+        desc: "Celebration fireworks badge, video ready card, 'Download MP4 Video' primary button, WhatsApp/Instagram share, and return home."
+      },
+      {
+        key: "15_generation_failed",
+        title: "Screen 15: Generation Failed",
+        category: "generate",
+        categoryLabel: "Video Generation",
+        device: "MOBILE",
+        html: ".stitch/designs/15_generation_failed.html",
+        png: ".stitch/designs/15_generation_failed.png",
+        id: "83c6612b611c4b878f031cbb430086a0",
+        desc: "Courteous error recovery screen, reassurance that data & photos are preserved, 'Retry Video Generation', and support contact."
+      },
+      {
+        key: "16_profile",
+        title: "Screen 16: Profile",
+        category: "user",
+        categoryLabel: "User Account",
+        device: "MOBILE",
+        html: ".stitch/designs/16_profile.html",
+        png: ".stitch/designs/16_profile.png",
+        id: "c28c74262f9b4636b4c0d3cd0d1f4821",
+        desc: "User avatar with gold jewelry frame, username, phone, Royal Patron tier, invitation creation stats, and quick links."
+      },
+      {
+        key: "17_my_creations",
+        title: "Screen 17: My Creations",
+        category: "user",
+        categoryLabel: "User Account",
+        device: "MOBILE",
+        html: ".stitch/designs/17_my_creations.html",
+        png: ".stitch/designs/17_my_creations.png",
+        id: "caeee5bdd61349bbad07e44330b02dd7",
+        desc: "Video creation history with Completed and Drafts tabs, video card thumbnails, Download MP4, WhatsApp share, and duplicate actions."
+      },
+      {
+        key: "18_settings",
+        title: "Screen 18: Settings",
+        category: "user",
+        categoryLabel: "User Account",
+        device: "MOBILE",
+        html: ".stitch/designs/18_settings.html",
+        png: ".stitch/designs/18_settings.png",
+        id: "6f76af6a3e9c4c7799cb576cd159cfbc",
+        desc: "Language selector English / Telugu pill toggle, password management, push notifications, privacy policy, and logout."
+      },
+      {
+        key: "19_admin_dashboard",
+        title: "Screen 19: Admin Dashboard",
+        category: "admin",
+        categoryLabel: "Admin Console",
+        device: "DESKTOP",
+        html: ".stitch/designs/19_admin_dashboard.html",
+        png: ".stitch/designs/19_admin_dashboard.png",
+        id: "f7b8c8cd04e84cfc952bf15f87f377fe",
+        desc: "Executive dashboard with KPIs: 128 Templates, 4850 Users, Free/Premium split, Revenue ₹3.24L, recent uploads table, and charts."
+      },
+      {
+        key: "20_admin_template_management",
+        title: "Screen 20: Template Management",
+        category: "admin",
+        categoryLabel: "Admin Console",
+        device: "DESKTOP",
+        html: ".stitch/designs/20_admin_template_management.html",
+        png: ".stitch/designs/20_admin_template_management.png",
+        id: "1a7e4ea3660245c5bf80108824a6abf0",
+        desc: "Full template catalog data table with search, category/religion filters, active status toggles, edit/duplicate actions, and +Add Template."
+      },
+      {
+        key: "21_admin_add_edit_template",
+        title: "Screen 21: Add/Edit Template",
+        category: "admin",
+        categoryLabel: "Admin Console",
+        device: "DESKTOP",
+        html: ".stitch/designs/21_admin_add_edit_template.html",
+        png: ".stitch/designs/21_admin_add_edit_template.png",
+        id: "75427858477943ecbff52941aa7c9211",
+        desc: "Template editor with 3 tabs: Basic Info, Media Uploads (MP4 video, fonts), and Personalization Placeholders builder with X/Y coordinates."
+      },
+      {
+        key: "22_admin_config_preview",
+        title: "Screen 22: Configuration Preview",
+        category: "admin",
+        categoryLabel: "Admin Console",
+        device: "DESKTOP",
+        html: ".stitch/designs/22_admin_config_preview.html",
+        png: ".stitch/designs/22_admin_config_preview.png",
+        id: "87695f22d2e54f2790624e05b731dc5f",
+        desc: "Visual inspector canvas showing video template with superimposed text and image bounding boxes, layer inspector, and coordinate sliders."
+      },
+      {
+        key: "23_admin_user_orders",
+        title: "Screen 23: User & Order Management",
+        category: "admin",
+        categoryLabel: "Admin Console",
+        device: "DESKTOP",
+        html: ".stitch/designs/23_admin_user_orders.html",
+        png: ".stitch/designs/23_admin_user_orders.png",
+        id: "278bd9282f7b4c60a7da2e75267eda2d",
+        desc: "Customer orders table with order IDs, customer details, UPI payment reference verification, approve/reject buttons, and download permissions."
+      }
+    ];
+
+    let currentIndex = 4; // Start at Screen 5: Home
+    let isShowingHtml = true;
+
+    function renderScreenBar(filterCat = 'all') {
+      const bar = document.getElementById('screenBar');
+      bar.innerHTML = '';
+      screens.forEach((s, idx) => {
+        if (filterCat !== 'all' && s.category !== filterCat) return;
+
+        const btn = document.createElement('button');
+        btn.className = `screen-nav-btn px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all border border-white/5 flex items-center gap-1.5 ${idx === currentIndex ? 'active-screen-btn' : 'bg-surfaceCard text-slate-300 hover:text-white hover:bg-surfaceHigh'}`;
+        btn.innerHTML = `<span class="opacity-60 text-[10px] font-mono">#${idx+1}</span> <span>${s.title.replace(/^Screen \d+:\s*/, '')}</span>`;
+        btn.onclick = () => selectScreen(idx);
+        bar.appendChild(btn);
+      });
+    }
+
+    function selectScreen(index) {
+      currentIndex = index;
+      const s = screens[index];
+
+      // Update counters & title
+      document.getElementById('screenCounter').innerText = `${String(index + 1).padStart(2, '0')} / ${screens.length}`;
+      document.getElementById('currentScreenTitle').innerText = s.title;
+
+      // Update inspector card
+      document.getElementById('badgeCategory').innerText = s.categoryLabel;
+      document.getElementById('badgeDevice').innerText = s.device === 'DESKTOP' ? 'DESKTOP CONSOLE' : 'MOBILE (Android)';
+      document.getElementById('infoTitle').innerText = s.title;
+      document.getElementById('infoDescription').innerText = s.desc;
+      document.getElementById('infoScreenId').innerText = s.id;
+      
+      const linkHtml = document.getElementById('linkHtmlFile');
+      linkHtml.href = s.html;
+      linkHtml.innerText = s.html.split('/').pop();
+
+      const linkPng = document.getElementById('linkPngFile');
+      linkPng.href = s.png;
+      linkPng.innerText = s.png.split('/').pop();
+
+      document.getElementById('openTabBtn').href = isShowingHtml ? s.html : s.png;
+
+      // Adapt device frame styling based on mobile vs desktop
+      const devContainer = document.getElementById('deviceContainer');
+      const notch = document.getElementById('phoneNotch');
+      if (s.device === 'DESKTOP') {
+        devContainer.className = 'desktop-mockup';
+        notch.classList.add('hidden');
+      } else {
+        devContainer.className = 'phone-mockup';
+        notch.classList.remove('hidden');
+      }
+
+      // Update iframe source
+      const iframe = document.getElementById('screenIframe');
+      const img = document.getElementById('screenImage');
+
+      if (isShowingHtml) {
+        iframe.src = s.html;
+        iframe.classList.remove('hidden');
+        img.classList.add('hidden');
+      } else {
+        img.src = s.png;
+        img.classList.remove('hidden');
+        iframe.classList.add('hidden');
+      }
+
+      renderScreenBar();
+    }
+
+    function nextScreen() {
+      if (currentIndex < screens.length - 1) {
+        selectScreen(currentIndex + 1);
+      } else {
+        selectScreen(0);
+      }
+    }
+
+    function prevScreen() {
+      if (currentIndex > 0) {
+        selectScreen(currentIndex - 1);
+      } else {
+        selectScreen(screens.length - 1);
+      }
+    }
+
+    function toggleRenderSource() {
+      isShowingHtml = !isShowingHtml;
+      document.getElementById('sourceLabel').innerText = isShowingHtml ? 'Live Code (HTML)' : 'Visual Design (PNG)';
+      document.getElementById('toggleSourceBtn').querySelector('.material-symbols-outlined').innerText = isShowingHtml ? 'code' : 'image';
+      selectScreen(currentIndex);
+    }
+
+    function reloadFrame() {
+      const iframe = document.getElementById('screenIframe');
+      iframe.src = iframe.src;
+    }
+
+    function filterGroup(cat) {
+      document.querySelectorAll('.group-pill').forEach(btn => {
+        btn.classList.remove('bg-surfaceCard', 'text-goldChampagne', 'border-goldPrimary/30');
+        btn.classList.add('text-slate-400');
+      });
+      const activeBtn = document.getElementById(`grp-${cat}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400');
+        activeBtn.classList.add('bg-surfaceCard', 'text-goldChampagne', 'border-goldPrimary/30');
+      }
+
+      renderScreenBar(cat);
+      // If current screen is not in category, jump to first in category
+      if (cat !== 'all') {
+        const firstMatch = screens.findIndex(s => s.category === cat);
+        if (firstMatch !== -1) selectScreen(firstMatch);
+      }
+    }
+
+    function setViewMode(mode) {
+      const sim = document.getElementById('simulatorView');
+      const gal = document.getElementById('galleryView');
+      const btnSim = document.getElementById('btn-view-sim');
+      const btnGal = document.getElementById('btn-view-gal');
+
+      if (mode === 'simulator') {
+        sim.classList.remove('hidden');
+        gal.classList.add('hidden');
+        btnSim.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-goldPrimary text-obsidian shadow-sm transition-all';
+        btnGal.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-white transition-all';
+      } else {
+        sim.classList.add('hidden');
+        gal.classList.remove('hidden');
+        btnGal.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-goldPrimary text-obsidian shadow-sm transition-all';
+        btnSim.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-white transition-all';
+        renderGalleryGrid();
+      }
+    }
+
+    function renderGalleryGrid() {
+      const grid = document.getElementById('galleryGrid');
+      grid.innerHTML = '';
+      screens.forEach((s, idx) => {
+        const card = document.createElement('div');
+        card.className = 'bg-charcoal rounded-xl overflow-hidden border border-white/10 hover:border-goldPrimary/40 transition-all flex flex-col cursor-pointer group shadow-lg';
+        card.onclick = () => {
+          setViewMode('simulator');
+          selectScreen(idx);
+        };
+
+        card.innerHTML = `
+          <div class="relative w-full aspect-[9/16] bg-obsidian overflow-hidden">
+            <img src="${s.png}" alt="${s.title}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+            <div class="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent opacity-60"></div>
+            <span class="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-obsidian/80 text-goldPrimary border border-goldPrimary/30">
+              #${idx+1}
+            </span>
+            <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-medium bg-obsidian/80 text-slate-300">
+              ${s.device}
+            </span>
+          </div>
+          <div class="p-3 flex flex-col flex-1 justify-between">
+            <div>
+              <div class="text-[10px] uppercase font-bold text-goldChampagne mb-0.5">${s.categoryLabel}</div>
+              <h4 class="text-xs font-bold text-white leading-tight mb-1 group-hover:text-goldPrimary transition-colors">${s.title}</h4>
+            </div>
+            <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] text-slate-400">
+              <span class="truncate max-w-[120px] font-mono">${s.id.slice(0, 8)}...</span>
+              <span class="text-goldPrimary flex items-center gap-0.5">View <span class="material-symbols-outlined text-[12px]">arrow_forward</span></span>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function renderJourneyList() {
+      const container = document.getElementById('journeyList');
+      const stages = [
+        { label: "1. Authentication (Sign In & Sign Up)", range: [0, 3] },
+        { label: "2. Home & Browse Occasions", range: [4, 5] },
+        { label: "3. Template Gallery & Filtering", range: [6, 7] },
+        { label: "4. Template Details & Video Play", range: [8, 8] },
+        { label: "5. Personalization Form & Uploads", range: [9, 9] },
+        { label: "6. Review Details & Video Preview", range: [10, 11] },
+        { label: "7. Video Compilation & Download", range: [12, 14] },
+        { label: "8. User Hub, History & Settings", range: [15, 17] },
+        { label: "9. Admin Console & Template Editor", range: [18, 22] }
+      ];
+
+      container.innerHTML = stages.map(st => `
+        <div class="flex items-center justify-between p-2 rounded-lg bg-surfaceCard/60 border border-white/5 hover:border-goldPrimary/30 transition-all cursor-pointer" onclick="selectScreen(${st.range[0]})">
+          <span class="text-slate-300 font-medium">${st.label}</span>
+          <span class="material-symbols-outlined text-[14px] text-goldPrimary">play_arrow</span>
+        </div>
+      `).join('');
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      renderScreenBar();
+      renderJourneyList();
+      selectScreen(4); // Home screen
+    });
+  </script>
+</body>
+</html>
