@@ -57,3 +57,12 @@ backend/data/*.json
 *.pyc
 __pycache__/
 test_mp4v.mp4
+test_*.mp4
+
+# Scratch/extracted dumps and debug frame captures
+extracted_templates/
+frame_*.jpg
+templ1_frame_*.jpg
+sample_result_*.jpg
+rendered_sample_*.jpg
+test_render_frame_*.jpg

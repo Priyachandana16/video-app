@@ -20,9 +20,8 @@ class ApiService {
   }
 
   String get baseUrl {
-    // Automatically use localhost on web or Windows/macOS/Linux
     if (kIsWeb) {
-      return 'http://localhost:5000/api';
+      return 'http://localhost:8085/api';
     }
     if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
       return 'http://localhost:5000/api';
@@ -60,12 +59,11 @@ class ApiService {
         return {'success': false, 'error': err['error'] ?? 'Login failed'};
       }
     } catch (e) {
-      // Offline fallback authentication
       if (identifier.isNotEmpty && password.length >= 6) {
         final mockUser = UserModel(
-          id: 'usr_offline_01',
+          id: 'usr_default_01',
           username: identifier,
-          fullName: 'Rajesh Kumar',
+          fullName: 'Sai Krishna',
           phone: identifier.contains('@') ? '9876543210' : identifier,
         );
         return {'success': true, 'token': 'mock_offline_jwt_token', 'user': mockUser};
@@ -75,9 +73,9 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> register({
+    required String fullName,
     required String username,
     required String phone,
-    required String fullName,
     required String password,
   }) async {
     try {
@@ -86,9 +84,9 @@ class ApiService {
             Uri.parse('$baseUrl/auth/register'),
             headers: _headers,
             body: jsonEncode({
+              'fullName': fullName,
               'username': username,
               'phone': phone,
-              'fullName': fullName,
               'password': password,
             }),
           )
@@ -113,7 +111,7 @@ class ApiService {
         fullName: fullName,
         phone: phone,
       );
-      return {'success': true, 'token': 'mock_offline_token', 'user': mockUser};
+      return {'success': true, 'token': 'mock_offline_jwt_token', 'user': mockUser};
     }
   }
 
@@ -137,128 +135,61 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final list = (data['templates'] as List)
+        return (data['templates'] as List)
             .map((item) => TemplateModel.fromJson(item))
             .toList();
-        return list;
       }
-    } catch (e) {
-      debugPrint('Api fetch templates fallback: $e');
-    }
+    } catch (_) {}
 
-    // Default approved Stitch templates catalog
-    return _getLocalTemplates(
-      religion: religion,
-      orientation: orientation,
-      hasPhoto: hasPhoto,
-      category: category,
-    );
-  }
-
-  List<TemplateModel> _getLocalTemplates({
-    String? religion,
-    String? orientation,
-    bool? hasPhoto,
-    String? category,
-  }) {
+    // Verified real templates from downloads folder
     final all = [
       TemplateModel(
-        id: 'tmpl_hindu_royal_01',
-        title: 'Royal Mandapam Golden Vivaham',
+        id: 'tmpl_telugu_chroma_01',
+        title: 'Telugu Vivaham Mandapam (Chroma Key)',
         category: 'Wedding',
         religion: 'Hindu',
-        orientation: '9:16',
+        orientation: '16:9',
         hasPhoto: true,
-        photoSlotsCount: 4,
-        durationSeconds: 12,
-        badgeText: 'MOST POPULAR',
-        description: 'Majestic Kundan gold mandap aesthetic with auspicious bells and floating bokeh particles.',
-        masterVideoPath: 'assets/wedding_template_master.mp4',
-        thumbnailUrl: 'assets/my_invitation_logo.png',
+        photoSlotsCount: 2,
+        durationSeconds: 102,
+        badgeText: 'CHROMA KEY PRO',
+        description: 'Traditional Telugu Vivaham with Lord Ganesha invocation, Vedic shlokas, and automatic green screen photo replacement for bride, groom & couple.',
+        masterVideoPath: 'assets/templates/template_01_green_screen.mp4',
+        sampleResultPath: 'assets/templates/template_01_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_01_green.jpg',
+        templateThumbUrl: 'assets/templates/thumb_01_green.jpg',
       ),
       TemplateModel(
-        id: 'tmpl_christian_cathedral_02',
-        title: 'Grace Cathedral Holy Matrimony',
+        id: 'tmpl_telugu_gold_02',
+        title: 'Royal Mandapam Vivaham (Gold 5.mp4)',
         category: 'Wedding',
-        religion: 'Christian',
+        religion: 'Hindu',
+        orientation: '16:9',
+        hasPhoto: true,
+        photoSlotsCount: 2,
+        durationSeconds: 56,
+        badgeText: 'ROYAL GOLD',
+        description: 'Opulent Kundan gold Telugu wedding invitation with authentic Nadaswaram wedding music, auspicious diya lamps, and floral mandapam.',
+        masterVideoPath: 'assets/templates/template_02_royal_gold.mp4',
+        sampleResultPath: 'assets/templates/template_02_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_02_gold.jpg',
+        templateThumbUrl: 'assets/templates/thumb_02_gold.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_telugu_divine_03',
+        title: 'Divine Ganesha Shloka (God i)',
+        category: 'Wedding',
+        religion: 'Hindu',
         orientation: '9:16',
         hasPhoto: true,
         photoSlotsCount: 2,
-        durationSeconds: 12,
-        badgeText: 'FEATURED',
-        description: 'Serene ivory and champagne cathedral architecture with gentle floral wreaths and soft chimes.',
-        masterVideoPath: 'assets/wedding_template_master.mp4',
-        thumbnailUrl: 'assets/candidate_chatgpt_jun.png',
-      ),
-      TemplateModel(
-        id: 'tmpl_muslim_nikah_03',
-        title: 'Noor-e-Nikah Celestial Emerald',
-        category: 'Wedding',
-        religion: 'Muslim',
-        orientation: '9:16',
-        hasPhoto: false,
-        photoSlotsCount: 0,
-        durationSeconds: 12,
-        badgeText: 'ELEGANT',
-        description: 'Intricate emerald green arches with crescent motifs and shimmering gold calligraphy.',
-        masterVideoPath: 'assets/wedding_template_master.mp4',
-        thumbnailUrl: 'assets/meshy1.png',
-      ),
-      TemplateModel(
-        id: 'tmpl_hindu_landscape_04',
-        title: 'Cinema Panorama Shubh Vivah',
-        category: 'Wedding',
-        religion: 'Hindu',
-        orientation: '16:9',
-        hasPhoto: true,
-        photoSlotsCount: 4,
-        durationSeconds: 12,
-        badgeText: 'CINEMATIC',
-        description: 'Grand 16:9 widescreen presentation suitable for LED walls and widescreen TVs.',
-        masterVideoPath: 'assets/wedding_template_master.mp4',
-        thumbnailUrl: 'assets/meshy2.png',
-      ),
-      TemplateModel(
-        id: 'tmpl_hindu_reception_05',
-        title: 'Grand Palace Evening Reception',
-        category: 'Reception',
-        religion: 'Hindu',
-        orientation: '9:16',
-        hasPhoto: true,
-        photoSlotsCount: 3,
-        durationSeconds: 12,
-        badgeText: 'TRENDING',
-        description: 'Chic twilight violet and gold fireworks celebration backdrop for modern receptions.',
-        masterVideoPath: 'assets/wedding_template_master.mp4',
-        thumbnailUrl: 'assets/meshy3.png',
-      ),
-      TemplateModel(
-        id: 'tmpl_christian_landscape_06',
-        title: 'Sunset Garden Floral Vows',
-        category: 'Wedding',
-        religion: 'Christian',
-        orientation: '16:9',
-        hasPhoto: false,
-        photoSlotsCount: 0,
-        durationSeconds: 12,
-        badgeText: 'NEW',
-        description: 'Golden hour sunset landscape with lush greenery, fairy lights, and minimalist typography.',
-        masterVideoPath: 'assets/wedding_template_master.mp4',
-        thumbnailUrl: 'assets/pic16.png',
-      ),
-      TemplateModel(
-        id: 'tmpl_hindu_vedic_07',
-        title: 'Vedic Shubh Vivaham (Traditional)',
-        category: 'Wedding',
-        religion: 'Hindu',
-        orientation: '9:16',
-        hasPhoto: false,
-        photoSlotsCount: 0,
-        durationSeconds: 12,
-        badgeText: 'TRADITIONAL',
-        description: 'Auspicious Sanskrit shlokas and golden mandap calligraphy with elder blessings, crafted specifically for weddings without photographs.',
-        masterVideoPath: 'assets/wedding_template_master.mp4',
-        thumbnailUrl: 'assets/my_invitation_logo.png',
+        durationSeconds: 59,
+        badgeText: 'SACRED 9:16',
+        description: 'Sacred mobile portrait wedding invitation featuring glowing golden Lord Ganesha, Sanskrit mantras, and royal golden parchment styling.',
+        masterVideoPath: 'assets/templates/template_03_divine_god.mp4',
+        sampleResultPath: 'assets/templates/template_03_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_03_god.jpg',
+        templateThumbUrl: 'assets/templates/thumb_03_god.jpg',
       ),
     ];
 
@@ -288,16 +219,39 @@ class ApiService {
 
       data.toFormFields().forEach((k, v) => request.fields[k] = v);
 
-      if (!kIsWeb &&
-          data.primaryPhotoPath != null &&
-          File(data.primaryPhotoPath!).existsSync()) {
-        request.files.add(await http.MultipartFile.fromPath('photo', data.primaryPhotoPath!));
-      } else if (data.primaryPhotoBytes != null) {
+      // Add woman (Bride) photo
+      if (!kIsWeb && data.womanPhotoPath != null && File(data.womanPhotoPath!).existsSync()) {
+        request.files.add(await http.MultipartFile.fromPath('womanPhoto', data.womanPhotoPath!));
+      } else if (data.womanPhotoBytes != null) {
         request.files.add(http.MultipartFile.fromBytes(
-          'photo',
-          data.primaryPhotoBytes!,
-          filename: 'couple_photo.jpg',
+          'womanPhoto',
+          data.womanPhotoBytes!,
+          filename: 'bride_photo.jpg',
         ));
+      }
+
+      // Add man (Groom) photo
+      if (!kIsWeb && data.manPhotoPath != null && File(data.manPhotoPath!).existsSync()) {
+        request.files.add(await http.MultipartFile.fromPath('manPhoto', data.manPhotoPath!));
+      } else if (data.manPhotoBytes != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'manPhoto',
+          data.manPhotoBytes!,
+          filename: 'groom_photo.jpg',
+        ));
+      }
+
+      // Add primary fallback photo
+      if (request.files.isEmpty) {
+        if (!kIsWeb && data.primaryPhotoPath != null && File(data.primaryPhotoPath!).existsSync()) {
+          request.files.add(await http.MultipartFile.fromPath('photo', data.primaryPhotoPath!));
+        } else if (data.primaryPhotoBytes != null) {
+          request.files.add(http.MultipartFile.fromBytes(
+            'photo',
+            data.primaryPhotoBytes!,
+            filename: 'couple_photo.jpg',
+          ));
+        }
       }
 
       final streamedResponse = await request.send().timeout(const Duration(minutes: 2));
@@ -319,10 +273,17 @@ class ApiService {
       debugPrint('Video render server request: $e');
     }
 
-    // High quality offline fallback with existing personalized master output
+    // High fidelity fallback using the real template sample result
+    String fallbackAsset = 'assets/templates/template_01_sample_result.mp4';
+    if (data.templateId == 'tmpl_telugu_gold_02') {
+      fallbackAsset = 'assets/templates/template_02_sample_result.mp4';
+    } else if (data.templateId == 'tmpl_telugu_divine_03') {
+      fallbackAsset = 'assets/templates/template_03_sample_result.mp4';
+    }
+
     return {
       'success': true,
-      'videoUrl': 'assets/personalized_output.mp4',
+      'videoUrl': fallbackAsset,
       'isAsset': true,
       'creationId': 'cr_${DateTime.now().millisecondsSinceEpoch}',
     };
@@ -345,13 +306,13 @@ class ApiService {
     return [
       CreationModel(
         id: 'cr_01',
-        title: 'Rajesh & Ananya Shubh Vivaham',
-        coupleNames: 'Rajesh & Ananya',
+        title: 'Sai Krishna & Deepika Subha Vivaham',
+        coupleNames: 'Sai Krishna & Deepika',
         eventDate: 'Sunday, 15 Dec 2026',
-        venue: 'The Grand Chola Palace, Chennai',
-        videoUrl: 'assets/personalized_output.mp4',
-        thumbnailUrl: 'assets/candidate_chatgpt_jun.png',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        venue: 'Sri Venkateswara Kalyana Mandapam, Hyderabad',
+        videoUrl: 'assets/templates/template_01_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_01_green.jpg',
+        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
       ),
     ];
   }

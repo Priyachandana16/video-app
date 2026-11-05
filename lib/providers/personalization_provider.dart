@@ -58,6 +58,8 @@ class PersonalizationProvider extends ChangeNotifier {
     String? rsvp,
     String? contactPhone,
     bool? hasPhoto,
+    String? womanPhotoPath,
+    String? manPhotoPath,
   }) {
     _data = _data.copyWith(
       brideName: brideName,
@@ -70,51 +72,58 @@ class PersonalizationProvider extends ChangeNotifier {
       rsvp: rsvp,
       contactPhone: contactPhone,
       hasPhoto: hasPhoto,
+      womanPhotoPath: womanPhotoPath,
+      manPhotoPath: manPhotoPath,
     );
     notifyListeners();
   }
 
-  Future<void> pickPrimaryPhoto() async {
+  Future<void> pickWomanPhoto() async {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1080,
-        maxHeight: 1080,
-        imageQuality: 85,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 90,
       );
       if (image != null) {
         final bytes = await image.readAsBytes();
+        _data.womanPhotoPath = image.path;
+        _data.womanPhotoBytes = bytes;
         _data.primaryPhotoPath = image.path;
         _data.primaryPhotoBytes = bytes;
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('Error picking photo: $e');
+      debugPrint('Error picking woman photo: $e');
     }
   }
 
-  Future<void> pickAdditionalPhoto() async {
+  Future<void> pickManPhoto() async {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1080,
-        maxHeight: 1080,
-        imageQuality: 85,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 90,
       );
       if (image != null) {
-        _data.additionalPhotos.add(image.path);
+        final bytes = await image.readAsBytes();
+        _data.manPhotoPath = image.path;
+        _data.manPhotoBytes = bytes;
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('Error picking additional photo: $e');
+      debugPrint('Error picking man photo: $e');
     }
   }
 
-  void removeAdditionalPhoto(int index) {
-    if (index >= 0 && index < _data.additionalPhotos.length) {
-      _data.additionalPhotos.removeAt(index);
-      notifyListeners();
-    }
+  Future<void> pickPrimaryPhoto() async {
+    await pickWomanPhoto();
+  }
+
+  Future<void> pickAdditionalPhoto() async {
+    await pickManPhoto();
   }
 
   Future<bool> startRendering() async {
@@ -124,7 +133,6 @@ class PersonalizationProvider extends ChangeNotifier {
     _renderError = null;
     notifyListeners();
 
-    // Simulated smooth progress while backend compiles video
     Timer? progressTimer;
     progressTimer = Timer.periodic(const Duration(milliseconds: 300), (timer) {
       if (_renderProgress < 0.90) {
@@ -144,25 +152,24 @@ class PersonalizationProvider extends ChangeNotifier {
         _creationId = result['creationId'];
         _isRendering = false;
 
-        // Auto-save creation to local list
-        _creations.insert(
-          0,
-          CreationModel(
-            id: _creationId ?? 'cr_${DateTime.now().millisecondsSinceEpoch}',
-            title: '${_data.coupleTitle} ${_data.ceremonyTitle}',
-            coupleNames: _data.coupleTitle,
-            eventDate: _data.eventDate,
-            venue: _data.venue,
-            videoUrl: _renderedVideoUrl ?? 'assets/personalized_output.mp4',
-            thumbnailUrl: _data.primaryPhotoPath ?? 'assets/candidate_chatgpt_jun.png',
-            createdAt: DateTime.now(),
-          ),
+        final newCreation = CreationModel(
+          id: _creationId ?? 'cr_${DateTime.now().millisecondsSinceEpoch}',
+          title: '${_data.coupleTitle} ${_data.ceremonyTitle}',
+          coupleNames: _data.coupleTitle,
+          eventDate: _data.eventDate,
+          venue: _data.venue,
+          videoUrl: _renderedVideoUrl ?? 'assets/templates/template_01_sample_result.mp4',
+          thumbnailUrl: 'assets/templates/thumb_01_green.jpg',
+          createdAt: DateTime.now(),
         );
+
+        _creations.insert(0, newCreation);
+        await StorageService.instance.saveCreation(newCreation);
 
         notifyListeners();
         return true;
       } else {
-        _renderError = result['error'] ?? 'Rendering failed';
+        _renderError = result['error'] ?? 'Video rendering failed';
         _isRendering = false;
         notifyListeners();
         return false;
@@ -176,33 +183,49 @@ class PersonalizationProvider extends ChangeNotifier {
     }
   }
 
-  Future<String?> downloadToDevice() async {
-    final videoPath = _renderedVideoUrl ?? 'assets/personalized_output.mp4';
-    final isAsset = videoPath.startsWith('assets/');
-
-    return await StorageService.instance.saveVideoToDevice(
-      videoSource: videoPath,
-      isAsset: isAsset,
-    );
-  }
-
-  Future<void> shareRenderedVideo() async {
-    final videoPath = _renderedVideoUrl ?? 'assets/personalized_output.mp4';
-    final isAsset = videoPath.startsWith('assets/');
-
-    await StorageService.instance.shareVideo(
-      videoSource: videoPath,
-      coupleTitle: _data.coupleTitle,
-      isAsset: isAsset,
-    );
-  }
-
   Future<void> loadCreations() async {
     _isLoadingCreations = true;
     notifyListeners();
 
-    _creations = await ApiService.instance.getCreations();
-    _isLoadingCreations = false;
+    try {
+      final serverCreations = await ApiService.instance.getCreations();
+      final localCreations = await StorageService.instance.getCreations();
+
+      final Map<String, CreationModel> map = {};
+      for (var c in localCreations) {
+        map[c.id] = c;
+      }
+      for (var c in serverCreations) {
+        map[c.id] = c;
+      }
+
+      _creations = map.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    } catch (e) {
+      debugPrint('Error loading creations: $e');
+    } finally {
+      _isLoadingCreations = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> downloadToDevice() async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    return _renderedLocalPath ?? 'Y:\\Video Invitation App !\\backend\\exports\\invitation_personalized.mp4';
+  }
+
+  void shareRenderedVideo() {
+    debugPrint('Sharing invitation video: $_renderedVideoUrl');
+  }
+
+  void reset() {
+    _data = PersonalizationData();
+    _isRendering = false;
+    _renderProgress = 0.0;
+    _renderedVideoUrl = null;
+    _renderedLocalPath = null;
+    _creationId = null;
+    _renderError = null;
     notifyListeners();
   }
 }

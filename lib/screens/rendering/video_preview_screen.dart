@@ -22,7 +22,6 @@ class VideoPreviewScreen extends StatefulWidget {
 
 class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
   bool _isSaving = false;
-  String? _savedPath;
 
   void _handleDownload() async {
     setState(() => _isSaving = true);
@@ -30,7 +29,6 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
     final path = await provider.downloadToDevice();
     setState(() {
       _isSaving = false;
-      _savedPath = path;
     });
 
     if (mounted) {
@@ -44,7 +42,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
           ),
           title: Row(
             children: [
-              const Icon(Icons.check_circle_rounded, color: AppColors.emeraldFree, size: 28),
+              const Icon(Icons.check_circle_rounded, color: AppColors.emeraldChroma, size: 28),
               const SizedBox(width: 10),
               Text(
                 'Video Saved!',
@@ -61,7 +59,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Your royal invitation MP4 has been successfully saved to your Android device.',
+                'Your royal personalized invitation MP4 is ready and saved.',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   color: AppColors.textBody,
@@ -76,7 +74,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
                   border: Border.all(color: AppColors.goldBorder, width: 0.8),
                 ),
                 child: Text(
-                  path ?? '/storage/emulated/0/Download/My_Invitation.mp4',
+                  path ?? 'My_Invitation_Personalized.mp4',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     color: AppColors.champagne,
@@ -113,23 +111,30 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
     final provider = context.watch<PersonalizationProvider>();
     final data = provider.data;
     final isVertical = widget.template.orientation == '9:16';
-    final videoPath = provider.renderedVideoUrl ?? 'assets/personalized_output.mp4';
+    final videoPath = provider.renderedVideoUrl ??
+        (widget.template.sampleResultPath ?? 'assets/templates/template_01_sample_result.mp4');
     final isAsset = videoPath.startsWith('assets/');
 
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-          (route) => false,
-        );
-        return false;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+            (route) => false,
+          );
+        }
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
+          backgroundColor: AppColors.surfaceDark,
           title: Text(
-            'Preview Invitation',
-            style: GoogleFonts.playfairDisplay(fontWeight: FontWeight.bold),
+            'Your Royal Video Invitation',
+            style: GoogleFonts.playfairDisplay(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
           ),
           leading: IconButton(
             icon: const Icon(Icons.home_rounded, color: AppColors.primaryGold),
@@ -142,7 +147,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
           ),
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -150,21 +155,21 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.emeraldFree.withOpacity(0.15),
+                  color: AppColors.emeraldChroma.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.emeraldFree.withOpacity(0.4), width: 1),
+                  border: Border.all(color: AppColors.emeraldChroma.withValues(alpha: 0.4), width: 1),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.verified, color: AppColors.emeraldFree, size: 16),
+                    const Icon(Icons.verified, color: AppColors.emeraldChroma, size: 16),
                     const SizedBox(width: 8),
                     Text(
                       'Ready For Download & Sharing',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.emeraldFree,
+                        color: AppColors.emeraldChroma,
                       ),
                     ),
                   ],
@@ -194,24 +199,38 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
               const SizedBox(height: 16),
 
               // Video Player
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: isVertical ? 390 : 230,
-                  maxWidth: isVertical ? 240 : double.infinity,
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.primaryGold, width: 1.5),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.goldGlow,
+                      blurRadius: 20,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
                 ),
-                child: VideoPlayerWidget(
-                  videoSource: videoPath,
-                  isAsset: isAsset,
-                  aspectRatio: isVertical ? 9 / 16 : 16 / 9,
-                  autoPlay: true,
-                  looping: true,
+                clipBehavior: Clip.antiAlias,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: isVertical ? 400 : 240,
+                    maxWidth: isVertical ? 250 : double.infinity,
+                  ),
+                  child: VideoPlayerWidget(
+                    videoSource: videoPath,
+                    isAsset: isAsset,
+                    aspectRatio: isVertical ? 9 / 16 : 16 / 9,
+                    autoPlay: true,
+                    looping: true,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
 
               // Action Buttons
               CustomButton(
-                text: _isSaving ? 'Saving to Device...' : 'Save Video to Phone',
+                text: _isSaving ? 'Saving to Device...' : 'Download HD Invitation (MP4)',
                 icon: Icons.download_rounded,
                 isLoading: _isSaving,
                 onPressed: _handleDownload,
@@ -219,7 +238,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
               const SizedBox(height: 12),
 
               CustomButton(
-                text: 'Share via WhatsApp / Socials',
+                text: 'Share on WhatsApp & Socials',
                 icon: Icons.share_rounded,
                 type: ButtonType.outlined,
                 onPressed: _handleShare,

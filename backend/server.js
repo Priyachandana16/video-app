@@ -64,13 +64,13 @@ function loadDb() {
       {
         id: 'cr_01',
         userId: 'usr_default_01',
-        templateId: 'tmpl_hindu_royal_01',
-        title: 'Rajesh & Ananya Vivaham',
-        coupleNames: 'Rajesh & Ananya',
-        eventDate: '15 Dec 2026',
-        venue: 'The Grand Chola Palace, Chennai',
-        videoUrl: '/assets/personalized_output.mp4',
-        thumbnailUrl: '/assets/candidate_chatgpt_jun.png',
+        templateId: 'tmpl_telugu_chroma_01',
+        title: 'Sai Krishna & Deepika Subha Vivaham',
+        coupleNames: 'Sai Krishna & Deepika',
+        eventDate: 'Sunday, 15 Dec 2026',
+        venue: 'Sri Venkateswara Kalyana Mandapam, Hyderabad',
+        videoUrl: '/assets/templates/template_01_sample_result.mp4',
+        thumbnailUrl: '/assets/templates/thumb_01_green.jpg',
         createdAt: new Date().toISOString()
       }
     ]
@@ -88,143 +88,69 @@ function saveDb(data) {
 // ----------------------------------------------------
 const TEMPLATES = [
   {
-    id: 'tmpl_hindu_royal_01',
-    title: 'Royal Mandapam Golden Vivaham',
+    id: 'tmpl_telugu_chroma_01',
+    title: 'Telugu Vivaham Mandapam (Chroma Key)',
     category: 'Wedding',
     religion: 'Hindu',
-    orientation: '9:16',
+    orientation: '16:9',
     hasPhoto: true,
-    photoSlotsCount: 4,
-    durationSeconds: 12,
-    badgeText: 'MOST POPULAR',
-    description: 'Majestic Kundan gold mandap aesthetic with auspicious bells, floating bokeh, and circular photo frame.',
-    masterVideoPath: path.join(PROJECT_ROOT, 'assets', 'wedding_template_master.mp4'),
-    thumbnailUrl: '/assets/candidate_screenshot.jpg',
+    photoSlotsCount: 2,
+    durationSeconds: 102,
+    badgeText: 'CHROMA KEY PRO',
+    description: 'Traditional Telugu Vivaham with Lord Ganesha invocation, Vedic shlokas, and automatic green screen photo replacement for bride, groom & couple.',
+    masterVideoPath: path.join(PROJECT_ROOT, 'assets', 'templates', 'template_01_green_screen.mp4'),
+    sampleResultPath: path.join(PROJECT_ROOT, 'assets', 'templates', 'template_01_sample_result.mp4'),
+    thumbnailUrl: '/assets/templates/thumb_01_green.jpg',
+    templateThumbUrl: '/assets/templates/thumb_01_green.jpg',
     timelineConfig: {
-      intro: { start: 0.0, end: 3.0, title: 'Auspicious Invitation' },
-      coupleNames: { start: 3.0, end: 6.5, title: 'Names & Blessings' },
-      photoOverlay: { start: 6.5, end: 9.5, title: 'Couple Showcase' },
-      eventDetails: { start: 9.5, end: 12.0, title: 'Muhurtham & Venue' }
+      intro: { start: 0.0, end: 28.0, title: 'Lord Ganesha & Vedic Shloka' },
+      brideSolo: { start: 28.0, end: 38.0, title: 'Bride Photo (Chroma Screen)' },
+      transition: { start: 38.0, end: 41.0, title: 'Sacred Mantras & Rings' },
+      coupleReveal: { start: 41.0, end: 51.0, title: 'Couple Photo (Chroma Screen)' },
+      eventDetails: { start: 51.0, end: 102.0, title: 'Muhurtham, Venue & Blessings' }
     }
   },
   {
-    id: 'tmpl_christian_cathedral_02',
-    title: 'Grace Cathedral Holy Matrimony',
+    id: 'tmpl_telugu_gold_02',
+    title: 'Royal Mandapam Vivaham (Gold 5.mp4)',
     category: 'Wedding',
-    religion: 'Christian',
+    religion: 'Hindu',
+    orientation: '16:9',
+    hasPhoto: true,
+    photoSlotsCount: 3,
+    durationSeconds: 56,
+    badgeText: 'ROYAL GOLD',
+    description: 'Opulent Kundan gold Telugu wedding invitation with authentic Nadaswaram wedding music, auspicious diya lamps, and floral mandapam.',
+    masterVideoPath: path.join(PROJECT_ROOT, 'assets', 'templates', 'template_02_royal_gold.mp4'),
+    sampleResultPath: path.join(PROJECT_ROOT, 'assets', 'templates', 'template_02_sample_result.mp4'),
+    thumbnailUrl: '/assets/templates/thumb_02_gold.jpg',
+    templateThumbUrl: '/assets/templates/thumb_02_gold.jpg',
+    timelineConfig: {
+      intro: { start: 0.0, end: 15.0, title: 'Shree Rastu Shubhamastu Invocation' },
+      brideGroom: { start: 15.0, end: 30.0, title: 'Bride & Groom Names & Photos' },
+      muhurtham: { start: 30.0, end: 45.0, title: 'Sumuhurtham & Auspicious Lagna' },
+      venue: { start: 45.0, end: 56.0, title: 'Venue & Cordial Welcome' }
+    }
+  },
+  {
+    id: 'tmpl_telugu_divine_03',
+    title: 'Divine Ganesha Shloka (God i)',
+    category: 'Wedding',
+    religion: 'Hindu',
     orientation: '9:16',
     hasPhoto: true,
     photoSlotsCount: 2,
-    durationSeconds: 12,
-    badgeText: 'FEATURED',
-    description: 'Serene ivory and champagne cathedral architecture with gentle floral wreaths and soft chimes.',
-    masterVideoPath: path.join(PROJECT_ROOT, 'assets', 'wedding_template_master.mp4'),
-    thumbnailUrl: '/assets/pic16.png',
+    durationSeconds: 59,
+    badgeText: 'SACRED 9:16',
+    description: 'Sacred mobile portrait wedding invitation featuring glowing golden Lord Ganesha, Sanskrit mantras, and royal golden parchment styling.',
+    masterVideoPath: path.join(PROJECT_ROOT, 'assets', 'templates', 'template_03_divine_god.mp4'),
+    sampleResultPath: path.join(PROJECT_ROOT, 'assets', 'templates', 'template_03_sample_result.mp4'),
+    thumbnailUrl: '/assets/templates/thumb_03_god.jpg',
+    templateThumbUrl: '/assets/templates/thumb_03_god.jpg',
     timelineConfig: {
-      intro: { start: 0.0, end: 3.0 },
-      coupleNames: { start: 3.0, end: 6.5 },
-      photoOverlay: { start: 6.5, end: 9.5 },
-      eventDetails: { start: 9.5, end: 12.0 }
-    }
-  },
-  {
-    id: 'tmpl_muslim_nikah_03',
-    title: 'Noor-e-Nikah Celestial Emerald',
-    category: 'Wedding',
-    religion: 'Muslim',
-    orientation: '9:16',
-    hasPhoto: false,
-    photoSlotsCount: 0,
-    durationSeconds: 12,
-    badgeText: 'ELEGANT',
-    description: 'Intricate emerald green arches with crescent motifs, shimmering gold calligraphy, and ceremonial poetry.',
-    masterVideoPath: path.join(PROJECT_ROOT, 'assets', 'wedding_template_master.mp4'),
-    thumbnailUrl: '/assets/meshy1.png',
-    timelineConfig: {
-      intro: { start: 0.0, end: 3.0 },
-      coupleNames: { start: 3.0, end: 6.5 },
-      photoOverlay: { start: 6.5, end: 9.5 },
-      eventDetails: { start: 9.5, end: 12.0 }
-    }
-  },
-  {
-    id: 'tmpl_hindu_landscape_04',
-    title: 'Cinema Panorama Shubh Vivah',
-    category: 'Wedding',
-    religion: 'Hindu',
-    orientation: '16:9',
-    hasPhoto: true,
-    photoSlotsCount: 4,
-    durationSeconds: 12,
-    badgeText: 'CINEMATIC',
-    description: 'Grand 16:9 widescreen presentation suitable for LED walls, banquet projectors, and widescreen TVs.',
-    masterVideoPath: path.join(PROJECT_ROOT, 'assets', 'wedding_template_master.mp4'),
-    thumbnailUrl: '/assets/meshy2.png',
-    timelineConfig: {
-      intro: { start: 0.0, end: 3.0 },
-      coupleNames: { start: 3.0, end: 6.5 },
-      photoOverlay: { start: 6.5, end: 9.5 },
-      eventDetails: { start: 9.5, end: 12.0 }
-    }
-  },
-  {
-    id: 'tmpl_hindu_reception_05',
-    title: 'Grand Palace Evening Reception',
-    category: 'Reception',
-    religion: 'Hindu',
-    orientation: '9:16',
-    hasPhoto: true,
-    photoSlotsCount: 3,
-    durationSeconds: 12,
-    badgeText: 'TRENDING',
-    description: 'Chic twilight violet and gold fireworks celebration backdrop for modern wedding receptions.',
-    masterVideoPath: path.join(PROJECT_ROOT, 'assets', 'wedding_template_master.mp4'),
-    thumbnailUrl: '/assets/meshy3.png',
-    timelineConfig: {
-      intro: { start: 0.0, end: 3.0 },
-      coupleNames: { start: 3.0, end: 6.5 },
-      photoOverlay: { start: 6.5, end: 9.5 },
-      eventDetails: { start: 9.5, end: 12.0 }
-    }
-  },
-  {
-    id: 'tmpl_christian_landscape_06',
-    title: 'Sunset Garden Floral Vows',
-    category: 'Wedding',
-    religion: 'Christian',
-    orientation: '16:9',
-    hasPhoto: false,
-    photoSlotsCount: 0,
-    durationSeconds: 12,
-    badgeText: 'NEW',
-    description: 'Golden hour sunset landscape with lush greenery, fairy lights, and minimalist typography.',
-    masterVideoPath: path.join(PROJECT_ROOT, 'assets', 'wedding_template_master.mp4'),
-    thumbnailUrl: '/assets/pic16.png',
-    timelineConfig: {
-      intro: { start: 0.0, end: 3.0 },
-      coupleNames: { start: 3.0, end: 6.5 },
-      photoOverlay: { start: 6.5, end: 9.5 },
-      eventDetails: { start: 9.5, end: 12.0 }
-    }
-  },
-  {
-    id: 'tmpl_hindu_vedic_07',
-    title: 'Vedic Shubh Vivaham (Traditional)',
-    category: 'Wedding',
-    religion: 'Hindu',
-    orientation: '9:16',
-    hasPhoto: false,
-    photoSlotsCount: 0,
-    durationSeconds: 12,
-    badgeText: 'TRADITIONAL',
-    description: 'Auspicious Sanskrit shlokas and golden mandap calligraphy with elder blessings, crafted specifically for weddings without photographs.',
-    masterVideoPath: path.join(PROJECT_ROOT, 'assets', 'wedding_template_master.mp4'),
-    thumbnailUrl: '/assets/my_invitation_logo.png',
-    timelineConfig: {
-      intro: { start: 0.0, end: 3.0, title: 'Auspicious Invocation' },
-      coupleNames: { start: 3.0, end: 6.5, title: 'Names & Blessings' },
-      photoOverlay: { start: 6.5, end: 9.5, title: 'Elders Blessing' },
-      eventDetails: { start: 9.5, end: 12.0, title: 'Muhurtham & Venue' }
+      intro: { start: 0.0, end: 15.0, title: 'Divine Ganesha Blessings' },
+      names: { start: 15.0, end: 32.0, title: 'Couple Names & Auspicious Muhurtham' },
+      venue: { start: 32.0, end: 59.0, title: 'Ceremonial Venue & Invitation' }
     }
   }
 ];
@@ -369,35 +295,52 @@ app.get('/api/templates/:id', (req, res) => {
 // ----------------------------------------------------
 
 // POST /api/render
-app.post('/api/render', upload.single('photo'), async (req, res) => {
+app.post('/api/render', upload.fields([
+  { name: 'womanPhoto', maxCount: 1 },
+  { name: 'manPhoto', maxCount: 1 },
+  { name: 'photo', maxCount: 1 }
+]), async (req, res) => {
   try {
     const {
-      templateId = 'tmpl_hindu_royal_01',
-      brideName = 'Ananya',
-      groomName = 'Rajesh',
-      ceremonyTitle = 'Shubh Vivaham',
+      templateId = 'tmpl_telugu_chroma_01',
+      brideName = 'Deepika',
+      groomName = 'Sai Krishna',
+      ceremonyTitle = 'Subha Vivaham',
       eventDate = 'Sunday, 15 December 2026',
-      muhurthamTime = 'Muhurtham: 09:45 AM',
-      venue = 'The Grand Chola Palace, Chennai',
+      muhurthamTime = 'Sumuhurtham: 10:24 AM',
+      venue = 'Sri Venkateswara Kalyana Mandapam, Hyderabad',
       rsvp = 'With Best Compliments from Family & Friends',
       userId = 'usr_guest'
     } = req.body;
 
     const template = TEMPLATES.find(t => t.id === templateId) || TEMPLATES[0];
+    const previewMode = req.body.previewMode === 'true' || req.body.previewMode === true || !req.body.fullDuration;
+    const sampleResultPath = template.sampleResultPath || path.join(PROJECT_ROOT, 'assets/templates/template_01_sample_result.mp4');
 
     const hasPhoto = req.body.hasPhoto === 'true' || req.body.hasPhoto === true || (template.hasPhoto && req.body.hasPhoto !== 'false');
 
-    // Determine photo path
-    let photoPath = null;
-    if (hasPhoto) {
-      if (req.file) {
-        photoPath = req.file.path;
-      } else if (req.body.photoPath && fs.existsSync(req.body.photoPath)) {
-        photoPath = req.body.photoPath;
-      } else {
-        photoPath = path.join(PROJECT_ROOT, 'assets', 'candidate_chatgpt_jun.png');
+    // Determine woman (Bride) and man (Groom) photo paths
+    let womanPhotoPath = null;
+    let manPhotoPath = null;
+    if (req.files) {
+      if (req.files['womanPhoto'] && req.files['womanPhoto'][0]) {
+        womanPhotoPath = req.files['womanPhoto'][0].path;
+      }
+      if (req.files['manPhoto'] && req.files['manPhoto'][0]) {
+        manPhotoPath = req.files['manPhoto'][0].path;
+      }
+      if (req.files['photo'] && req.files['photo'][0]) {
+        if (!womanPhotoPath) womanPhotoPath = req.files['photo'][0].path;
+        if (!manPhotoPath) manPhotoPath = req.files['photo'][0].path;
       }
     }
+    if (!womanPhotoPath && req.body.womanPhotoPath && fs.existsSync(req.body.womanPhotoPath)) {
+      womanPhotoPath = req.body.womanPhotoPath;
+    }
+    if (!manPhotoPath && req.body.manPhotoPath && fs.existsSync(req.body.manPhotoPath)) {
+      manPhotoPath = req.body.manPhotoPath;
+    }
+    const photoPath = womanPhotoPath || manPhotoPath;
 
     const timestamp = Date.now();
     const outputFilename = `invitation_${timestamp}.mp4`;
@@ -410,6 +353,8 @@ app.post('/api/render', upload.single('photo'), async (req, res) => {
       outputVideoPath,
       hasPhoto,
       photoPath,
+      womanPhotoPath,
+      manPhotoPath,
       brideName,
       groomName,
       parentsNames: req.body.parentsNames || 'Smt. Lakshmi & Sri. Venkat Rao',
@@ -417,7 +362,9 @@ app.post('/api/render', upload.single('photo'), async (req, res) => {
       eventDate,
       muhurthamTime,
       venue,
-      rsvp
+      rsvp,
+      previewMode: req.body.previewMode === 'true' || req.body.previewMode === true || !req.body.fullDuration,
+      sampleResultPath: template.sampleResultPath
     };
 
     fs.writeFileSync(configPath, JSON.stringify(renderConfig, null, 2), 'utf8');
@@ -461,7 +408,7 @@ app.post('/api/render', upload.single('photo'), async (req, res) => {
         venue,
         videoUrl: relativeUrl,
         downloadPath: outputVideoPath,
-        thumbnailUrl: '/assets/candidate_chatgpt_jun.png',
+        thumbnailUrl: template.thumbnailUrl || '/assets/templates/thumb_01_green.jpg',
         createdAt: new Date().toISOString()
       };
 

@@ -11,6 +11,8 @@ class TemplateModel {
   final String description;
   final String masterVideoPath;
   final String thumbnailUrl;
+  final String? sampleResultPath;
+  final String? templateThumbUrl;
   final Map<String, dynamic>? timelineConfig;
 
   TemplateModel({
@@ -26,6 +28,8 @@ class TemplateModel {
     required this.description,
     required this.masterVideoPath,
     required this.thumbnailUrl,
+    this.sampleResultPath,
+    this.templateThumbUrl,
     this.timelineConfig,
   });
 
@@ -43,6 +47,8 @@ class TemplateModel {
       description: json['description'] ?? '',
       masterVideoPath: json['masterVideoPath'] ?? 'assets/wedding_template_master.mp4',
       thumbnailUrl: json['thumbnailUrl'] ?? '',
+      sampleResultPath: json['sampleResultPath'],
+      templateThumbUrl: json['templateThumbUrl'],
       timelineConfig: json['timelineConfig'] as Map<String, dynamic>?,
     );
   }
@@ -61,6 +67,8 @@ class TemplateModel {
       'description': description,
       'masterVideoPath': masterVideoPath,
       'thumbnailUrl': thumbnailUrl,
+      'sampleResultPath': sampleResultPath,
+      'templateThumbUrl': templateThumbUrl,
       'timelineConfig': timelineConfig,
     };
   }

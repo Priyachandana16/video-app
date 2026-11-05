@@ -13,21 +13,44 @@ class TemplateCard extends StatelessWidget {
     required this.onTap,
   });
 
+  ImageProvider _resolveImage(String url) {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return NetworkImage(url);
+    }
+    if (url.startsWith('/assets/')) {
+      return NetworkImage('http://localhost:5000$url');
+    }
+    return AssetImage(url);
+  }
+
+  String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isVertical = template.orientation == '9:16';
+    final isChroma = template.id.contains('chroma') || template.badgeText.contains('CHROMA');
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        margin: const EdgeInsets.only(bottom: 18),
         decoration: BoxDecoration(
-          color: AppColors.cardSurface,
+          gradient: AppColors.cardGradient,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.goldBorder, width: 1.2),
+          border: Border.all(
+            color: isChroma ? AppColors.emeraldChroma.withValues(alpha: 0.6) : AppColors.goldBorder,
+            width: isChroma ? 1.5 : 1.2,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.4),
-              blurRadius: 14,
+              color: isChroma
+                  ? AppColors.emeraldGlow
+                  : Colors.black.withValues(alpha: 0.5),
+              blurRadius: 16,
               offset: const Offset(0, 6),
             ),
           ],
@@ -40,14 +63,14 @@ class TemplateCard extends StatelessWidget {
             Stack(
               children: [
                 AspectRatio(
-                  aspectRatio: isVertical ? 9 / 12 : 16 / 9,
+                  aspectRatio: isVertical ? 16 / 10 : 16 / 9,
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.surfaceDark,
                       image: DecorationImage(
-                        image: AssetImage(template.thumbnailUrl),
+                        image: _resolveImage(template.thumbnailUrl),
                         fit: BoxFit.cover,
-                        onError: (exception, stackTrace) {},
+                        onError: (_, __) {},
                       ),
                     ),
                     child: Container(
@@ -56,53 +79,71 @@ class TemplateCard extends StatelessWidget {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withOpacity(0.2),
+                            Colors.black.withValues(alpha: 0.3),
                             Colors.transparent,
-                            Colors.black.withOpacity(0.85),
+                            Colors.black.withValues(alpha: 0.88),
                           ],
-                          stops: const [0.0, 0.4, 1.0],
+                          stops: const [0.0, 0.45, 1.0],
                         ),
                       ),
                     ),
                   ),
                 ),
 
-                // Top Badges
+                // Top Left Badges: Chroma / Premium Badge
                 Positioned(
                   top: 12,
                   left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryGold,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryGold.withOpacity(0.4),
-                          blurRadius: 8,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          gradient: isChroma
+                              ? const LinearGradient(
+                                  colors: [Color(0xFF10B981), Color(0xFF059669)],
+                                )
+                              : AppColors.goldGradient,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isChroma ? AppColors.emeraldGlow : AppColors.goldGlow,
+                              blurRadius: 8,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Text(
-                      template.badgeText.isNotEmpty ? template.badgeText : 'PREMIUM',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.surfaceDark,
-                        letterSpacing: 0.5,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isChroma) ...[
+                              const Icon(Icons.auto_awesome, size: 12, color: Colors.white),
+                              const SizedBox(width: 4),
+                            ],
+                            Text(
+                              template.badgeText.isNotEmpty ? template.badgeText : 'PREMIUM',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: isChroma ? Colors.white : AppColors.surfaceDark,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
 
-                // Orientation Pill
+                // Top Right Orientation Pill
                 Positioned(
                   top: 12,
                   right: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceDark.withOpacity(0.75),
+                      color: AppColors.surfaceDark.withValues(alpha: 0.85),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.goldBorder, width: 0.8),
                     ),
@@ -111,7 +152,7 @@ class TemplateCard extends StatelessWidget {
                       children: [
                         Icon(
                           isVertical ? Icons.stay_current_portrait : Icons.stay_current_landscape,
-                          size: 12,
+                          size: 13,
                           color: AppColors.champagne,
                         ),
                         const SizedBox(width: 4),
@@ -119,7 +160,7 @@ class TemplateCard extends StatelessWidget {
                           template.orientation,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             color: AppColors.champagne,
                           ),
                         ),
@@ -128,33 +169,36 @@ class TemplateCard extends StatelessWidget {
                   ),
                 ),
 
-                // Center Play Button
+                // Center Play Button with subtle breathing ring
                 Positioned.fill(
                   child: Center(
                     child: Container(
-                      height: 48,
-                      width: 48,
+                      height: 52,
+                      width: 52,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.surfaceDark.withOpacity(0.7),
-                        border: Border.all(color: AppColors.primaryGold, width: 1.5),
+                        color: AppColors.surfaceDark.withValues(alpha: 0.75),
+                        border: Border.all(
+                          color: isChroma ? AppColors.emeraldChroma : AppColors.primaryGold,
+                          width: 2,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primaryGold.withOpacity(0.25),
-                            blurRadius: 12,
+                            color: isChroma ? AppColors.emeraldGlow : AppColors.goldGlow,
+                            blurRadius: 14,
                           ),
                         ],
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.play_arrow_rounded,
-                        color: AppColors.primaryGold,
-                        size: 30,
+                        color: isChroma ? AppColors.emeraldChroma : AppColors.primaryGold,
+                        size: 34,
                       ),
                     ),
                   ),
                 ),
 
-                // Bottom Overlay Badges (Duration & Photos)
+                // Bottom Overlay Badges (Duration & Photo Slot Count)
                 Positioned(
                   bottom: 10,
                   left: 12,
@@ -163,21 +207,22 @@ class TemplateCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.75),
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white12, width: 0.5),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.timer_outlined, size: 12, color: AppColors.champagne),
+                            const Icon(Icons.timer_outlined, size: 13, color: AppColors.champagne),
                             const SizedBox(width: 4),
                             Text(
-                              '0:${template.durationSeconds}s',
+                              _formatDuration(template.durationSeconds),
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
                                 color: AppColors.champagne,
                               ),
                             ),
@@ -185,33 +230,33 @@ class TemplateCard extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
                           color: template.hasPhoto
-                              ? AppColors.royalCrimson.withOpacity(0.85)
-                              : Colors.black.withOpacity(0.6),
+                              ? AppColors.royalCrimson.withValues(alpha: 0.85)
+                              : Colors.black.withValues(alpha: 0.75),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: template.hasPhoto ? AppColors.champagne : Colors.transparent,
-                            width: 0.6,
+                            color: template.hasPhoto ? AppColors.champagne : Colors.white12,
+                            width: 0.8,
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              template.hasPhoto ? Icons.photo_library : Icons.photo_outlined,
-                              size: 12,
+                              template.hasPhoto ? Icons.photo_camera_rounded : Icons.photo_outlined,
+                              size: 13,
                               color: Colors.white,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               template.hasPhoto
-                                  ? '${template.photoSlotsCount} Photos'
-                                  : 'No Photo',
+                                  ? (isChroma ? 'Chroma Photo Swap' : '${template.photoSlotsCount} Photos')
+                                  : 'Text Only',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
                             ),
@@ -226,16 +271,16 @@ class TemplateCard extends StatelessWidget {
 
             // Card Body
             Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.elevatedSurface,
+                          color: AppColors.surfaceHigh,
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(color: AppColors.goldBorder, width: 0.8),
                         ),
@@ -243,7 +288,7 @@ class TemplateCard extends StatelessWidget {
                           template.religion,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             color: AppColors.champagne,
                           ),
                         ),
@@ -252,34 +297,94 @@ class TemplateCard extends StatelessWidget {
                       Text(
                         template.category,
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                           color: AppColors.textSecondary,
                         ),
                       ),
+                      const Spacer(),
+                      if (isChroma)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.emeraldChroma.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'AI Chroma',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.emeraldChroma,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     template.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.playfairDisplay(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     template.description,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
+                      fontSize: 12,
                       color: AppColors.textSecondary,
-                      height: 1.3,
+                      height: 1.35,
                     ),
+                  ),
+                  const SizedBox(height: 14),
+                  // Bottom CTA Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          decoration: BoxDecoration(
+                            gradient: isChroma
+                                ? const LinearGradient(
+                                    colors: [Color(0xFF10B981), Color(0xFF047857)],
+                                  )
+                                : AppColors.goldGradient,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isChroma ? AppColors.emeraldGlow : AppColors.goldGlow,
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.edit_note_rounded, size: 16, color: AppColors.surfaceDark),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Personalize This Video',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.surfaceDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -18,7 +18,7 @@ class VideoPlayerWidget extends StatefulWidget {
     this.isAsset = false,
     this.autoPlay = true,
     this.looping = true,
-    this.aspectRatio = 9 / 16,
+    this.aspectRatio = 16 / 9,
   });
 
   @override
@@ -68,14 +68,21 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
     VideoPlayerController controller;
 
-    if (widget.isAsset || widget.videoSource.startsWith('assets/')) {
-      controller = VideoPlayerController.asset(widget.videoSource);
-    } else if (widget.videoSource.startsWith('http')) {
-      controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoSource));
+    final src = widget.videoSource;
+    if (src.startsWith('http://') || src.startsWith('https://')) {
+      controller = VideoPlayerController.networkUrl(Uri.parse(src));
+    } else if (src.startsWith('/exports/') || src.startsWith('/assets/')) {
+      controller = VideoPlayerController.networkUrl(Uri.parse(kIsWeb ? src : 'http://localhost:5000$src'));
+    } else if (widget.isAsset || src.startsWith('assets/')) {
+      if (kIsWeb) {
+        controller = VideoPlayerController.networkUrl(Uri.parse('/$src'));
+      } else {
+        controller = VideoPlayerController.asset(src);
+      }
     } else if (!kIsWeb) {
-      controller = VideoPlayerController.file(File(widget.videoSource));
+      controller = VideoPlayerController.file(File(src));
     } else {
-      controller = VideoPlayerController.asset('assets/personalized_output.mp4');
+      controller = VideoPlayerController.networkUrl(Uri.parse('/assets/templates/template_01_sample_result.mp4'));
     }
 
     _controller = controller;
@@ -129,20 +136,25 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     });
   }
 
+  @override
+  void dispose() {
+    _disposeController();
+    super.dispose();
+  }
+
   void _togglePlayPause() {
     final c = _controller;
     if (c == null || !_isInitialized) return;
 
-    setState(() {
-      if (c.value.isPlaying) {
-        c.pause();
-      } else {
-        if (c.value.position >= c.value.duration) {
-          c.seekTo(Duration.zero);
-        }
-        c.play();
+    if (c.value.isPlaying) {
+      c.pause();
+    } else {
+      if (c.value.position >= c.value.duration) {
+        c.seekTo(Duration.zero);
       }
-    });
+      c.play();
+    }
+    setState(() {});
   }
 
   void _toggleMute() {
@@ -154,17 +166,10 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     });
   }
 
-  @override
-  void dispose() {
-    _disposeController();
-    super.dispose();
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$minutes:$seconds';
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = d.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -178,7 +183,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         border: Border.all(color: AppColors.goldBorder, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.6),
+            color: Colors.black.withValues(alpha: 0.6),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -264,9 +269,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withOpacity(0.55),
+                          Colors.black.withValues(alpha: 0.55),
                           Colors.transparent,
-                          Colors.black.withOpacity(0.75),
+                          Colors.black.withValues(alpha: 0.75),
                         ],
                         stops: const [0.0, 0.5, 1.0],
                       ),
@@ -283,15 +288,15 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.65),
+                                  color: Colors.black.withValues(alpha: 0.65),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(color: AppColors.goldBorder, width: 0.8),
                                 ),
                                 child: Text(
-                                  'HD 720p',
+                                  'HD 1080p',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 10,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w700,
                                     color: AppColors.champagne,
                                   ),
                                 ),
@@ -299,9 +304,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                               GestureDetector(
                                 onTap: _toggleMute,
                                 child: Container(
-                                  padding: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(7),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.65),
+                                    color: Colors.black.withValues(alpha: 0.75),
                                     shape: BoxShape.circle,
                                     border: Border.all(color: AppColors.goldBorder, width: 0.8),
                                   ),
@@ -324,11 +329,11 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                             width: 56,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: AppColors.surfaceDark.withOpacity(0.85),
+                              color: AppColors.surfaceDark.withValues(alpha: 0.85),
                               border: Border.all(color: AppColors.primaryGold, width: 2),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primaryGold.withOpacity(0.35),
+                                  color: AppColors.primaryGold.withValues(alpha: 0.35),
                                   blurRadius: 16,
                                 ),
                               ],

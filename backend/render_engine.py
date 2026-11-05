@@ -2,190 +2,270 @@ import sys
 import os
 import json
 import subprocess
-import cv2
-import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 def get_ffmpeg_path():
-    # Check node_modules installer
     candidate = os.path.join(os.path.dirname(__file__), 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe')
     if os.path.exists(candidate):
         return candidate
     return 'ffmpeg'
 
+def fit_image_to_rect(img, target_w, target_h):
+    """Aspect-fill and center crop image to target dimensions."""
+    scale = max(target_w / img.width, target_h / img.height)
+    new_w, new_h = int(img.width * scale), int(img.height * scale)
+    resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    left = (new_w - target_w) // 2
+    top = (new_h - target_h) // 2
+    return resized.crop((left, top, left + target_w, top + target_h))
+
+def get_best_font(size):
+    for fn in ["georgia.ttf", "arial.ttf", "calibri.ttf", "segoeui.ttf"]:
+        try:
+            return ImageFont.truetype(fn, size)
+        except:
+            continue
+    return ImageFont.load_default()
+
+def draw_text_with_shadow(draw, pos, text, font, fill_color, shadow_color=(200, 200, 210, 180), offset=(2, 2), anchor='mm'):
+    x, y = pos
+    draw.text((x + offset[0], y + offset[1]), text, font=font, fill=shadow_color, anchor=anchor)
+    draw.text((x, y), text, font=font, fill=fill_color, anchor=anchor)
+
 def render_invitation(config_path):
     with open(config_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
-    master_video = data.get('masterVideoPath', 'assets/wedding_template_master.mp4')
-    output_video = data.get('outputVideoPath', 'assets/personalized_output.mp4')
-    has_photo = data.get('hasPhoto', True)
-    photo_path = data.get('photoPath')
+    master_video = data.get('masterVideoPath', 'assets/templates/template_01_green_screen.mp4')
+    output_video = data.get('outputVideoPath', 'backend/exports/personalized_output.mp4')
+    
+    woman_photo_path = data.get('womanPhotoPath') or data.get('photoPath')
+    man_photo_path = data.get('manPhotoPath') or data.get('photoPath')
 
-    bride_name = data.get('brideName', 'Ananya')
-    groom_name = data.get('groomName', 'Rajesh')
-    couple_title = f"{groom_name}  &  {bride_name}"
-    parents_names = data.get('parentsNames', 'Smt. Lakshmi & Sri. Venkat Rao')
-    ceremony_title = data.get('ceremonyTitle', 'Shubh Vivaham')
+    bride_name = data.get('brideName', 'Deepika')
+    groom_name = data.get('groomName', 'Sai Krishna')
+    parents_names = data.get('parentsNames', 'Smt. Sarojini & Sri. Rama Rao')
+    ceremony_title = data.get('ceremonyTitle', 'శుభ వివాహం / Subha Vivaham')
     event_date = data.get('eventDate', 'Sunday, 15 December 2026')
-    muhurtham_time = data.get('muhurthamTime', 'Muhurtham: 09:45 AM')
-    venue = data.get('venue', 'The Grand Chola Palace, Chennai')
+    muhurtham_time = data.get('muhurthamTime', 'Sumuhurtham: 10:24 AM')
+    venue = data.get('venue', 'Sri Venkateswara Kalyana Mandapam, Hyderabad')
     rsvp = data.get('rsvp', 'With Best Compliments from Family & Friends')
+    is_preview = data.get('previewMode', False)
 
     if not os.path.isabs(master_video):
         master_video = os.path.abspath(master_video)
     if not os.path.isabs(output_video):
         output_video = os.path.abspath(output_video)
-    if photo_path and not os.path.isabs(photo_path):
-        photo_path = os.path.abspath(photo_path)
 
     os.makedirs(os.path.dirname(output_video), exist_ok=True)
-
-    cap = cv2.VideoCapture(master_video)
-    if not cap.isOpened():
-        print(f"ERROR: Cannot open master video at {master_video}", file=sys.stderr)
-        sys.exit(1)
-
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-    # Write intermediate raw file
-    raw_temp_video = output_video + ".raw.mp4"
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(raw_temp_video, fourcc, fps, (width, height))
-
-    # Prepare photo overlay if enabled and photo file exists
-    photo_img = None
-    if has_photo and photo_path and os.path.exists(photo_path):
-        try:
-            raw_photo = Image.open(photo_path).convert('RGBA')
-            size = min(360, width - 80)
-            raw_photo = raw_photo.resize((size, size), Image.Resampling.LANCZOS)
-            mask = Image.new('L', (size, size), 0)
-            draw_m = ImageDraw.Draw(mask)
-            draw_m.ellipse((0, 0, size, size), fill=255)
-            raw_photo.putalpha(mask)
-            photo_img = raw_photo
-        except Exception as e:
-            print(f"Warning loading photo: {e}", file=sys.stderr)
-
-    # Fonts
-    font_serif = None
-    font_serif_lg = None
-    font_sans = None
-    font_sans_sm = None
-    try:
-        font_serif = ImageFont.truetype("georgia.ttf", 36)
-        font_serif_lg = ImageFont.truetype("georgia.ttf", 44)
-        font_sans = ImageFont.truetype("arial.ttf", 24)
-        font_sans_sm = ImageFont.truetype("arial.ttf", 20)
-    except Exception:
-        font_serif = ImageFont.load_default()
-        font_serif_lg = ImageFont.load_default()
-        font_sans = ImageFont.load_default()
-        font_sans_sm = ImageFont.load_default()
-
-    processed_frames = 0
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        t = processed_frames / fps
-
-        # Convert to PIL Image for typography
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        pil_img = Image.fromarray(frame_rgb)
-        draw = ImageDraw.Draw(pil_img)
-
-        # 0.0 - 3.0s: Master Video with subtle ceremonial introduction
-        if 0.5 <= t < 3.0:
-            fade = min(1.0, (t - 0.5) / 0.5) if t < 1.0 else (min(1.0, (3.0 - t) / 0.5) if t > 2.5 else 1.0)
-            gold_color = (int(245 * fade), int(184 * fade), int(46 * fade))
-            champ_color = (int(246 * fade), int(217 * fade), int(139 * fade))
-            draw.text((width // 2, height // 2 - 40), "Cordially Invites You To", fill=champ_color, font=font_sans, anchor='mm')
-            draw.text((width // 2, height // 2 + 10), ceremony_title, fill=gold_color, font=font_serif_lg, anchor='mm')
-
-        # 3.0 - 6.5s: Couple Names & Auspicious Blessing
-        elif 3.0 <= t < 6.5:
-            fade = min(1.0, (t - 3.0) / 0.5) if t < 3.5 else (min(1.0, (6.5 - t) / 0.5) if t > 6.0 else 1.0)
-            gold_color = (int(245 * fade), int(184 * fade), int(46 * fade))
-            champ_color = (int(246 * fade), int(217 * fade), int(139 * fade))
-            draw.text((width // 2, height // 2 - 60), ceremony_title, fill=champ_color, font=font_sans, anchor='mm')
-            draw.text((width // 2, height // 2), couple_title, fill=gold_color, font=font_serif_lg, anchor='mm')
-            if rsvp:
-                draw.text((width // 2, height // 2 + 60), rsvp, fill=(int(200 * fade), int(190 * fade), int(180 * fade)), font=font_sans_sm, anchor='mm')
-
-        # 6.5 - 9.5s: Couple Photo OR Elegant Traditional Blessing (Without Photo)
-        elif 6.5 <= t < 9.5:
-            fade = min(1.0, (t - 6.5) / 0.5) if t < 7.0 else (min(1.0, (9.5 - t) / 0.5) if t > 9.0 else 1.0)
-            gold_color = (int(245 * fade), int(184 * fade), int(46 * fade))
-            champ_color = (int(246 * fade), int(217 * fade), int(139 * fade))
-
-            if has_photo and photo_img:
-                # WITH PHOTO LAYOUT: circular gold halo framed couple photo
-                px = (width - photo_img.width) // 2
-                py = (height - photo_img.height) // 2 - 50
-                draw.ellipse((px - 8, py - 8, px + photo_img.width + 8, py + photo_img.height + 8), outline=gold_color, width=3)
-                pil_img.paste(photo_img, (px, py), photo_img)
-                draw.text((width // 2, height // 2 + 190), couple_title, fill=gold_color, font=font_serif, anchor='mm')
-                draw.text((width // 2, height // 2 + 230), "United in Love & Harmony", fill=(246, 217, 139), font=font_sans_sm, anchor='mm')
-            else:
-                # WITHOUT PHOTO LAYOUT: elegant ceremonial family blessing (no empty photo frame!)
-                # Auspicious decorative lines
-                draw.line([(width // 2 - 120, height // 2 - 90), (width // 2 + 120, height // 2 - 90)], fill=gold_color, width=2)
-                draw.text((width // 2, height // 2 - 60), "With Divine Blessings of Elders", fill=champ_color, font=font_sans, anchor='mm')
-                if parents_names:
-                    draw.text((width // 2, height // 2 - 15), parents_names, fill=gold_color, font=font_serif, anchor='mm')
-                draw.text((width // 2, height // 2 + 35), "Cordially Request the Honour of Your Presence", fill=champ_color, font=font_sans_sm, anchor='mm')
-                draw.text((width // 2, height // 2 + 75), "At the Celebrations of", fill=champ_color, font=font_sans_sm, anchor='mm')
-                draw.text((width // 2, height // 2 + 115), couple_title, fill=gold_color, font=font_serif_lg, anchor='mm')
-                draw.line([(width // 2 - 120, height // 2 + 155), (width // 2 + 120, height // 2 + 155)], fill=gold_color, width=2)
-
-        # 9.5 - 12.0s: Event Muhurtham, Date, Venue & Blessing
-        elif 9.5 <= t <= 12.0:
-            fade = min(1.0, (t - 9.5) / 0.5) if t < 10.0 else (min(1.0, (12.0 - t) / 0.5) if t > 11.5 else 1.0)
-            gold_color = (int(245 * fade), int(184 * fade), int(46 * fade))
-            champ_color = (int(246 * fade), int(217 * fade), int(139 * fade))
-            draw.text((width // 2, height // 2 - 70), event_date, fill=gold_color, font=font_serif, anchor='mm')
-            draw.text((width // 2, height // 2 - 20), muhurtham_time, fill=champ_color, font=font_sans, anchor='mm')
-            draw.text((width // 2, height // 2 + 30), venue, fill=(240, 240, 240), font=font_sans, anchor='mm')
-            draw.text((width // 2, height // 2 + 80), "Kindly Grace The Occasion", fill=champ_color, font=font_sans_sm, anchor='mm')
-
-        # Convert back to BGR and write frame
-        out_frame = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
-        out.write(out_frame)
-        processed_frames += 1
-
-    cap.release()
-    out.release()
-
-    # Transcode raw output to genuine H.264 (yuv420p + faststart) for full web and mobile compatibility
     ffmpeg_bin = get_ffmpeg_path()
-    cmd = [
-        ffmpeg_bin, '-y',
-        '-i', raw_temp_video,
-        '-c:v', 'libx264',
-        '-preset', 'fast',
-        '-crf', '22',
-        '-pix_fmt', 'yuv420p',
-        '-movflags', '+faststart',
-        output_video
-    ]
-    try:
-        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if os.path.exists(raw_temp_video):
-            os.remove(raw_temp_video)
-        print(f"SUCCESS: Rendered and encoded {processed_frames} frames to H.264 at {output_video}")
-    except Exception as e:
-        print(f"FFmpeg transcode warning: {e}, falling back to raw file", file=sys.stderr)
-        if os.path.exists(raw_temp_video):
-            os.replace(raw_temp_video, output_video)
+
+    # Generate elegant fallback transparent images if user photos not provided
+    temp_dir = os.path.dirname(output_video)
+    prep_groom = os.path.join(temp_dir, f"prep_groom_{os.path.basename(output_video)}.png")
+    prep_bride = os.path.join(temp_dir, f"prep_bride_{os.path.basename(output_video)}.png")
+
+    if not woman_photo_path or not os.path.exists(woman_photo_path):
+        blank_w = Image.new('RGBA', (1240, 892), (0, 0, 0, 0))
+        blank_w.save(prep_bride, 'PNG')
+        woman_photo_path = prep_bride
+    if not man_photo_path or not os.path.exists(man_photo_path):
+        blank_m = Image.new('RGBA', (1240, 892), (0, 0, 0, 0))
+        blank_m.save(prep_groom, 'PNG')
+        man_photo_path = prep_groom
+    
+    txt_groom_png = os.path.join(temp_dir, f"txt_groom_{os.path.basename(output_video)}.png")
+    txt_bride_png = os.path.join(temp_dir, f"txt_bride_{os.path.basename(output_video)}.png")
+    txt_muhurtham_png = os.path.join(temp_dir, f"txt_muhurtham_{os.path.basename(output_video)}.png")
+    txt_venue_png = os.path.join(temp_dir, f"txt_venue_{os.path.basename(output_video)}.png")
+
+    master_lower = os.path.basename(master_video).lower()
+    is_chroma = "green_screen" in master_lower or "01" in master_lower
+    is_temp2 = "royal_gold" in master_lower or "02" in master_lower or "5.mp4" in master_lower
+    is_temp3 = "divine_god" in master_lower or "03" in master_lower or "god" in master_lower
+
+    if is_chroma:
+        # Template 1: Green Screen Mandap Video (1920x892)
+        # Scale photos to 1240 x 892 to fit the right green arch window (x=680..1920)
+        try:
+            raw_m = Image.open(man_photo_path).convert('RGB')
+            fit_image_to_rect(raw_m, 1240, 892).save(prep_groom, 'PNG')
+        except Exception:
+            prep_groom = man_photo_path
+
+        try:
+            raw_w = Image.open(woman_photo_path).convert('RGB')
+            fit_image_to_rect(raw_w, 1240, 892).save(prep_bride, 'PNG')
+        except Exception:
+            prep_bride = woman_photo_path
+
+        # Colors matching the authentic sample result (Royal Burgundy / Purple + Gold)
+        royal_purple = (85, 20, 65, 255)
+        royal_maroon = (110, 25, 40, 255)
+        sub_color = (60, 60, 70, 240)
+        gold_color = (180, 130, 20, 255)
+
+        f_large = get_best_font(52)
+        f_mid = get_best_font(28)
+        f_small = get_best_font(24)
+
+        # 1. Groom Reveal Text (Left Panel x = 540, centered between dividers y=350..550)
+        img_groom_txt = Image.new('RGBA', (1920, 892), (0, 0, 0, 0))
+        d1 = ImageDraw.Draw(img_groom_txt)
+        draw_text_with_shadow(d1, (540, 410), f"చి|| {groom_name}", f_large, royal_purple)
+        draw_text_with_shadow(d1, (540, 470), "s/o", f_mid, sub_color)
+        draw_text_with_shadow(d1, (540, 520), parents_names, f_small, royal_maroon)
+        img_groom_txt.save(txt_groom_png, 'PNG')
+
+        # 2. Bride Reveal Text (Left Panel x = 540, centered between dividers y=350..550)
+        img_bride_txt = Image.new('RGBA', (1920, 892), (0, 0, 0, 0))
+        d2 = ImageDraw.Draw(img_bride_txt)
+        draw_text_with_shadow(d2, (540, 410), f"చి||ల||సౌ|| {bride_name}", f_large, royal_purple)
+        draw_text_with_shadow(d2, (540, 470), "D/o", f_mid, sub_color)
+        draw_text_with_shadow(d2, (540, 520), parents_names, f_small, royal_maroon)
+        img_bride_txt.save(txt_bride_png, 'PNG')
+
+        # 3. Sumuhurtham Text (Centered x = 960 between dividers y=320..580)
+        img_muh_txt = Image.new('RGBA', (1920, 892), (0, 0, 0, 0))
+        d3 = ImageDraw.Draw(img_muh_txt)
+        draw_text_with_shadow(d3, (960, 350), "సుముహూర్తం / Sumuhurtham", f_large, royal_purple)
+        draw_text_with_shadow(d3, (960, 430), event_date, f_mid, royal_maroon)
+        draw_text_with_shadow(d3, (960, 500), muhurtham_time, f_large, gold_color)
+        img_muh_txt.save(txt_muhurtham_png, 'PNG')
+
+        # 4. Venue & Reception Text (Centered x = 960)
+        img_ven_txt = Image.new('RGBA', (1920, 892), (0, 0, 0, 0))
+        d4 = ImageDraw.Draw(img_ven_txt)
+        draw_text_with_shadow(d4, (960, 360), "కళ్యాణ వేదిక & విందు / Venue", f_large, royal_purple)
+        draw_text_with_shadow(d4, (960, 440), venue, f_mid, royal_maroon)
+        draw_text_with_shadow(d4, (960, 510), rsvp, f_small, sub_color)
+        img_ven_txt.save(txt_venue_png, 'PNG')
+
+        # Compositing filter graph:
+        # [0:v] Master Video keyed on bright green 0x00FF00
+        # Under the arch (x=680, y=0):
+        # - Groom photo active at 28.4s -> 38.5s
+        # - Bride photo active at 41.2s -> 51.5s
+        # On top:
+        # - Groom text active at 28.4s -> 38.5s
+        # - Bride text active at 41.2s -> 51.5s
+        # - Sumuhurtham text active at 54.0s -> 68.0s
+        # - Venue text active at 69.0s -> 85.0s
+        filter_str = (
+            "[1:v]scale=1240:892[groom_p];"
+            "[2:v]scale=1240:892[bride_p];"
+            "[0:v]chromakey=0x00ff00:0.18:0.08[ck];"
+            "color=c=0x0E0E12:s=1920x892:d=102.6[canvas];"
+            "[canvas][groom_p]overlay=x=680:y=0:enable='between(t,28.4,38.5)'[bg1];"
+            "[bg1][bride_p]overlay=x=680:y=0:enable='between(t,41.2,51.5)':shortest=1[bg2];"
+            "[bg2][ck]overlay=x=0:y=0[vid];"
+            "[vid][3:v]overlay=x=0:y=0:enable='between(t,28.4,38.5)'[v_g];"
+            "[v_g][4:v]overlay=x=0:y=0:enable='between(t,41.2,51.5)'[v_b];"
+            "[v_b][5:v]overlay=x=0:y=0:enable='between(t,54.0,68.0)'[v_m];"
+            "[v_m][6:v]overlay=x=0:y=0:enable='between(t,69.0,85.0)'[final]"
+        )
+
+        cmd = [
+            ffmpeg_bin, '-y', '-loglevel', 'error', '-nostats',
+            '-i', master_video,
+            '-loop', '1', '-i', prep_groom,
+            '-loop', '1', '-i', prep_bride,
+            '-loop', '1', '-i', txt_groom_png,
+            '-loop', '1', '-i', txt_bride_png,
+            '-loop', '1', '-i', txt_muhurtham_png,
+            '-loop', '1', '-i', txt_venue_png,
+            '-filter_complex', filter_str,
+            '-map', '[final]',
+            '-map', '0:a:0?',
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-crf', '22',
+            '-c:a', 'copy',
+            '-shortest',
+            '-movflags', '+faststart',
+            output_video
+        ]
+
+    elif is_temp2:
+        # Template 2: Royal Gold Mandapam (1920x864, 56s)
+        try:
+            raw_m = Image.open(man_photo_path).convert('RGB')
+            fit_image_to_rect(raw_m, 620, 720).save(prep_groom, 'PNG')
+        except Exception:
+            prep_groom = man_photo_path
+
+        try:
+            raw_w = Image.open(woman_photo_path).convert('RGB')
+            fit_image_to_rect(raw_w, 620, 720).save(prep_bride, 'PNG')
+        except Exception:
+            prep_bride = woman_photo_path
+
+        # Dual framed photos at 16s to 38s
+        filter_str = (
+            "[1:v]scale=540:680[groom_p];"
+            "[2:v]scale=540:680[bride_p];"
+            "[0:v][groom_p]overlay=x=220:y=90:enable='between(t,16,38)'[v1];"
+            "[v1][bride_p]overlay=x=1160:y=90:enable='between(t,16,38)'[final]"
+        )
+
+        cmd = [
+            ffmpeg_bin, '-y', '-loglevel', 'error', '-nostats',
+            '-i', master_video,
+            '-loop', '1', '-i', prep_groom,
+            '-loop', '1', '-i', prep_bride,
+            '-filter_complex', filter_str,
+            '-map', '[final]',
+            '-map', '0:a:0?',
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-crf', '22',
+            '-c:a', 'copy',
+            '-shortest',
+            '-movflags', '+faststart',
+            output_video
+        ]
+
+    else:
+        # Template 3: Divine God Ganesha Portrait (9:16 mobile, 59s)
+        try:
+            raw_w = Image.open(woman_photo_path).convert('RGB')
+            fit_image_to_rect(raw_w, 800, 700).save(prep_bride, 'PNG')
+        except Exception:
+            prep_bride = woman_photo_path
+
+        filter_str = (
+            "[1:v]scale=720:640[photo_p];"
+            "[0:v][photo_p]overlay=x=180:y=240:enable='between(t,12,38)'[final]"
+        )
+
+        cmd = [
+            ffmpeg_bin, '-y', '-loglevel', 'error', '-nostats',
+            '-i', master_video,
+            '-loop', '1', '-i', prep_bride,
+            '-filter_complex', filter_str,
+            '-map', '[final]',
+            '-map', '0:a:0?',
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-crf', '22',
+            '-c:a', 'copy',
+            '-shortest',
+            '-movflags', '+faststart',
+            output_video
+        ]
+
+    print("Executing render command:", " ".join(cmd[:12]), "...")
+    proc = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+
+    if proc.returncode != 0:
+        print("FFmpeg error:", proc.stderr[-800:])
+        raise RuntimeError(f"FFmpeg failed: {proc.stderr[-300:]}")
+
+    print(f"Render completed successfully: {output_video} (Size: {os.path.getsize(output_video)} bytes)")
+    return output_video
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
+    if len(sys.argv) > 1:
+        render_invitation(sys.argv[1])
+    else:
         print("Usage: python render_engine.py <config.json>")
-        sys.exit(1)
-    render_invitation(sys.argv[1])

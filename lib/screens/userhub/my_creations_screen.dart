@@ -125,7 +125,7 @@ class MyCreationsScreen extends StatelessWidget {
               : ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   itemCount: creations.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
+                  separatorBuilder: (context, index) => const SizedBox(height: 16),
                   itemBuilder: (context, index) {
                     final item = creations[index];
 
@@ -158,8 +158,10 @@ class MyCreationsScreen extends StatelessWidget {
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(14),
                                       border: Border.all(color: AppColors.primaryGold, width: 1),
-                                      image: const DecorationImage(
-                                        image: AssetImage('assets/candidate_chatgpt_jun.png'),
+                                      image: DecorationImage(
+                                        image: (item.thumbnailUrl.isNotEmpty && !item.thumbnailUrl.contains('result'))
+                                            ? AssetImage(item.thumbnailUrl.startsWith('/') ? item.thumbnailUrl.substring(1) : item.thumbnailUrl)
+                                            : const AssetImage('assets/templates/thumb_01_green.jpg'),
                                         fit: BoxFit.cover,
                                       ),
                                     ),

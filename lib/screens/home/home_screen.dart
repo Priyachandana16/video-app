@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_colors.dart';
 import '../../providers/template_provider.dart';
 import '../../providers/personalization_provider.dart';
 import '../../models/template_model.dart';
-import '../../widgets/template_card.dart';
-import '../../widgets/filter_bottom_sheet.dart';
-import '../customization/template_details_screen.dart';
+import '../customization/personalization_form_screen.dart';
+import '../auth/sign_in_screen.dart';
 import 'categories_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -18,64 +16,318 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  String _selectedLang = 'EN';
+  String _selectedOccasion = 'Wedding';
+  String _selectedFilter = 'All';
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
+  final List<Map<String, dynamic>> _occasions = [
+    {
+      'title': 'First Birthday',
+      'count': '44+ designs',
+      'icon': Icons.card_giftcard_rounded,
+      'color': const Color(0xFF162E3B), // Teal / Dark Blue
+      'borderColor': const Color(0xFF38BDF8),
+    },
+    {
+      'title': 'Birthday',
+      'count': '21+ designs',
+      'icon': Icons.celebration_rounded,
+      'color': const Color(0xFF1C476E), // Ocean Blue
+      'borderColor': const Color(0xFF60A5FA),
+    },
+    {
+      'title': 'Wedding',
+      'count': '100+ designs',
+      'icon': Icons.favorite_rounded,
+      'color': const Color(0xFF481622), // Burgundy / Wine
+      'borderColor': const Color(0xFFFF5277),
+    },
+    {
+      'title': 'Anniversary',
+      'count': '42+ designs',
+      'icon': Icons.auto_awesome_rounded,
+      'color': const Color(0xFF361726), // Deep Plum
+      'borderColor': const Color(0xFFF472B6),
+    },
+    {
+      'title': 'Festivals',
+      'count': '29+ designs',
+      'icon': Icons.flare_rounded,
+      'color': const Color(0xFF382312), // Bronze / Warm Earth
+      'borderColor': const Color(0xFFFBBF24),
+    },
+  ];
 
-  void _openFilterSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const FilterBottomSheet(),
-    );
-  }
-
-  void _navigateToDetail(TemplateModel template) {
+  void _navigateToCustomize(TemplateModel template) {
     context.read<TemplateProvider>().selectTemplate(template);
     context.read<PersonalizationProvider>().updateTemplate(template);
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => TemplateDetailsScreen(template: template),
+        builder: (_) => PersonalizationFormScreen(template: template),
       ),
     );
   }
 
-  Widget _buildOccasionChip(String title, bool isSelected, VoidCallback onTap) {
+  void _navigateToWeddingCategory() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const CategoriesScreen(),
+      ),
+    );
+  }
+
+  ImageProvider _resolveImage(String url) {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return NetworkImage(url);
+    }
+    if (url.startsWith('/assets/')) {
+      return NetworkImage('http://localhost:5000$url');
+    }
+    return AssetImage(url);
+  }
+
+  String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  Widget _buildOccasionGridCard(Map<String, dynamic> occ) {
+    final isWedding = occ['title'] == 'Wedding';
+    final isSelected = _selectedOccasion == occ['title'];
+    final Color bg = occ['color'] as Color;
+    final Color border = occ['borderColor'] as Color;
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        if (isWedding) {
+          _navigateToWeddingCategory();
+        } else {
+          setState(() => _selectedOccasion = occ['title'] as String);
+        }
+      },
       child: Container(
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        height: 104,
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryGold : AppColors.cardSurface,
-          borderRadius: BorderRadius.circular(16),
+          color: bg,
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? AppColors.primaryGold : AppColors.goldBorder,
-            width: 1,
+            color: (isWedding || isSelected) ? border : Colors.white.withValues(alpha: 0.08),
+            width: (isWedding || isSelected) ? 1.5 : 1,
           ),
-          boxShadow: isSelected
+          boxShadow: isWedding
               ? [
                   BoxShadow(
-                    color: AppColors.primaryGold.withOpacity(0.25),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: border.withValues(alpha: 0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
                 ]
               : null,
         ),
-        child: Text(
-          title,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? AppColors.surfaceDark : AppColors.textPrimary,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(
+              occ['icon'] as IconData,
+              color: Colors.white,
+              size: 26,
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  occ['title'] as String,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  occ['count'] as String,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildTemplateGridCard(TemplateModel tmpl) {
+    final isChroma = tmpl.id.contains('chroma');
+    final isGold = tmpl.id.contains('gold');
+
+    return GestureDetector(
+      onTap: () => _navigateToCustomize(tmpl),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF16161C),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isChroma
+                ? const Color(0xFF10B981)
+                : (isGold ? const Color(0xFFEAB308) : Colors.white.withValues(alpha: 0.1)),
+            width: (isChroma || isGold) ? 1.4 : 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: isChroma
+                  ? const Color(0x3310B981)
+                  : (isGold ? const Color(0x33EAB308) : Colors.black.withValues(alpha: 0.4)),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            // Background Thumbnail Poster
+            Positioned.fill(
+              child: Image(
+                image: _resolveImage(tmpl.thumbnailUrl),
+                fit: BoxFit.cover,
+                errorBuilder: (ctx, err, stack) => Container(
+                  color: const Color(0xFF1F1F28),
+                  child: const Center(
+                    child: Icon(Icons.videocam, color: Colors.white38, size: 40),
+                  ),
+                ),
+              ),
+            ),
+
+            // Top Badges Row (Screenshot 6 Layout)
+            Positioned(
+              top: 10,
+              left: 10,
+              right: 10,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Duration & Photos Badges
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.videocam_rounded, size: 12, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatDuration(tmpl.durationSeconds),
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${tmpl.photoSlotsCount} photos',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // AI / Premium Pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      gradient: isGold
+                          ? const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)])
+                          : const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)]),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      isGold ? 'PREMIUM' : 'AI',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Bottom Gradient Info Overlay
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(10, 36, 10, 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.95),
+                      Colors.black.withValues(alpha: 0.6),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      tmpl.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      tmpl.badgeText,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: isChroma ? const Color(0xFF34D399) : const Color(0xFFFBBF24),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -87,637 +339,311 @@ class _HomeScreenState extends State<HomeScreen> {
     final templates = templateProvider.templates;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        titleSpacing: 16,
-        title: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryGold.withOpacity(0.3),
-                    blurRadius: 8,
-                  ),
-                ],
-              ),
-              child: Image.asset('assets/my_invitation_logo.png'),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'My Invitation',
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          // Language Switcher
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-            decoration: BoxDecoration(
-              color: AppColors.cardSurface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.goldBorder, width: 0.8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () => setState(() => _selectedLang = 'EN'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _selectedLang == 'EN' ? AppColors.primaryGold : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      'EN',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: _selectedLang == 'EN' ? AppColors.surfaceDark : AppColors.champagne,
-                      ),
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => setState(() => _selectedLang = 'తె'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _selectedLang == 'తె' ? AppColors.primaryGold : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      'తె',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: _selectedLang == 'తె' ? AppColors.surfaceDark : AppColors.champagne,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Filter Button
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.tune_rounded, color: AppColors.primaryGold, size: 22),
-                onPressed: _openFilterSheet,
-              ),
-              if (templateProvider.hasActiveFilters)
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppColors.royalCrimson,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => templateProvider.loadTemplates(),
-        color: AppColors.primaryGold,
-        backgroundColor: AppColors.surfaceDark,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Search Bar
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.inputBackground,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.inputBorder, width: 1),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (val) => templateProvider.setSearchQuery(val),
-                  style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'Search Hindu, Christian, Muslim wedding...',
-                    hintStyle: GoogleFonts.plusJakartaSans(
-                      color: AppColors.textMuted,
-                      fontSize: 13,
-                    ),
-                    prefixIcon: const Icon(Icons.search, color: AppColors.primaryGold, size: 20),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, color: AppColors.textSecondary, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              templateProvider.setSearchQuery('');
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              // Occasion Pills
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
+      backgroundColor: const Color(0xFF0E0E12),
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            // Top Header Bar Matching Screenshot 3
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildOccasionChip(
-                      'All',
-                      templateProvider.selectedCategory == 'All',
-                      () => templateProvider.setCategory('All'),
-                    ),
-                    _buildOccasionChip(
-                      'Wedding',
-                      templateProvider.selectedCategory == 'Wedding',
-                      () => templateProvider.setCategory('Wedding'),
-                    ),
-                    _buildOccasionChip(
-                      'Reception',
-                      templateProvider.selectedCategory == 'Reception',
-                      () => templateProvider.setCategory('Reception'),
-                    ),
-                    _buildOccasionChip(
-                      'Engagement',
-                      templateProvider.selectedCategory == 'Engagement',
-                      () => templateProvider.setCategory('Engagement'),
-                    ),
-                    _buildOccasionChip(
-                      'Sangeet',
-                      templateProvider.selectedCategory == 'Sangeet',
-                      () => templateProvider.setCategory('Sangeet'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Religion Quick Toggle Filter
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Traditions',
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.champagne,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const CategoriesScreen()),
-                      );
-                    },
-                    child: Text(
-                      'View All',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primaryGold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildReligionBanner(
-                      title: 'Hindu',
-                      subtitle: 'Shubh Vivah',
-                      isSelected: templateProvider.selectedReligion == 'Hindu',
-                      onTap: () => templateProvider.setReligion(
-                        templateProvider.selectedReligion == 'Hindu' ? 'All' : 'Hindu',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildReligionBanner(
-                      title: 'Christian',
-                      subtitle: 'Matrimony',
-                      isSelected: templateProvider.selectedReligion == 'Christian',
-                      onTap: () => templateProvider.setReligion(
-                        templateProvider.selectedReligion == 'Christian' ? 'All' : 'Christian',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildReligionBanner(
-                      title: 'Muslim',
-                      subtitle: 'Nikah Mubarak',
-                      isSelected: templateProvider.selectedReligion == 'Muslim',
-                      onTap: () => templateProvider.setReligion(
-                        templateProvider.selectedReligion == 'Muslim' ? 'All' : 'Muslim',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              // Photo Options: With Photo / Without Photo
-              // Displayed directly below tradition selection when Wedding -> Hindu or Hindu is selected
-              if (templateProvider.selectedReligion == 'Hindu' || templateProvider.selectedPhotoFilter != 'All') ...[
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildPhotoOptionCard(
-                        title: 'With Photo',
-                        subtitle: 'Couple photo included',
-                        icon: Icons.photo_camera_outlined,
-                        isSelected: templateProvider.selectedPhotoFilter == 'With Photo',
-                        onTap: () => templateProvider.setPhotoFilter('With Photo'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildPhotoOptionCard(
-                        title: 'Without Photo',
-                        subtitle: 'Vedic text only',
-                        icon: Icons.auto_stories_outlined,
-                        isSelected: templateProvider.selectedPhotoFilter == 'Without Photo',
-                        onTap: () => templateProvider.setPhotoFilter('Without Photo'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 24),
-
-              // Featured Spotlight Video Banner
-              if (templates.isNotEmpty) ...[
-                Text(
-                  'Featured Invitation',
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () => _navigateToDetail(templates.first),
-                  child: Container(
-                    height: 210,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: AppColors.primaryGold, width: 1.5),
-                      image: const DecorationImage(
-                        image: AssetImage('assets/candidate_chatgpt_jun.png'),
-                        fit: BoxFit.cover,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryGold.withOpacity(0.2),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
+                    // Brand Logo
+                    Row(
+                      children: [
+                        Text(
+                          'Vivaham',
+                          style: GoogleFonts.playfairDisplay(
+                            color: const Color(0xFFE2E8F0),
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEAB308).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFEAB308), width: 0.8),
+                          ),
+                          child: Text(
+                            'వివాహం',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: const Color(0xFFEAB308),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    child: Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.2),
-                            Colors.black.withOpacity(0.85),
+
+                    // Sign In Pill Button
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SignInScreen()),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E26),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.arrow_forward_rounded, size: 14, color: Colors.white),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Sign in',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Promo Banner Carousel
+            SliverToBoxAdapter(
+              child: Container(
+                height: 110,
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    Container(
+                      width: 300,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF31151E), Color(0xFF1A1A24)],
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFFF5277).withValues(alpha: 0.3), width: 1),
+                      ),
+                      child: Row(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryGold,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  'MASTER TEMPLATE',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.surfaceDark,
-                                    letterSpacing: 0.5,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Telugu Wedding Invitations',
+                                  style: GoogleFonts.playfairDisplay(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.7),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: AppColors.goldBorder, width: 0.8),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Mandap Chroma Key • Vedic Shlokas',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: const Color(0xFFE2E8F0),
+                                    fontSize: 11,
+                                  ),
                                 ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.timer_outlined, size: 12, color: AppColors.champagne),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '0:12s • 9:16',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.champagne,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Royal Mandapam Vivaham',
-                                      style: GoogleFonts.playfairDisplay(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Kundan gold mandap with floating bokeh & circular photo',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12,
-                                        color: AppColors.champagne,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                height: 46,
-                                width: 46,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: AppColors.primaryGold,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.primaryGold.withOpacity(0.5),
-                                      blurRadius: 12,
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.arrow_forward,
-                                  color: AppColors.surfaceDark,
-                                  size: 24,
-                                ),
-                              ),
-                            ],
-                          ),
+                          const Icon(Icons.celebration_rounded, color: Color(0xFFEAB308), size: 36),
                         ],
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 28),
-              ],
-
-              // Templates Grid
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'All Video Templates',
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    '${templates.length} Available',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              if (templateProvider.isLoading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: CircularProgressIndicator(color: AppColors.primaryGold),
-                  ),
-                )
-              else if (templates.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.filter_alt_off_outlined, color: AppColors.textMuted, size: 48),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No templates match this filter',
-                          style: GoogleFonts.plusJakartaSans(
-                            color: AppColors.textSecondary,
-                            fontSize: 14,
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 300,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF1A2634), Color(0xFF1A1A24)],
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3), width: 1),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Royal Gold Temple Elegance',
+                                  style: GoogleFonts.playfairDisplay(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Kundan Frames • Nadaswaram Music',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: const Color(0xFFE2E8F0),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextButton(
-                          onPressed: () => templateProvider.resetFilters(),
-                          child: const Text('Reset Filters', style: TextStyle(color: AppColors.primaryGold)),
-                        ),
-                      ],
+                          const Icon(Icons.auto_awesome_rounded, color: Color(0xFFEAB308), size: 36),
+                        ],
+                      ),
                     ),
-                  ),
-                )
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: templates.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    final tmpl = templates[index];
-                    return TemplateCard(
-                      template: tmpl,
-                      onTap: () => _navigateToDetail(tmpl),
-                    );
-                  },
-                ),
-              const SizedBox(height: 32),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReligionBanner({
-    required String title,
-    required String subtitle,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryGold.withOpacity(0.18) : AppColors.cardSurface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.primaryGold : AppColors.goldBorder,
-            width: isSelected ? 1.5 : 0.8,
-          ),
-        ),
-        child: Column(
-          children: [
-            Text(
-              title,
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? AppColors.primaryGold : AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 10,
-                color: isSelected ? AppColors.champagne : AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPhotoOptionCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryGold.withOpacity(0.16) : AppColors.cardSurface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.primaryGold : AppColors.goldBorder,
-            width: isSelected ? 1.5 : 0.8,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.primaryGold.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primaryGold.withOpacity(0.25) : AppColors.surfaceDark,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected ? AppColors.primaryGold : AppColors.goldBorder.withOpacity(0.5),
-                  width: 0.8,
+                  ],
                 ),
               ),
-              child: Icon(
-                icon,
-                size: 18,
-                color: isSelected ? AppColors.primaryGold : AppColors.champagne,
+            ),
+
+            // Browse by occasion Title (Screenshot 3)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 10, 18, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Browse by occasion',
+                      style: GoogleFonts.playfairDisplay(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Pick an occasion to see designs made for it',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: const Color(0xFF94A3B8),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+
+            // 2-Column Grid of 5 Occasions Matching Screenshot 3
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.6,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _buildOccasionGridCard(_occasions[index]),
+                  childCount: _occasions.length,
+                ),
+              ),
+            ),
+
+            // "View all 10 occasions v"
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        title,
+                        'View all 10 occasions',
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isSelected ? AppColors.primaryGold : AppColors.textPrimary,
+                          color: const Color(0xFF94A3B8),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      if (isSelected) ...[
-                        const SizedBox(width: 4),
-                        const Icon(Icons.check_circle_rounded, size: 13, color: AppColors.primaryGold),
-                      ],
+                      const SizedBox(width: 4),
+                      const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF94A3B8), size: 18),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10,
-                      color: isSelected ? AppColors.champagne : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
+                ),
               ),
+            ),
+
+            // Section Header: "The Grand Seemantham & Telugu Vivaham" (Screenshot 3)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Telugu Wedding Vivaham',
+                      style: GoogleFonts.playfairDisplay(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: _navigateToWeddingCategory,
+                      child: Row(
+                        children: [
+                          Text(
+                            'View All',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: const Color(0xFFEAB308),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right_rounded, color: Color(0xFFEAB308), size: 16),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 2-Column Vertical 9:16 Template Cards Grid
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.62, // 9:14.5 for tall portrait cards
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final tmpl = templates[index];
+                    return _buildTemplateGridCard(tmpl);
+                  },
+                  childCount: templates.length,
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 40),
             ),
           ],
         ),

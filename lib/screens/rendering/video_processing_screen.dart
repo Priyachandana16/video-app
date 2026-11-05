@@ -52,10 +52,12 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
   }
 
   String _getStepLabel(double progress) {
-    if (progress < 0.25) return 'Loading master invitation template...';
-    if (progress < 0.55) return 'Compositing names & typography...';
-    if (progress < 0.85) return 'Masking couple photo into gold frame...';
-    return 'Finalizing 720p 30fps MP4 invitation...';
+    final isChroma = widget.template.id.contains('chroma');
+    if (progress < 0.20) return 'Loading master HD video & Nadaswaram audio...';
+    if (progress < 0.45) return isChroma ? 'Executing Chroma-Key Mandap Arch Detection...' : 'Compositing golden mandap typography...';
+    if (progress < 0.70) return isChroma ? 'Compositing Bride & Couple into Chroma Window...' : 'Framing couple photo with royal gold filigree...';
+    if (progress < 0.90) return 'Applying auspicious Muhurtham & Vedic fonts...';
+    return 'Finalizing 1080p H.264 MP4 with synchronized audio...';
   }
 
   @override
@@ -63,8 +65,8 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
     final provider = context.watch<PersonalizationProvider>();
     final progress = provider.renderProgress;
 
-    return WillPopScope(
-      onWillPop: () async => false, // Prevent accidental back press during render
+    return PopScope(
+      canPop: false,
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: Center(
@@ -84,7 +86,7 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primaryGold.withOpacity(0.2),
+                            color: AppColors.primaryGold.withValues(alpha: 0.25),
                             blurRadius: 30,
                             spreadRadius: 2,
                           ),
@@ -115,7 +117,7 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
 
                 // Processing Title
                 Text(
-                  'Rendering Royal Invitation',
+                  'Crafting Royal Invitation',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.playfairDisplay(
                     fontSize: 24,
@@ -146,11 +148,13 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, color: AppColors.primaryGold, size: 20),
+                      const Icon(Icons.auto_awesome, color: AppColors.primaryGold, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Personalized with your couple name, photo, and event Muhurtham.',
+                          widget.template.id.contains('chroma')
+                              ? 'Chroma Key engine is blending your photo seamlessly into the golden mandap arch.'
+                              : 'Personalized with your couple name, photo, and event Muhurtham.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             color: AppColors.textSecondary,
