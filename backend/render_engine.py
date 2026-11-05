@@ -35,7 +35,7 @@ def draw_text_with_shadow(draw, pos, text, font, fill_color, shadow_color=(20, 2
 
 def run_ffmpeg_with_progress(cmd, total_duration_sec=60.0):
     """Run FFmpeg and stream live PROGRESS: 0.XX | <step> lines to stdout."""
-    print("PROGRESS: 0.45 | Launching FFmpeg hardware-accelerated synthesis...", flush=True)
+    print("PROGRESS: 0.45 | Creating invitation scenes...", flush=True)
     
     # We pipe stderr because FFmpeg prints stats to stderr by default
     proc = subprocess.Popen(
@@ -60,18 +60,17 @@ def run_ffmpeg_with_progress(cmd, total_duration_sec=60.0):
                 current_pct = 0.45 + (0.50 * ratio)
                 if current_pct - last_reported_pct >= 0.04 or current_pct >= 0.94:
                     last_reported_pct = current_pct
-                    step_msg = f"Encoding video frame at {elapsed:.1f}s / {total_duration_sec:.1f}s..."
-                    print(f"PROGRESS: {current_pct:.2f} | {step_msg}", flush=True)
+                    print(f"PROGRESS: {current_pct:.2f} | Rendering your invitation video...", flush=True)
 
     proc.wait()
     if proc.returncode != 0:
         err_output = proc.stderr.read() if proc.stderr else "Unknown error"
         raise RuntimeError(f"FFmpeg failed with exit code {proc.returncode}: {err_output[-400:]}")
 
-    print("PROGRESS: 0.98 | Synchronizing audio tracks and finalizing MP4...", flush=True)
+    print("PROGRESS: 0.98 | Finalizing video...", flush=True)
 
 def render_invitation(config_path):
-    print("PROGRESS: 0.10 | Loading invitation configuration and assets...", flush=True)
+    print("PROGRESS: 0.10 | Preparing your invitation...", flush=True)
     with open(config_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
@@ -104,7 +103,7 @@ def render_invitation(config_path):
     ffmpeg_bin = get_ffmpeg_path()
     temp_dir = os.path.dirname(output_video)
 
-    print("PROGRESS: 0.20 | Preparing user portraits with custom scale & positioning...", flush=True)
+    print("PROGRESS: 0.20 | Preparing and framing uploaded photos...", flush=True)
 
     # Prepare user photos
     prep_groom = os.path.join(temp_dir, f"prep_groom_{os.path.basename(output_video)}.png")
@@ -129,7 +128,7 @@ def render_invitation(config_path):
     is_temp2 = "royal_gold" in master_lower or "02" in master_lower or "5.mp4" in master_lower
     is_temp3 = "divine_god" in master_lower or "03" in master_lower or "god" in master_lower
 
-    print("PROGRESS: 0.30 | Typesetting auspicious Telugu & Vedic typography...", flush=True)
+    print("PROGRESS: 0.35 | Processing wedding details & typography...", flush=True)
 
     # Color Palette
     royal_purple = (85, 20, 65, 255)
@@ -358,10 +357,10 @@ def render_invitation(config_path):
             output_video
         ]
 
-    print("PROGRESS: 0.40 | Compositing layers into high-speed FFmpeg engine...", flush=True)
+    print("PROGRESS: 0.45 | Creating invitation scenes...", flush=True)
     run_ffmpeg_with_progress(cmd, total_duration_sec=total_duration)
 
-    print(f"PROGRESS: 1.00 | Render completed successfully: {output_video}", flush=True)
+    print(f"PROGRESS: 1.00 | Video ready!", flush=True)
     return output_video
 
 if __name__ == '__main__':

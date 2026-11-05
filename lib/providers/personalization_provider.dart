@@ -12,8 +12,8 @@ class PersonalizationProvider extends ChangeNotifier {
   final ImagePicker _picker = ImagePicker();
 
   bool _isRendering = false;
-  double _renderProgress = 0.0;
-  String _renderStep = 'Loading master video & authentic background music...';
+  double _renderProgress = 0.01;
+  String _renderStep = 'Preparing your invitation...';
   String? _renderedVideoUrl;
   String? _renderedLocalPath;
   String? _creationId;
@@ -158,8 +158,8 @@ class PersonalizationProvider extends ChangeNotifier {
   Future<bool> startRendering() async {
     if (_isRendering) return false;
     _isRendering = true;
-    _renderProgress = 0.08;
-    _renderStep = 'Connecting to rendering pipeline...';
+    _renderProgress = 0.01;
+    _renderStep = 'Preparing your invitation...';
     _renderError = null;
     notifyListeners();
 
@@ -167,15 +167,19 @@ class PersonalizationProvider extends ChangeNotifier {
       final result = await ApiService.instance.renderVideo(
         _data,
         onProgress: (progress, step) {
-          _renderProgress = progress;
-          _renderStep = step;
+          if (progress > _renderProgress) {
+            _renderProgress = progress.clamp(0.01, 1.0);
+          }
+          if (step.isNotEmpty) {
+            _renderStep = step;
+          }
           notifyListeners();
         },
       );
 
       if (result['success'] == true) {
         _renderProgress = 1.0;
-        _renderStep = 'Video finalized successfully!';
+        _renderStep = 'Video ready!';
         _renderedVideoUrl = result['videoUrl'];
         _renderedLocalPath = result['downloadPath'];
         _creationId = result['creationId'];
@@ -249,7 +253,8 @@ class PersonalizationProvider extends ChangeNotifier {
   void reset() {
     _data = PersonalizationData();
     _isRendering = false;
-    _renderProgress = 0.0;
+    _renderProgress = 0.01;
+    _renderStep = 'Preparing your invitation...';
     _renderedVideoUrl = null;
     _renderedLocalPath = null;
     _creationId = null;

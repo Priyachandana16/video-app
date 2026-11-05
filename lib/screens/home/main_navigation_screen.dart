@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'home_screen.dart';
+import 'search_screen.dart';
 import '../userhub/my_creations_screen.dart';
 import '../userhub/profile_screen.dart';
 import '../customization/personalization_form_screen.dart';
@@ -24,7 +25,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     HomeScreen(),
     MyCreationsScreen(),
     PersonalizationFormScreen(),
-    HomeScreen(), // Search placeholder
+    SearchScreen(),
     ProfileScreen(),
   ];
 

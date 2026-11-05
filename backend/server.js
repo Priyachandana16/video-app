@@ -700,8 +700,8 @@ app.post('/api/render', upload.fields([
     const jobRecord = {
       jobId,
       status: 'processing',
-      progress: 0.15,
-      step: 'Loading master HD video & auspicious music...',
+      progress: 0.10,
+      step: 'Preparing your invitation...',
       templateId,
       outputFilename,
       createdAt: new Date().toISOString()
@@ -716,8 +716,8 @@ app.post('/api/render', upload.fields([
         success: true,
         jobId,
         status: 'processing',
-        progress: 0.15,
-        step: 'Loading master HD video & auspicious music...',
+        progress: 0.10,
+        step: 'Preparing your invitation...',
         message: 'Video rendering initiated'
       });
     }
@@ -733,16 +733,18 @@ app.post('/api/render', upload.fields([
     // Interval to advance estimated progress if python doesn't emit explicit tags
     const progressTimer = setInterval(() => {
       const cur = RENDER_JOBS.get(jobId);
-      if (cur && cur.status === 'processing' && cur.progress < 0.92) {
-        cur.progress = Math.min(0.92, +(cur.progress + 0.04).toFixed(2));
-        if (cur.progress >= 0.30 && cur.progress < 0.50) {
-          cur.step = 'Framing and positioning couple photos...';
-        } else if (cur.progress >= 0.50 && cur.progress < 0.70) {
-          cur.step = 'Compositing mandap architecture & video layers...';
-        } else if (cur.progress >= 0.70 && cur.progress < 0.88) {
-          cur.step = 'Typesetting auspicious Telugu calligraphy & Muhurtham...';
-        } else if (cur.progress >= 0.88) {
-          cur.step = 'Encoding 1080p H.264 video with synchronized audio...';
+      if (cur && cur.status === 'processing' && cur.progress < 0.94) {
+        cur.progress = Math.min(0.94, +(cur.progress + 0.03).toFixed(2));
+        if (cur.progress >= 0.15 && cur.progress < 0.35) {
+          cur.step = 'Processing wedding details...';
+        } else if (cur.progress >= 0.35 && cur.progress < 0.55) {
+          cur.step = 'Preparing uploaded photos...';
+        } else if (cur.progress >= 0.55 && cur.progress < 0.75) {
+          cur.step = 'Creating invitation scenes...';
+        } else if (cur.progress >= 0.75 && cur.progress < 0.92) {
+          cur.step = 'Rendering your invitation video...';
+        } else if (cur.progress >= 0.92) {
+          cur.step = 'Finalizing video...';
         }
       }
     }, 1200);
@@ -805,7 +807,7 @@ app.post('/api/render', upload.fields([
       const cur = RENDER_JOBS.get(jobId) || {};
       cur.status = 'completed';
       cur.progress = 1.0;
-      cur.step = 'Video generation complete!';
+      cur.step = 'Video ready!';
       cur.creationId = creationRecord.id;
       cur.videoUrl = relativeUrl;
       cur.downloadPath = outputVideoPath;

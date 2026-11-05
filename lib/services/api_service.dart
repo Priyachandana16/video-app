@@ -223,6 +223,250 @@ class ApiService {
         thumbnailUrl: 'assets/templates/thumb_03_god.jpg',
         templateThumbUrl: 'assets/templates/thumb_03_god.jpg',
       ),
+      // First Birthday
+      TemplateModel(
+        id: 'tmpl_first_bday_chroma_01',
+        title: 'First Birthday Grand Arch (Chroma Key)',
+        category: 'First Birthday',
+        religion: 'Hindu',
+        orientation: '16:9',
+        hasPhoto: true,
+        photoSlotsCount: 2,
+        durationSeconds: 56,
+        badgeText: 'BABY SPECIAL',
+        description: 'Grand First Birthday invitation video with photo frame and festive celebration music.',
+        masterVideoPath: 'assets/templates/template_02_royal_gold.mp4',
+        sampleResultPath: 'assets/templates/template_02_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_02_gold.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_first_bday_divine_02',
+        title: 'Little Angel First Birthday (Portrait)',
+        category: 'First Birthday',
+        religion: 'Hindu',
+        orientation: '9:16',
+        hasPhoto: true,
+        photoSlotsCount: 1,
+        durationSeconds: 59,
+        badgeText: 'PORTRAIT 9:16',
+        description: 'Vertical mobile first birthday video invitation with baby photo and joyful festive animations.',
+        masterVideoPath: 'assets/templates/template_03_divine_god.mp4',
+        sampleResultPath: 'assets/templates/template_03_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_03_god.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_first_bday_text_03',
+        title: 'Joyful First Birthday Celebration (Text)',
+        category: 'First Birthday',
+        religion: 'Hindu',
+        orientation: '16:9',
+        hasPhoto: false,
+        photoSlotsCount: 0,
+        durationSeconds: 56,
+        badgeText: 'TRADITIONAL VEDIC',
+        description: 'Festive first birthday celebration invitation with traditional Telugu blessings and auspicious mantras.',
+        masterVideoPath: 'assets/templates/template_02_royal_gold.mp4',
+        sampleResultPath: 'assets/templates/template_02_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_02_gold.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_first_bday_text_04',
+        title: 'Divine Little Star Milestone (Text 9:16)',
+        category: 'First Birthday',
+        religion: 'Hindu',
+        orientation: '9:16',
+        hasPhoto: false,
+        photoSlotsCount: 0,
+        durationSeconds: 59,
+        badgeText: 'SACRED SHLOKA',
+        description: 'Auspicious portrait birthday invitation with Sanskrit baby blessings and sweet temple bells.',
+        masterVideoPath: 'assets/templates/template_03_divine_god.mp4',
+        sampleResultPath: 'assets/templates/template_03_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_03_god.jpg',
+      ),
+      // Birthday
+      TemplateModel(
+        id: 'tmpl_bday_gold_01',
+        title: 'Sparkling Birthday Bash (Gold 16:9)',
+        category: 'Birthday',
+        religion: 'Hindu',
+        orientation: '16:9',
+        hasPhoto: true,
+        photoSlotsCount: 2,
+        durationSeconds: 56,
+        badgeText: 'ROYAL GOLD',
+        description: 'Opulent golden birthday celebration invitation featuring radiant photo framing and jubilant melody.',
+        masterVideoPath: 'assets/templates/template_02_royal_gold.mp4',
+        sampleResultPath: 'assets/templates/template_02_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_02_gold.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_bday_divine_02',
+        title: 'Celebration of Life Birthday (Portrait)',
+        category: 'Birthday',
+        religion: 'Hindu',
+        orientation: '9:16',
+        hasPhoto: true,
+        photoSlotsCount: 1,
+        durationSeconds: 59,
+        badgeText: 'PORTRAIT 9:16',
+        description: 'Vertical WhatsApp Status and Reel friendly birthday invitation with portrait photo slot.',
+        masterVideoPath: 'assets/templates/template_03_divine_god.mp4',
+        sampleResultPath: 'assets/templates/template_03_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_03_god.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_bday_text_03',
+        title: 'Grand Birthday Gala (Traditional Text 16:9)',
+        category: 'Birthday',
+        religion: 'Hindu',
+        orientation: '16:9',
+        hasPhoto: false,
+        photoSlotsCount: 0,
+        durationSeconds: 56,
+        badgeText: 'TRADITIONAL VEDIC',
+        description: 'Elegant typographic birthday invitation with heartfelt Telugu greetings.',
+        masterVideoPath: 'assets/templates/template_02_royal_gold.mp4',
+        sampleResultPath: 'assets/templates/template_02_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_02_gold.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_bday_text_04',
+        title: 'Ayushya Suktam Birthday Blessings (9:16)',
+        category: 'Birthday',
+        religion: 'Hindu',
+        orientation: '9:16',
+        hasPhoto: false,
+        photoSlotsCount: 0,
+        durationSeconds: 59,
+        badgeText: 'SACRED SHLOKA',
+        description: 'Traditional Vedic birthday prayer invitation with sacred blessings and golden diya motif.',
+        masterVideoPath: 'assets/templates/template_03_divine_god.mp4',
+        sampleResultPath: 'assets/templates/template_03_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_03_god.jpg',
+      ),
+      // Anniversary
+      TemplateModel(
+        id: 'tmpl_anniv_chroma_01',
+        title: 'Golden Milestones Anniversary (Chroma Arch)',
+        category: 'Anniversary',
+        religion: 'Hindu',
+        orientation: '16:9',
+        hasPhoto: true,
+        photoSlotsCount: 2,
+        durationSeconds: 102,
+        badgeText: 'CHROMA PRO',
+        description: 'Spectacular wedding anniversary celebration with couple photo integration into golden mandap arch.',
+        masterVideoPath: 'assets/templates/template_01_green_screen.mp4',
+        sampleResultPath: 'assets/templates/template_01_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_01_green.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_anniv_divine_02',
+        title: 'Eternal Bond Anniversary (Vertical Portrait)',
+        category: 'Anniversary',
+        religion: 'Hindu',
+        orientation: '9:16',
+        hasPhoto: true,
+        photoSlotsCount: 2,
+        durationSeconds: 59,
+        badgeText: 'SACRED 9:16',
+        description: 'Mobile vertical anniversary invitation celebrating enduring love and togetherness.',
+        masterVideoPath: 'assets/templates/template_03_divine_god.mp4',
+        sampleResultPath: 'assets/templates/template_03_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_03_god.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_anniv_text_03',
+        title: 'Shasti Poorthi / Silver Jubilee (Text 16:9)',
+        category: 'Anniversary',
+        religion: 'Hindu',
+        orientation: '16:9',
+        hasPhoto: false,
+        photoSlotsCount: 0,
+        durationSeconds: 56,
+        badgeText: 'TRADITIONAL VEDIC',
+        description: 'Traditional 25th / 50th / 60th anniversary celebration invitation with Vedic shlokas.',
+        masterVideoPath: 'assets/templates/template_02_royal_gold.mp4',
+        sampleResultPath: 'assets/templates/template_02_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_02_gold.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_anniv_text_04',
+        title: 'Dampatya Suktam Anniversary (Text 9:16)',
+        category: 'Anniversary',
+        religion: 'Hindu',
+        orientation: '9:16',
+        hasPhoto: false,
+        photoSlotsCount: 0,
+        durationSeconds: 59,
+        badgeText: 'SACRED SHLOKA',
+        description: 'Divine portrait anniversary card with sacred Dampatya blessings and golden lamp artwork.',
+        masterVideoPath: 'assets/templates/template_03_divine_god.mp4',
+        sampleResultPath: 'assets/templates/template_03_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_03_god.jpg',
+      ),
+      // Festivals
+      TemplateModel(
+        id: 'tmpl_fest_chroma_01',
+        title: 'Grand Festive Utsav & Pooja (Chroma 16:9)',
+        category: 'Festivals',
+        religion: 'Hindu',
+        orientation: '16:9',
+        hasPhoto: true,
+        photoSlotsCount: 2,
+        durationSeconds: 102,
+        badgeText: 'FESTIVAL SPECIAL',
+        description: 'Grand Diwali, Sankranti, Ugadi, or Vinayaka Chavithi pooja invitation with family photo frame.',
+        masterVideoPath: 'assets/templates/template_01_green_screen.mp4',
+        sampleResultPath: 'assets/templates/template_01_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_01_green.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_fest_divine_02',
+        title: 'Divine Pooja & Satyanarayana Vratham (9:16)',
+        category: 'Festivals',
+        religion: 'Hindu',
+        orientation: '9:16',
+        hasPhoto: true,
+        photoSlotsCount: 1,
+        durationSeconds: 59,
+        badgeText: 'PORTRAIT 9:16',
+        description: 'Vertical mobile invitation for Griha Pravesham, Satyanarayana Pooja, and community festivals.',
+        masterVideoPath: 'assets/templates/template_03_divine_god.mp4',
+        sampleResultPath: 'assets/templates/template_03_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_03_god.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_fest_text_03',
+        title: 'Traditional Utsavam Mandapam (Text 16:9)',
+        category: 'Festivals',
+        religion: 'Hindu',
+        orientation: '16:9',
+        hasPhoto: false,
+        photoSlotsCount: 0,
+        durationSeconds: 56,
+        badgeText: 'TRADITIONAL VEDIC',
+        description: 'Classic Telugu festival invitation with traditional mandapam and Vedic chants.',
+        masterVideoPath: 'assets/templates/template_02_royal_gold.mp4',
+        sampleResultPath: 'assets/templates/template_02_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_02_gold.jpg',
+      ),
+      TemplateModel(
+        id: 'tmpl_fest_text_04',
+        title: 'Sacred Temple Pooja Invocation (Text 9:16)',
+        category: 'Festivals',
+        religion: 'Hindu',
+        orientation: '9:16',
+        hasPhoto: false,
+        photoSlotsCount: 0,
+        durationSeconds: 59,
+        badgeText: 'SACRED SHLOKA',
+        description: 'Vertical festival invitation with sacred stotrams, ringing bells, and traditional lamps.',
+        masterVideoPath: 'assets/templates/template_03_divine_god.mp4',
+        sampleResultPath: 'assets/templates/template_03_sample_result.mp4',
+        thumbnailUrl: 'assets/templates/thumb_03_god.jpg',
+      ),
     ];
 
     return all.where((t) {
@@ -246,15 +490,17 @@ class ApiService {
 
   Future<Map<String, dynamic>> renderVideo(
     PersonalizationData data, {
-    void Function(double progress, String stepLabel)? onProgress,
+    void Function(double progress, String step)? onProgress,
   }) async {
     try {
-      onProgress?.call(0.12, 'Loading master video & authentic background music...');
+      onProgress?.call(0.01, 'Preparing your invitation...');
       final uri = Uri.parse('$baseUrl/render?async=true');
       final request = http.MultipartRequest('POST', uri);
       request.headers['x-async-render'] = 'true';
 
       data.toFormFields().forEach((k, v) => request.fields[k] = v);
+
+      onProgress?.call(0.04, 'Processing wedding details...');
 
       // Add woman (Bride) photo
       if (!kIsWeb && data.womanPhotoPath != null && File(data.womanPhotoPath!).existsSync()) {
@@ -291,7 +537,7 @@ class ApiService {
         }
       }
 
-      onProgress?.call(0.24, 'Framing and positioning couple photos...');
+      onProgress?.call(0.08, 'Preparing uploaded photos...');
       final streamedResponse = await request.send().timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
 
@@ -312,13 +558,13 @@ class ApiService {
               if (statusRes.statusCode == 200) {
                 final job = jsonDecode(statusRes.body);
                 final double p = (job['progress'] as num?)?.toDouble() ?? 0.5;
-                final String step = job['step'] ?? 'Processing video frames...';
+                final String step = job['step'] ?? 'Rendering your invitation video...';
                 onProgress?.call(p, step);
 
                 if (job['status'] == 'completed') {
                   final rawUrl = job['videoUrl'] ?? '';
                   final fullUrl = rawUrl.startsWith('http') ? rawUrl : '$serverHost$rawUrl';
-                  onProgress?.call(1.0, 'Video generation complete!');
+                  onProgress?.call(1.0, 'Video ready!');
                   return {
                     'success': true,
                     'videoUrl': fullUrl,
@@ -333,7 +579,7 @@ class ApiService {
           final String rawUrl = resData['videoUrl'] ?? '';
           final String serverHost = baseUrl.replaceAll('/api', '');
           final String fullUrl = rawUrl.startsWith('http') ? rawUrl : '$serverHost$rawUrl';
-          onProgress?.call(1.0, 'Video generation complete!');
+          onProgress?.call(1.0, 'Video ready!');
           return {
             'success': true,
             'videoUrl': fullUrl,
@@ -347,13 +593,13 @@ class ApiService {
     }
 
     // Smooth milestone progress for fallback
-    onProgress?.call(0.50, 'Compositing mandap architecture & video layers...');
+    onProgress?.call(0.35, 'Creating invitation scenes...');
     await Future.delayed(const Duration(milliseconds: 600));
-    onProgress?.call(0.75, 'Typesetting auspicious Telugu calligraphy & Muhurtham...');
+    onProgress?.call(0.70, 'Rendering your invitation video...');
     await Future.delayed(const Duration(milliseconds: 600));
-    onProgress?.call(0.92, 'Encoding 1080p H.264 video with synchronized audio...');
+    onProgress?.call(0.95, 'Finalizing video...');
     await Future.delayed(const Duration(milliseconds: 600));
-    onProgress?.call(1.0, 'Video generation complete!');
+    onProgress?.call(1.0, 'Video ready!');
 
     // High fidelity fallback using the real template sample result
     String fallbackAsset = 'assets/templates/template_01_sample_result.mp4';

@@ -19,6 +19,11 @@ class VideoProcessingScreen extends StatefulWidget {
 }
 
 class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
+  double _displayedProgress = 0.01;
+  bool _hasStarted = false;
+  bool _hasError = false;
+  String? _errorMessage;
+
   @override
   void initState() {
     super.initState();
@@ -26,153 +31,272 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
   }
 
   void _startRenderProcess() async {
+    if (_hasStarted && !_hasError) return;
+    setState(() {
+      _hasStarted = true;
+      _hasError = false;
+      _errorMessage = null;
+      _displayedProgress = 0.01;
+    });
+
     final provider = context.read<PersonalizationProvider>();
     final success = await provider.startRendering();
 
     if (mounted) {
       if (success) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => VideoPreviewScreen(template: widget.template),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppColors.royalCrimson,
-            content: Text(
-              provider.renderError ?? 'Video generation error',
-              style: GoogleFonts.plusJakartaSans(color: Colors.white),
+        setState(() => _displayedProgress = 1.0);
+        // Allow brief visual confirmation of 100% completion
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => VideoPreviewScreen(template: widget.template),
             ),
-          ),
-        );
-        Navigator.pop(context);
+          );
+        }
+      } else {
+        setState(() {
+          _hasError = true;
+          _hasStarted = false;
+          _errorMessage = provider.renderError ??
+              'Video generation encountered an issue. Please try again.';
+        });
       }
     }
   }
 
-  String _getStepLabel(PersonalizationProvider provider) {
+  String _getStepLabel(PersonalizationProvider provider, double progress) {
     if (provider.renderStep.isNotEmpty &&
-        !provider.renderStep.startsWith('Loading master video')) {
+        provider.renderStep != 'Preparing your invitation...') {
       return provider.renderStep;
     }
-    final progress = provider.renderProgress;
-    final isChroma = widget.template.id.contains('chroma');
-    if (progress < 0.20) return 'Loading master HD video & Nadaswaram audio...';
-    if (progress < 0.45) return isChroma ? 'Executing Chroma-Key Mandap Arch Detection...' : 'Compositing golden typography & details...';
-    if (progress < 0.70) return isChroma ? 'Compositing Photo into Chroma Window...' : 'Framing personalized photo with royal filigree...';
-    if (progress < 0.90) return 'Applying auspicious Muhurtham & Vedic fonts...';
-    return 'Finalizing 1080p H.264 MP4 with synchronized audio...';
+    if (progress < 0.15) return 'Preparing your invitation...';
+    if (progress < 0.35) return 'Processing wedding details...';
+    if (progress < 0.55) return 'Preparing uploaded photos...';
+    if (progress < 0.75) return 'Creating invitation scenes...';
+    if (progress < 0.95) return 'Rendering your invitation video...';
+    if (progress < 1.0) return 'Finalizing video...';
+    return 'Video ready!';
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<PersonalizationProvider>();
-    final progress = provider.renderProgress;
+    final rawTarget = provider.renderProgress;
+
+    // Enforce monotonic forward progress starting from 0.01 up to 1.0
+    final targetProgress = _hasError
+        ? _displayedProgress
+        : rawTarget.clamp(_displayedProgress, 1.0);
 
     return PopScope(
-      canPop: false,
+      canPop: _hasError,
       child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Glowing Gold Spinner Container
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primaryGold.withValues(alpha: 0.25),
-                            blurRadius: 30,
-                            spreadRadius: 2,
-                          ),
-                        ],
+        backgroundColor: const Color(0xFF0E0E12),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: _hasError
+                  ? _buildErrorView()
+                  : TweenAnimationBuilder<double>(
+                      tween: Tween<double>(
+                        begin: _displayedProgress,
+                        end: targetProgress,
                       ),
-                    ),
-                    SizedBox(
-                      width: 110,
-                      height: 110,
-                      child: CircularProgressIndicator(
-                        value: progress > 0 ? progress : null,
-                        strokeWidth: 4,
-                        backgroundColor: AppColors.surfaceHigh,
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryGold),
-                      ),
-                    ),
-                    Text(
-                      '${(progress * 100).toInt()}%',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryGold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 36),
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeOutCubic,
+                      onEnd: () {
+                        if (targetProgress > _displayedProgress) {
+                          _displayedProgress = targetProgress;
+                        }
+                      },
+                      builder: (context, animValue, _) {
+                        final currentVal = animValue.clamp(0.01, 1.0);
+                        final displayPercent = (currentVal * 100).toInt().clamp(1, 100);
 
-                // Processing Title
-                Text(
-                  'Crafting Royal Invitation',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 12),
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Circular Progress Indicator
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Subtle gold circular track border
+                                Container(
+                                  width: 130,
+                                  height: 130,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.primaryGold
+                                          .withValues(alpha: 0.15),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                                // Animated Circular Progress Indicator
+                                SizedBox(
+                                  width: 116,
+                                  height: 116,
+                                  child: CircularProgressIndicator(
+                                    value: currentVal,
+                                    strokeWidth: 4.5,
+                                    strokeCap: StrokeCap.round,
+                                    backgroundColor: const Color(0xFF1E1E28),
+                                    valueColor:
+                                        const AlwaysStoppedAnimation<Color>(
+                                      AppColors.primaryGold,
+                                    ),
+                                  ),
+                                ),
+                                // Centered Percentage Display
+                                Text(
+                                  '$displayPercent%',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryGold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 32),
 
-                // Current Step
-                Text(
-                  _getStepLabel(provider),
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    color: AppColors.champagne,
-                  ),
-                ),
-                const SizedBox(height: 28),
+                            // Heading
+                            Text(
+                              'Crafting Royal Invitation',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.playfairDisplay(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
 
-                // Information Card
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardSurface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.goldBorder, width: 0.8),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.auto_awesome, color: AppColors.primaryGold, size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          widget.template.id.contains('chroma')
-                              ? 'Chroma Key engine is blending your photo seamlessly into the golden mandap arch.'
-                              : 'Personalized with your couple name, photo, and event Muhurtham.',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                            // Dynamic Stage Label
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 250),
+                              child: Text(
+                                _getStepLabel(provider, currentVal),
+                                key: ValueKey(provider.renderStep),
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  color: AppColors.champagne,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: const Color(0xFF18151A),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFE11D48).withValues(alpha: 0.4),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE11D48).withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.error_outline_rounded,
+              color: Color(0xFFFB7185),
+              size: 36,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Generation Interrupted',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _errorMessage ??
+                'We could not finalize the video. Your custom details and photos are safely preserved.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              color: const Color(0xFFCBD5E1),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'Back to Edit',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _startRenderProcess,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGold,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'Retry Generation',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
