@@ -13,6 +13,7 @@ class PersonalizationProvider extends ChangeNotifier {
 
   bool _isRendering = false;
   double _renderProgress = 0.0;
+  String _renderStep = 'Loading master video & authentic background music...';
   String? _renderedVideoUrl;
   String? _renderedLocalPath;
   String? _creationId;
@@ -24,6 +25,7 @@ class PersonalizationProvider extends ChangeNotifier {
   PersonalizationData get data => _data;
   bool get isRendering => _isRendering;
   double get renderProgress => _renderProgress;
+  String get renderStep => _renderStep;
   String? get renderedVideoUrl => _renderedVideoUrl;
   String? get renderedLocalPath => _renderedLocalPath;
   String? get creationId => _creationId;
@@ -74,6 +76,21 @@ class PersonalizationProvider extends ChangeNotifier {
       hasPhoto: hasPhoto,
       womanPhotoPath: womanPhotoPath,
       manPhotoPath: manPhotoPath,
+    );
+    notifyListeners();
+  }
+
+  void updatePhotoPlacement({
+    required String placement,
+    double scale = 1.0,
+    double offsetX = 0.0,
+    double offsetY = 0.0,
+  }) {
+    _data = _data.copyWith(
+      photoPlacement: placement,
+      photoScale: scale,
+      photoOffsetX: offsetX,
+      photoOffsetY: offsetY,
     );
     notifyListeners();
   }
@@ -141,24 +158,24 @@ class PersonalizationProvider extends ChangeNotifier {
   Future<bool> startRendering() async {
     if (_isRendering) return false;
     _isRendering = true;
-    _renderProgress = 0.05;
+    _renderProgress = 0.08;
+    _renderStep = 'Connecting to rendering pipeline...';
     _renderError = null;
     notifyListeners();
 
-    Timer? progressTimer;
-    progressTimer = Timer.periodic(const Duration(milliseconds: 300), (timer) {
-      if (_renderProgress < 0.90) {
-        _renderProgress += 0.05;
-        notifyListeners();
-      }
-    });
-
     try {
-      final result = await ApiService.instance.renderVideo(_data);
-      progressTimer.cancel();
+      final result = await ApiService.instance.renderVideo(
+        _data,
+        onProgress: (progress, step) {
+          _renderProgress = progress;
+          _renderStep = step;
+          notifyListeners();
+        },
+      );
 
       if (result['success'] == true) {
         _renderProgress = 1.0;
+        _renderStep = 'Video finalized successfully!';
         _renderedVideoUrl = result['videoUrl'];
         _renderedLocalPath = result['downloadPath'];
         _creationId = result['creationId'];
@@ -187,7 +204,6 @@ class PersonalizationProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      progressTimer.cancel();
       _renderError = e.toString();
       _isRendering = false;
       notifyListeners();

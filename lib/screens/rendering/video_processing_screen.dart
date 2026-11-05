@@ -51,11 +51,16 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
     }
   }
 
-  String _getStepLabel(double progress) {
+  String _getStepLabel(PersonalizationProvider provider) {
+    if (provider.renderStep.isNotEmpty &&
+        !provider.renderStep.startsWith('Loading master video')) {
+      return provider.renderStep;
+    }
+    final progress = provider.renderProgress;
     final isChroma = widget.template.id.contains('chroma');
     if (progress < 0.20) return 'Loading master HD video & Nadaswaram audio...';
-    if (progress < 0.45) return isChroma ? 'Executing Chroma-Key Mandap Arch Detection...' : 'Compositing golden mandap typography...';
-    if (progress < 0.70) return isChroma ? 'Compositing Bride & Couple into Chroma Window...' : 'Framing couple photo with royal gold filigree...';
+    if (progress < 0.45) return isChroma ? 'Executing Chroma-Key Mandap Arch Detection...' : 'Compositing golden typography & details...';
+    if (progress < 0.70) return isChroma ? 'Compositing Photo into Chroma Window...' : 'Framing personalized photo with royal filigree...';
     if (progress < 0.90) return 'Applying auspicious Muhurtham & Vedic fonts...';
     return 'Finalizing 1080p H.264 MP4 with synchronized audio...';
   }
@@ -129,7 +134,7 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
 
                 // Current Step
                 Text(
-                  _getStepLabel(progress),
+                  _getStepLabel(provider),
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,

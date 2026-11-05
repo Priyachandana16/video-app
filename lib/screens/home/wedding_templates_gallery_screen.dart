@@ -9,11 +9,13 @@ import '../../services/api_service.dart';
 import '../customization/personalization_form_screen.dart';
 
 class WeddingTemplatesGalleryScreen extends StatefulWidget {
+  final String occasion;
   final String orientation; // '16:9' or '9:16'
   final bool hasPhoto;
 
   const WeddingTemplatesGalleryScreen({
     super.key,
+    this.occasion = 'Wedding',
     required this.orientation,
     required this.hasPhoto,
   });
@@ -41,11 +43,17 @@ class _WeddingTemplatesGalleryScreenState
   Future<void> _loadTemplates() async {
     setState(() => _isLoading = true);
     try {
-      final templates = await ApiService.instance.getTemplates(
-        category: 'Wedding',
+      var templates = await ApiService.instance.getTemplates(
+        category: widget.occasion,
         orientation: _currentOrientation,
         hasPhoto: _currentHasPhoto,
       );
+      if (templates.isEmpty) {
+        templates = await ApiService.instance.getTemplates(
+          orientation: _currentOrientation,
+          hasPhoto: _currentHasPhoto,
+        );
+      }
       if (mounted) {
         setState(() {
           _filteredTemplates = templates;
@@ -491,7 +499,7 @@ class _WeddingTemplatesGalleryScreenState
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Matching Templates',
+          widget.occasion == 'Wedding' ? 'Matching Templates' : '${widget.occasion} Templates',
           style: GoogleFonts.playfairDisplay(
             color: Colors.white,
             fontSize: 20,

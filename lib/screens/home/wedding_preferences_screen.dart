@@ -4,11 +4,13 @@ import '../../core/theme/app_colors.dart';
 import 'wedding_templates_gallery_screen.dart';
 
 class WeddingPreferencesScreen extends StatefulWidget {
+  final String occasion;
   final String? initialOrientation;
   final bool? initialHasPhoto;
 
   const WeddingPreferencesScreen({
     super.key,
+    this.occasion = 'Wedding',
     this.initialOrientation,
     this.initialHasPhoto,
   });
@@ -23,6 +25,74 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
 
   // Step 2: Photo Preference ('with_photo' or 'without_photo')
   String? _selectedPhotoPreference;
+
+  String get _pageTitle {
+    switch (widget.occasion) {
+      case 'First Birthday':
+        return 'First Birthday Invitation';
+      case 'Birthday':
+        return 'Birthday Invitation';
+      case 'Anniversary':
+        return 'Anniversary Invitation';
+      case 'Festivals':
+      case 'Festival':
+        return 'Festival Invitation';
+      case 'Wedding':
+      default:
+        return 'Wedding Invitation';
+    }
+  }
+
+  String get _pageSubtitle {
+    switch (widget.occasion) {
+      case 'First Birthday':
+        return 'Customize your preferences to find the perfect template design for your little one\'s first birthday celebration.';
+      case 'Birthday':
+        return 'Customize your preferences to find the perfect template design for your birthday celebration.';
+      case 'Anniversary':
+        return 'Customize your preferences to find the perfect template design for your milestone wedding anniversary.';
+      case 'Festivals':
+      case 'Festival':
+        return 'Customize your preferences to find the perfect template design for your auspicious festival celebration.';
+      case 'Wedding':
+      default:
+        return 'Customize your preferences to find the perfect template design for your auspicious celebration.';
+    }
+  }
+
+  String get _withPhotoSubtitle {
+    switch (widget.occasion) {
+      case 'First Birthday':
+        return 'Includes baby, parents & family photo slots integrated into the video';
+      case 'Birthday':
+        return 'Includes birthday star & celebration photo slots integrated into the video';
+      case 'Anniversary':
+        return 'Includes couple wedding memories & portrait photo slots integrated into the video';
+      case 'Festivals':
+      case 'Festival':
+        return 'Includes family puja & celebration photo slots integrated into the video';
+      case 'Wedding':
+      default:
+        return 'Includes bride, groom & couple photo slots integrated into the video';
+    }
+  }
+
+  String get _withoutPhotoSubtitle {
+    switch (widget.occasion) {
+      case 'First Birthday':
+        return 'Playful festive themes, joyful typography & celebratory music without photo slots';
+      case 'Birthday':
+        return 'Vibrant party themes, stylish typography & upbeat music without photo slots';
+      case 'Anniversary':
+        return 'Royal gold typography, romantic wishes & celebratory melodies without photo slots';
+      case 'Festivals':
+      case 'Festival':
+        return 'Sacred Vedic shlokas, traditional motifs & divine mantras without photo slots';
+      case 'Wedding':
+      default:
+        return 'Elegant traditional Vedic typography, sacred shlokas & mandapam without photo slots';
+    }
+  }
 
   @override
   void initState() {
@@ -44,6 +114,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => WeddingTemplatesGalleryScreen(
+          occasion: widget.occasion,
           orientation: _selectedOrientation!,
           hasPhoto: hasPhoto,
         ),
@@ -360,7 +431,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Wedding Invitation',
+          _pageTitle,
           style: GoogleFonts.playfairDisplay(
             color: Colors.white,
             fontSize: 20,
@@ -380,7 +451,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                   children: [
                     // Subtitle Intro
                     Text(
-                      'Customize your preferences to find the perfect template design for your auspicious celebration.',
+                      _pageSubtitle,
                       style: GoogleFonts.plusJakartaSans(
                         color: const Color(0xFF94A3B8),
                         fontSize: 13,
@@ -419,7 +490,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                     _buildPhotoPreferenceCard(
                       preferenceKey: 'with_photo',
                       title: 'With Photo',
-                      subtitle: 'Includes bride, groom & couple photo slots integrated into the video',
+                      subtitle: _withPhotoSubtitle,
                       icon: Icons.add_photo_alternate_rounded,
                       accentColor: AppColors.brandPink,
                     ),
@@ -427,7 +498,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                     _buildPhotoPreferenceCard(
                       preferenceKey: 'without_photo',
                       title: 'Without Photo',
-                      subtitle: 'Elegant traditional Vedic typography, sacred shlokas & mandapam without photo slots',
+                      subtitle: _withoutPhotoSubtitle,
                       icon: Icons.font_download_rounded,
                       accentColor: AppColors.primaryGold,
                     ),

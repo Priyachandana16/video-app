@@ -12,6 +12,12 @@ class PersonalizationData {
   String rsvp;
   String contactPhone;
   bool hasPhoto;
+
+  // Photo placement & positioning controls
+  String photoPlacement; // 'arch_center', 'left', 'right', 'center'
+  double photoScale; // 0.8 - 1.5
+  double photoOffsetX; // -50.0 to 50.0
+  double photoOffsetY; // -50.0 to 50.0
   
   // Specific photo slots for woman (Bride) and man (Groom)
   String? womanPhotoPath;
@@ -36,6 +42,10 @@ class PersonalizationData {
     this.rsvp = 'With Best Compliments from Family & Friends',
     this.contactPhone = '+91 98765 43210',
     this.hasPhoto = true,
+    this.photoPlacement = 'arch_center',
+    this.photoScale = 1.0,
+    this.photoOffsetX = 0.0,
+    this.photoOffsetY = 0.0,
     this.womanPhotoPath,
     this.womanPhotoBytes,
     this.manPhotoPath,
@@ -51,6 +61,10 @@ class PersonalizationData {
     return {
       'templateId': templateId,
       'hasPhoto': hasPhoto.toString(),
+      'photoPlacement': photoPlacement,
+      'photoScale': photoScale.toString(),
+      'photoOffsetX': photoOffsetX.toString(),
+      'photoOffsetY': photoOffsetY.toString(),
       'brideName': brideName,
       'groomName': groomName,
       'parentsNames': parentsNames,
@@ -75,6 +89,10 @@ class PersonalizationData {
     String? rsvp,
     String? contactPhone,
     bool? hasPhoto,
+    String? photoPlacement,
+    double? photoScale,
+    double? photoOffsetX,
+    double? photoOffsetY,
     String? womanPhotoPath,
     Uint8List? womanPhotoBytes,
     String? manPhotoPath,
@@ -95,6 +113,10 @@ class PersonalizationData {
       rsvp: rsvp ?? this.rsvp,
       contactPhone: contactPhone ?? this.contactPhone,
       hasPhoto: hasPhoto ?? this.hasPhoto,
+      photoPlacement: photoPlacement ?? this.photoPlacement,
+      photoScale: photoScale ?? this.photoScale,
+      photoOffsetX: photoOffsetX ?? this.photoOffsetX,
+      photoOffsetY: photoOffsetY ?? this.photoOffsetY,
       womanPhotoPath: womanPhotoPath ?? this.womanPhotoPath,
       womanPhotoBytes: womanPhotoBytes ?? this.womanPhotoBytes,
       manPhotoPath: manPhotoPath ?? this.manPhotoPath,

@@ -70,9 +70,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToWeddingCategory() {
+    _navigateToOccasionPreferences('Wedding');
+  }
+
+  void _navigateToOccasionPreferences(String occasion) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const WeddingPreferencesScreen(),
+        builder: (_) => WeddingPreferencesScreen(occasion: occasion),
       ),
     );
   }
@@ -94,19 +98,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildOccasionGridCard(Map<String, dynamic> occ) {
-    final isWedding = occ['title'] == 'Wedding';
-    final isSelected = _selectedOccasion == occ['title'];
+    final occasionTitle = occ['title'] as String;
+    final isWedding = occasionTitle == 'Wedding';
+    final isSelected = _selectedOccasion == occasionTitle;
     final Color bg = occ['color'] as Color;
     final Color border = occ['borderColor'] as Color;
 
     return GestureDetector(
-      onTap: () {
-        if (isWedding) {
-          _navigateToWeddingCategory();
-        } else {
-          setState(() => _selectedOccasion = occ['title'] as String);
-        }
-      },
+      onTap: () => _navigateToOccasionPreferences(occasionTitle),
       child: Container(
         height: 104,
         padding: const EdgeInsets.all(14),

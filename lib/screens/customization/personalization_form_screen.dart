@@ -574,6 +574,69 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
         ],
         const SizedBox(height: 14),
 
+        // Photo Placement & Framing Action Card
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A24),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppColors.primaryGold.withValues(alpha: 0.35),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.crop_rotate_rounded, color: AppColors.primaryGold, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Photo Placement & Framing',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _openPhotoPlacementSheet(provider),
+                    icon: const Icon(Icons.tune_rounded, size: 16, color: AppColors.primaryGold),
+                    label: Text(
+                      'Adjust',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: AppColors.primaryGold,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      backgroundColor: AppColors.primaryGold.withValues(alpha: 0.12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Selected: ${provider.data.photoPlacement.toUpperCase()} • Scale ${(provider.data.photoScale * 100).toInt()}% • Offset (${provider.data.photoOffsetX.toInt()}px, ${provider.data.photoOffsetY.toInt()}px)',
+                style: GoogleFonts.plusJakartaSans(
+                  color: AppColors.champagne,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
         // Photo Tip
         Container(
           padding: const EdgeInsets.all(12),
@@ -608,6 +671,351 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
         ),
         const SizedBox(height: 24),
       ],
+    );
+  }
+
+  Widget _buildPresetChip(
+    String value,
+    String label,
+    String current,
+    ValueChanged<String> onSelected,
+  ) {
+    final isSelected = current == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onSelected(value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primaryGold : const Color(0xFF1E1E2A),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected ? AppColors.primaryGold : Colors.white12,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                color: isSelected ? Colors.black : Colors.white70,
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openPhotoPlacementSheet(PersonalizationProvider provider) {
+    double tempScale = provider.data.photoScale;
+    double tempOffsetX = provider.data.photoOffsetX;
+    double tempOffsetY = provider.data.photoOffsetY;
+    String tempPlacement = provider.data.photoPlacement;
+
+    final hasPhoto = provider.data.womanPhotoBytes != null ||
+        provider.data.manPhotoBytes != null ||
+        (provider.data.womanPhotoPath != null && provider.data.womanPhotoPath!.isNotEmpty) ||
+        (provider.data.manPhotoPath != null && provider.data.manPhotoPath!.isNotEmpty);
+    final photoBytes = provider.data.womanPhotoBytes ?? provider.data.manPhotoBytes;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF14141E),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.crop_rotate_rounded, color: AppColors.primaryGold, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Edit Photo Placement & Framing',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white70),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Position where your photo appears within the video invitation frame.',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: const Color(0xFF94A3B8),
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Interactive Framing Preview Box
+                  Container(
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0A0A0F),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.goldBorder, width: 1.2),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          decoration: const BoxDecoration(
+                            gradient: RadialGradient(
+                              colors: [
+                                Color(0xFF1F1D2B),
+                                Color(0xFF0F0E17),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Photo with applied offset & scale
+                        Transform.translate(
+                          offset: Offset(tempOffsetX, tempOffsetY),
+                          child: Transform.scale(
+                            scale: tempScale,
+                            child: hasPhoto && photoBytes != null
+                                ? Image.memory(
+                                    photoBytes,
+                                    height: 140,
+                                    width: 140,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    height: 140,
+                                    width: 140,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: AppColors.surfaceHigh,
+                                      border: Border.all(color: AppColors.brandPink, width: 2),
+                                    ),
+                                    child: const Icon(
+                                      Icons.person,
+                                      size: 64,
+                                      color: AppColors.primaryGold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        // Golden Arch / Oval Frame Overlay
+                        IgnorePointer(
+                          child: Container(
+                            margin: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(
+                                tempPlacement == 'full' ? 16 : 100,
+                              ),
+                              border: Border.all(
+                                color: AppColors.primaryGold.withValues(alpha: 0.6),
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Helper pill
+                        Positioned(
+                          bottom: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black87,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Placement: ${tempPlacement.toUpperCase()} • Scale: ${(tempScale * 100).toInt()}%',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: AppColors.champagne,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Placement presets
+                  Text(
+                    'Frame Position Preset',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _buildPresetChip('center', 'Arch Center', tempPlacement, (p) {
+                        setModalState(() {
+                          tempPlacement = p;
+                          tempOffsetX = 0.0;
+                          tempOffsetY = 0.0;
+                        });
+                      }),
+                      const SizedBox(width: 8),
+                      _buildPresetChip('left', 'Left Frame', tempPlacement, (p) {
+                        setModalState(() {
+                          tempPlacement = p;
+                          tempOffsetX = -25.0;
+                        });
+                      }),
+                      const SizedBox(width: 8),
+                      _buildPresetChip('right', 'Right Frame', tempPlacement, (p) {
+                        setModalState(() {
+                          tempPlacement = p;
+                          tempOffsetX = 25.0;
+                        });
+                      }),
+                      const SizedBox(width: 8),
+                      _buildPresetChip('full', 'Full View', tempPlacement, (p) {
+                        setModalState(() {
+                          tempPlacement = p;
+                          tempScale = 1.15;
+                          tempOffsetX = 0.0;
+                          tempOffsetY = 0.0;
+                        });
+                      }),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Sliders: Scale / Zoom
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Photo Scale / Zoom: ${(tempScale * 100).toInt()}%',
+                        style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 12),
+                      ),
+                      TextButton(
+                        onPressed: () => setModalState(() {
+                          tempScale = 1.0;
+                          tempOffsetX = 0.0;
+                          tempOffsetY = 0.0;
+                        }),
+                        child: Text('Reset', style: GoogleFonts.plusJakartaSans(color: AppColors.primaryGold, fontSize: 11)),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: tempScale.clamp(0.8, 1.6),
+                    min: 0.8,
+                    max: 1.6,
+                    divisions: 16,
+                    activeColor: AppColors.primaryGold,
+                    inactiveColor: Colors.white12,
+                    onChanged: (v) => setModalState(() => tempScale = v),
+                  ),
+
+                  // Sliders: Horizontal Offset
+                  Text(
+                    'Horizontal Position (X): ${tempOffsetX.toInt()}px',
+                    style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 12),
+                  ),
+                  Slider(
+                    value: tempOffsetX.clamp(-60.0, 60.0),
+                    min: -60.0,
+                    max: 60.0,
+                    divisions: 24,
+                    activeColor: AppColors.brandPink,
+                    inactiveColor: Colors.white12,
+                    onChanged: (v) => setModalState(() => tempOffsetX = v),
+                  ),
+
+                  // Sliders: Vertical Offset
+                  Text(
+                    'Vertical Position (Y): ${tempOffsetY.toInt()}px',
+                    style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 12),
+                  ),
+                  Slider(
+                    value: tempOffsetY.clamp(-60.0, 60.0),
+                    min: -60.0,
+                    max: 60.0,
+                    divisions: 24,
+                    activeColor: AppColors.champagne,
+                    inactiveColor: Colors.white12,
+                    onChanged: (v) => setModalState(() => tempOffsetY = v),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  ElevatedButton(
+                    onPressed: () {
+                      provider.updatePhotoPlacement(
+                        placement: tempPlacement,
+                        scale: tempScale,
+                        offsetX: tempOffsetX,
+                        offsetY: tempOffsetY,
+                      );
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          backgroundColor: Color(0xFF166534),
+                          content: Text('Photo placement & framing saved!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGold,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text(
+                      'Apply Photo Placement',
+                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
