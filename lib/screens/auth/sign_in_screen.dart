@@ -70,24 +70,18 @@ class _SignInScreenState extends State<SignInScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo Emblem
+                  // Official Logo Branding
                   Center(
                     child: Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primaryGold.withOpacity(0.2),
-                            blurRadius: 20,
-                          ),
-                        ],
+                      height: 120,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Image.asset(
+                        'assets/official_logo.png',
+                        fit: BoxFit.contain,
                       ),
-                      child: Image.asset('assets/my_invitation_logo.png'),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
                   // Header Titles
                   Text(

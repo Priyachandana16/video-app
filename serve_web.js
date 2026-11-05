@@ -127,7 +127,9 @@ function serveStaticFile(filePath, res, req) {
   res.writeHead(200, {
     'Content-Type': contentType,
     'Content-Length': stat.size,
-    'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600',
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+    'Pragma': 'no-cache',
+    'Expires': '0',
     'Accept-Ranges': 'bytes'
   });
 
@@ -137,4 +139,11 @@ function serveStaticFile(filePath, res, req) {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[Web Server] Flutter Web app running at http://localhost:${PORT}`);
   console.log(`[Web Server] Serving production bundle from: ${WEB_DIR}`);
+});
+
+const server2 = http.createServer((req, res) => {
+  server.emit('request', req, res);
+});
+server2.listen(8088, '0.0.0.0', () => {
+  console.log(`[Web Server] Clean origin listener running at http://localhost:8088`);
 });

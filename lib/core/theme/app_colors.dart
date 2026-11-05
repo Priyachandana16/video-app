@@ -8,6 +8,13 @@ class AppColors {
   static const Color elevatedSurface = Color(0xFF1B1B24);
   static const Color surfaceHigh = Color(0xFF23232E);
 
+  // Brand Pink & Gold Luxury Palette (matching official logo)
+  static const Color brandPink = Color(0xFFE91E63);
+  static const Color brandVividPink = Color(0xFFFF2A7A);
+  static const Color brandDeepPink = Color(0xFFC2185B);
+  static const Color brandPinkGlow = Color(0x40E91E63);
+  static const Color brandPinkBorder = Color(0x4DE91E63);
+
   // 24K Gold & Champagne luxury palette
   static const Color primaryGold = Color(0xFFF5B82E);
   static const Color richGold = Color(0xFFFFD56B);

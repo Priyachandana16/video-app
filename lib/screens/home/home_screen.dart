@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
 import '../../providers/template_provider.dart';
 import '../../providers/personalization_provider.dart';
 import '../../models/template_model.dart';
 import '../customization/personalization_form_screen.dart';
 import '../auth/sign_in_screen.dart';
 import 'categories_screen.dart';
+import 'wedding_preferences_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -70,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _navigateToWeddingCategory() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const CategoriesScreen(),
+        builder: (_) => const WeddingPreferencesScreen(),
       ),
     );
   }
@@ -343,46 +345,26 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            // Top Header Bar Matching Screenshot 3
+            // Top Header Bar with Official My Invitation Logo
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Brand Logo
-                    Row(
-                      children: [
-                        Text(
-                          'Vivaham',
-                          style: GoogleFonts.playfairDisplay(
-                            color: const Color(0xFFE2E8F0),
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEAB308).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFEAB308), width: 0.8),
-                          ),
-                          child: Text(
-                            'వివాహం',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: const Color(0xFFEAB308),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
+                    // Official Logo with Telugu Tagline intact
+                    Container(
+                      height: 48,
+                      constraints: const BoxConstraints(maxWidth: 190),
+                      child: Image.asset(
+                        'assets/official_logo.png',
+                        fit: BoxFit.contain,
+                        alignment: Alignment.centerLeft,
+                      ),
                     ),
 
-                    // Sign In Pill Button
+                    // Polished Sign In Pill Button
                     GestureDetector(
                       onTap: () {
                         Navigator.of(context).push(
@@ -395,14 +377,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: const Color(0xFF1E1E26),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.15),
+                            color: AppColors.primaryGold.withValues(alpha: 0.35),
                             width: 1,
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.arrow_forward_rounded, size: 14, color: Colors.white),
+                            const Icon(
+                              Icons.person_outline_rounded,
+                              size: 14,
+                              color: AppColors.primaryGold,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               'Sign in',
@@ -421,105 +407,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // Promo Banner Carousel
-            SliverToBoxAdapter(
-              child: Container(
-                height: 110,
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    Container(
-                      width: 300,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF31151E), Color(0xFF1A1A24)],
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0xFFFF5277).withValues(alpha: 0.3), width: 1),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Telugu Wedding Invitations',
-                                  style: GoogleFonts.playfairDisplay(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Mandap Chroma Key • Vedic Shlokas',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: const Color(0xFFE2E8F0),
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.celebration_rounded, color: Color(0xFFEAB308), size: 36),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      width: 300,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF1A2634), Color(0xFF1A1A24)],
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3), width: 1),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Royal Gold Temple Elegance',
-                                  style: GoogleFonts.playfairDisplay(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Kundan Frames • Nadaswaram Music',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: const Color(0xFFE2E8F0),
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.auto_awesome_rounded, color: Color(0xFFEAB308), size: 36),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Browse by occasion Title (Screenshot 3)
+            // Browse by occasion Title
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 10, 18, 4),
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -533,7 +424,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Pick an occasion to see designs made for it',
+                      'Pick an occasion to discover handcrafted templates',
                       style: GoogleFonts.plusJakartaSans(
                         color: const Color(0xFF94A3B8),
                         fontSize: 12,
@@ -593,7 +484,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Telugu Wedding Vivaham',
+                      'Royal Wedding Invitations',
                       style: GoogleFonts.playfairDisplay(
                         color: Colors.white,
                         fontSize: 18,

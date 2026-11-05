@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="description" content="Vivaham - Royal Video Invitation Maker. Traditional Indian & Telugu Wedding Video Invitations.">
-  <title>Vivaham • Royal Video Invitation Maker</title>
+  <meta name="description" content="My Invitation - Official Video Invitation Maker. మీ ఆహ్వానాలను.. మనసులకు కలుపుతుంది.">
+  <title>My Invitation • Video Invitation Maker</title>
   <link rel="icon" type="image/png" href="favicon.png"/>
   <link rel="manifest" href="manifest.json">
   <style>
@@ -75,6 +75,11 @@
         for (var r of regs) { r.unregister(); }
       });
     }
+    if (window.caches) {
+      caches.keys().then(function(keys) {
+        for (var k of keys) { caches.delete(k); }
+      });
+    }
 
     function removeLoader() {
       var loader = document.getElementById('loading-container');
@@ -95,9 +100,9 @@
   <div id="loading-container">
     <div class="spinner"></div>
     <div class="brand-title">
-      <span>Vivaham</span> <span class="brand-gold">వివాహం</span>
+      <span style="color:#FF2A6D">My</span> <span class="brand-gold">Invitation</span>
     </div>
-    <div class="brand-sub">Royal Video Invitation Studio</div>
+    <div class="brand-sub">మీ ఆహ్వానాలను.. మనసులకు కలుపుతుంది</div>
   </div>
   <script src="flutter_bootstrap.js" async></script>
 </body>

@@ -80,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             ),
           ),
 
-          // Central Branding Content
+          // Central Branding Content with Official Logo
           Center(
             child: FadeTransition(
               opacity: _fadeAnimation,
@@ -89,63 +89,24 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Verified Transparent Logo Emblem
+                    // Official Logo displaying full emblem, pink-and-gold lettering, hearts, and Telugu tagline
                     Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primaryGold.withOpacity(0.2),
-                            blurRadius: 30,
-                            spreadRadius: 4,
-                          ),
-                        ],
-                      ),
+                      constraints: const BoxConstraints(maxWidth: 320, maxHeight: 320),
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Image.asset(
-                        'assets/my_invitation_logo.png',
+                        'assets/official_logo.png',
                         fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
                       ),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 36),
 
-                    // App Title
-                    Text(
-                      'My Invitation',
-                      style: GoogleFonts.playfairDisplay(
-                        fontSize: 34,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                        letterSpacing: 1.2,
-                        shadows: [
-                          Shadow(
-                            color: AppColors.primaryGold.withOpacity(0.4),
-                            blurRadius: 18,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Tagline
-                    Text(
-                      'Craft Royal Video Invitations',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.champagne,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    const SizedBox(height: 48),
-
-                    // Elegant Gold Spinner
+                    // Elegant Gold & Pink Accent Spinner
                     const SizedBox(
-                      width: 28,
-                      height: 28,
+                      width: 32,
+                      height: 32,
                       child: CircularProgressIndicator(
-                        strokeWidth: 2.2,
+                        strokeWidth: 2.4,
                         valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryGold),
                       ),
                     ),

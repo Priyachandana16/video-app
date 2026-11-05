@@ -152,6 +152,48 @@ const TEMPLATES = [
       names: { start: 15.0, end: 32.0, title: 'Couple Names & Auspicious Muhurtham' },
       venue: { start: 32.0, end: 59.0, title: 'Ceremonial Venue & Invitation' }
     }
+  },
+  {
+    id: 'tmpl_telugu_classic_text_04',
+    title: 'Classic Mandapam Vivaham (Traditional Text)',
+    category: 'Wedding',
+    religion: 'Hindu',
+    orientation: '16:9',
+    hasPhoto: false,
+    photoSlotsCount: 0,
+    durationSeconds: 56,
+    badgeText: 'TRADITIONAL VEDIC',
+    description: 'Classic Telugu wedding invitation without photo frames. Features golden floral mandapam, sacred Vedic shlokas, and traditional Nadaswaram wedding instruments.',
+    masterVideoPath: path.join(PROJECT_ROOT, 'assets', 'templates', 'template_02_royal_gold.mp4'),
+    sampleResultPath: path.join(PROJECT_ROOT, 'assets', 'templates', 'template_02_sample_result.mp4'),
+    thumbnailUrl: '/assets/templates/thumb_02_gold.jpg',
+    templateThumbUrl: '/assets/templates/thumb_02_gold.jpg',
+    timelineConfig: {
+      intro: { start: 0.0, end: 15.0, title: 'Shree Rastu Shubhamastu Invocation' },
+      brideGroom: { start: 15.0, end: 30.0, title: 'Bride & Groom Names & Auspicious Muhurtham' },
+      venue: { start: 30.0, end: 56.0, title: 'Mandapam Venue & Cordial Welcome' }
+    }
+  },
+  {
+    id: 'tmpl_telugu_sacred_text_05',
+    title: 'Sacred Vedic Shlokas (Divine Ganesha Text)',
+    category: 'Wedding',
+    religion: 'Hindu',
+    orientation: '9:16',
+    hasPhoto: false,
+    photoSlotsCount: 0,
+    durationSeconds: 59,
+    badgeText: 'SACRED SHLOKA',
+    description: 'Mobile vertical wedding invitation without couple photos. Features glowing golden Lord Ganesha animation, Mangala Snanam and Muhurtham mantras in Telugu.',
+    masterVideoPath: path.join(PROJECT_ROOT, 'assets', 'templates', 'template_03_divine_god.mp4'),
+    sampleResultPath: path.join(PROJECT_ROOT, 'assets', 'templates', 'template_03_sample_result.mp4'),
+    thumbnailUrl: '/assets/templates/thumb_03_god.jpg',
+    templateThumbUrl: '/assets/templates/thumb_03_god.jpg',
+    timelineConfig: {
+      intro: { start: 0.0, end: 15.0, title: 'Divine Ganesha Blessings' },
+      names: { start: 15.0, end: 32.0, title: 'Couple Names & Auspicious Muhurtham' },
+      venue: { start: 32.0, end: 59.0, title: 'Ceremonial Venue & Invitation' }
+    }
   }
 ];
 

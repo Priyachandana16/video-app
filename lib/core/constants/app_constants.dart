@@ -1,13 +1,14 @@
 class AppConstants {
   static const String appName = 'My Invitation';
-  static const String appTagline = 'Royal Video Invitation Maker';
+  static const String appTagline = 'మీ ఆహ్వానాలను.. మనసులకు కలుపుతుంది';
+  static const String appEnglishTagline = 'Connecting Invitations to Hearts';
 
   // API Endpoints
   static const String defaultApiBaseUrl = 'http://10.0.2.2:5000/api';
   static const String localHostApiBaseUrl = 'http://localhost:5000/api';
 
   // Assets
-  static const String logoAsset = 'assets/my_invitation_logo.png';
+  static const String logoAsset = 'assets/official_logo.png';
   static const String masterVideoAsset = 'assets/templates/template_01_green_screen.mp4';
   static const String sampleCouplePhoto = 'assets/templates/thumb_01_green.jpg';
   static const String renderedOutputAsset = 'assets/templates/template_01_sample_result.mp4';

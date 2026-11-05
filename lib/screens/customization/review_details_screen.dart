@@ -192,43 +192,45 @@ class ReviewDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Dual Photo Timeframe Placements
-            Text(
-              'Ceremony Photo Placements',
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            // Dual Photo Timeframe Placements (only shown if template.hasPhoto)
+            if (template.hasPhoto) ...[
+              Text(
+                'Ceremony Photo Placements',
+                style: GoogleFonts.playfairDisplay(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Photos will appear at these exact timeframes in the template video:',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
-                color: const Color(0xFF94A3B8),
+              const SizedBox(height: 6),
+              Text(
+                'Photos will appear at these exact timeframes in the template video:',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  color: const Color(0xFF94A3B8),
+                ),
               ),
-            ),
-            const SizedBox(height: 14),
+              const SizedBox(height: 14),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildPhotoPreview(
-                  label: 'Woman Photo',
-                  sceneTime: 'Scene 2: 00:28 - 00:38',
-                  localPath: data.womanPhotoPath,
-                  bytes: data.womanPhotoBytes,
-                ),
-                _buildPhotoPreview(
-                  label: 'Man Photo',
-                  sceneTime: 'Scene 3: 00:41 - 00:51',
-                  localPath: data.manPhotoPath,
-                  bytes: data.manPhotoBytes,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildPhotoPreview(
+                    label: 'Woman Photo',
+                    sceneTime: 'Scene 2: 00:28 - 00:38',
+                    localPath: data.womanPhotoPath,
+                    bytes: data.womanPhotoBytes,
+                  ),
+                  _buildPhotoPreview(
+                    label: 'Man Photo',
+                    sceneTime: 'Scene 3: 00:41 - 00:51',
+                    localPath: data.manPhotoPath,
+                    bytes: data.manPhotoBytes,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+            ],
 
             // Ceremony Information Card
             Text(

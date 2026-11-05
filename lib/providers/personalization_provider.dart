@@ -118,6 +118,18 @@ class PersonalizationProvider extends ChangeNotifier {
     }
   }
 
+  void removeWomanPhoto() {
+    _data.womanPhotoPath = null;
+    _data.womanPhotoBytes = null;
+    notifyListeners();
+  }
+
+  void removeManPhoto() {
+    _data.manPhotoPath = null;
+    _data.manPhotoBytes = null;
+    notifyListeners();
+  }
+
   Future<void> pickPrimaryPhoto() async {
     await pickWomanPhoto();
   }
