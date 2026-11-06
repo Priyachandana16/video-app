@@ -2,7 +2,9 @@ import sys
 import os
 import json
 import re
+import math
 import subprocess
+import shutil
 from PIL import Image, ImageDraw, ImageFont
 
 def get_ffmpeg_path():
@@ -11,33 +13,105 @@ def get_ffmpeg_path():
         return candidate
     return 'ffmpeg'
 
-def fit_image_to_rect(img, target_w, target_h):
-    """Aspect-fill and center crop image to target dimensions."""
-    scale = max(target_w / img.width, target_h / img.height)
-    new_w, new_h = int(img.width * scale), int(img.height * scale)
-    resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-    left = (new_w - target_w) // 2
-    top = (new_h - target_h) // 2
-    return resized.crop((left, top, left + target_w, top + target_h))
+def fit_image_to_rect(img, target_w, target_h, fit_mode='cover'):
+    """Aspect-fill or fit image to target bounding box dimensions."""
+    if fit_mode == 'contain':
+        scale = min(target_w / float(img.width), target_h / float(img.height))
+        new_w, new_h = max(1, int(img.width * scale)), max(1, int(img.height * scale))
+        resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        bg = Image.new('RGBA', (target_w, target_h), (0, 0, 0, 0))
+        offset_x = (target_w - new_w) // 2
+        offset_y = (target_h - new_h) // 2
+        bg.paste(resized, (offset_x, offset_y))
+        return bg
+    else: # cover (default)
+        scale = max(target_w / float(img.width), target_h / float(img.height))
+        new_w, new_h = max(1, int(img.width * scale)), max(1, int(img.height * scale))
+        resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        left = max(0, (new_w - target_w) // 2)
+        top = max(0, (new_h - target_h) // 2)
+        return resized.crop((left, top, left + target_w, top + target_h))
 
-def get_best_font(size):
-    for fn in ["georgia.ttf", "arial.ttf", "calibri.ttf", "segoeui.ttf"]:
+def hex_to_rgb(hex_str, default=(255, 215, 0)):
+    try:
+        hex_str = hex_str.lstrip('#')
+        if len(hex_str) == 6:
+            return tuple(int(hex_str[i:i+2], 16) for i in (0, 2, 4))
+        elif len(hex_str) == 8:
+            return tuple(int(hex_str[i:i+2], 16) for i in (0, 2, 4, 6))
+    except Exception:
+        pass
+    return default
+
+def get_best_font(font_family, size):
+    candidates = []
+    fam_lower = (font_family or '').lower()
+    if 'cinzel' in fam_lower:
+        candidates = ["georgia.ttf", "times.ttf", "palatino.ttf", "segoeui.ttf"]
+    elif 'playfair' in fam_lower:
+        candidates = ["georgia.ttf", "times.ttf", "arial.ttf"]
+    else:
+        candidates = ["calibri.ttf", "arial.ttf", "segoeui.ttf", "georgia.ttf"]
+
+    for fn in candidates:
         try:
             return ImageFont.truetype(fn, size)
-        except:
+        except Exception:
             continue
     return ImageFont.load_default()
 
-def draw_text_with_shadow(draw, pos, text, font, fill_color, shadow_color=(20, 20, 30, 200), offset=(2, 2), anchor='mm'):
-    x, y = pos
-    draw.text((x + offset[0], y + offset[1]), text, font=font, fill=shadow_color, anchor=anchor)
-    draw.text((x, y), text, font=font, fill=fill_color, anchor=anchor)
+def render_text_overlay(text, font_family, font_size, font_color, align, canvas_w, canvas_h, target_x, target_y):
+    """Render antialiased text onto a transparent RGBA image at canvas coordinates."""
+    img = Image.new('RGBA', (canvas_w, canvas_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    font = get_best_font(font_family, font_size)
+
+    rgb = hex_to_rgb(font_color, (255, 215, 0))
+    fill_color = rgb if len(rgb) == 4 else (*rgb, 255)
+    shadow_color = (15, 15, 20, 220)
+
+    # Word wrapping if text is long
+    max_text_width = int(canvas_w * 0.85)
+    words = text.split(' ')
+    lines = []
+    cur_line = []
+    for w in words:
+        test_line = ' '.join(cur_line + [w])
+        bbox = draw.textbbox((0, 0), test_line, font=font)
+        if bbox[2] - bbox[0] > max_text_width and cur_line:
+            lines.append(' '.join(cur_line))
+            cur_line = [w]
+        else:
+            cur_line.append(w)
+    if cur_line:
+        lines.append(' '.join(cur_line))
+
+    line_height = int(font_size * 1.25)
+    total_h = len(lines) * line_height
+    start_y = target_y - (total_h // 2)
+
+    for i, line in enumerate(lines):
+        bbox = draw.textbbox((0, 0), line, font=font)
+        lw = bbox[2] - bbox[0]
+        if align == 'left':
+            lx = target_x
+        elif align == 'right':
+            lx = target_x - lw
+        else: # center
+            lx = target_x - (lw // 2)
+
+        ly = start_y + (i * line_height)
+        # Drop shadow for readability over rich video
+        for ox, oy in [(-2, -2), (2, -2), (-2, 2), (2, 2), (3, 3)]:
+            draw.text((lx + ox, ly + oy), line, font=font, fill=shadow_color)
+        draw.text((lx, ly), line, font=font, fill=fill_color)
+
+    return img
 
 def run_ffmpeg_with_progress(cmd, total_duration_sec=60.0):
     """Run FFmpeg and stream live PROGRESS: 0.XX | <step> lines to stdout."""
-    print("PROGRESS: 0.45 | Creating invitation scenes...", flush=True)
-    
-    # We pipe stderr because FFmpeg prints stats to stderr by default
+    print("PROGRESS: 0.40 | Assembling composition timeline...", flush=True)
+
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
@@ -47,9 +121,8 @@ def run_ffmpeg_with_progress(cmd, total_duration_sec=60.0):
     )
 
     time_pattern = re.compile(r'time=(\d+):(\d+):(\d+\.\d+)')
-    last_reported_pct = 0.45
+    last_reported_pct = 0.40
 
-    # Read stderr line-by-line in real time
     if proc.stderr:
         for line in proc.stderr:
             match = time_pattern.search(line)
@@ -57,314 +130,360 @@ def run_ffmpeg_with_progress(cmd, total_duration_sec=60.0):
                 hrs, mins, secs = int(match.group(1)), int(match.group(2)), float(match.group(3))
                 elapsed = hrs * 3600 + mins * 60 + secs
                 ratio = min(1.0, elapsed / max(1.0, total_duration_sec))
-                current_pct = 0.45 + (0.50 * ratio)
+                current_pct = 0.40 + (0.55 * ratio)
                 if current_pct - last_reported_pct >= 0.04 or current_pct >= 0.94:
                     last_reported_pct = current_pct
-                    print(f"PROGRESS: {current_pct:.2f} | Rendering your invitation video...", flush=True)
+                    print(f"PROGRESS: {current_pct:.2f} | Rendering high-definition video...", flush=True)
 
     proc.wait()
     if proc.returncode != 0:
         err_output = proc.stderr.read() if proc.stderr else "Unknown error"
         raise RuntimeError(f"FFmpeg failed with exit code {proc.returncode}: {err_output[-400:]}")
 
-    print("PROGRESS: 0.98 | Finalizing video...", flush=True)
+    print("PROGRESS: 0.98 | Finalizing MP4 invitation...", flush=True)
 
-def render_invitation(config_path):
-    print("PROGRESS: 0.10 | Preparing your invitation...", flush=True)
+def render_dynamic_invitation(config_path):
+    print("PROGRESS: 0.05 | Initializing dynamic rendering engine...", flush=True)
+
     with open(config_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
-    master_video = data.get('masterVideoPath', 'assets/templates/template_01_green_screen.mp4')
-    output_video = data.get('outputVideoPath', 'backend/exports/personalized_output.mp4')
-    
-    woman_photo_path = data.get('womanPhotoPath') or data.get('photoPath')
-    man_photo_path = data.get('manPhotoPath') or data.get('photoPath')
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    templates_file = os.path.join(os.path.dirname(__file__), 'data', 'templates.json')
 
-    photo_placement = str(data.get('photoPlacement', 'center')).lower()
-    photo_scale = float(data.get('photoScale', 1.0))
-    photo_offset_x = float(data.get('photoOffsetX', 0.0))
-    photo_offset_y = float(data.get('photoOffsetY', 0.0))
+    # Resolve template definition
+    template = data.get('template')
+    if not template:
+        template_id = data.get('templateId', 'tmpl_telugu_chroma_01')
+        if os.path.exists(templates_file):
+            try:
+                with open(templates_file, 'r', encoding='utf-8') as tf:
+                    t_list = json.load(tf)
+                    for t in t_list:
+                        if t.get('id') == template_id:
+                            template = t
+                            break
+            except Exception as e:
+                print(f"Warning: Could not read templates.json: {e}")
 
-    bride_name = data.get('brideName', 'Deepika')
-    groom_name = data.get('groomName', 'Sai Krishna')
-    parents_names = data.get('parentsNames', 'Smt. Sarojini & Sri. Rama Rao')
-    ceremony_title = data.get('ceremonyTitle', 'శుభ వివాహం / Subha Vivaham')
-    event_date = data.get('eventDate', 'Sunday, 15 December 2026')
-    muhurtham_time = data.get('muhurthamTime', 'Sumuhurtham: 10:24 AM')
-    venue = data.get('venue', 'Sri Venkateswara Kalyana Mandapam, Hyderabad')
-    rsvp = data.get('rsvp', 'With Best Compliments from Family & Friends')
+    if not template:
+        template = {
+            "id": "tmpl_telugu_chroma_01",
+            "canvasWidth": 1920,
+            "canvasHeight": 1080,
+            "durationSeconds": 102,
+            "masterVideoPath": "assets/templates/template_01_green_screen.mp4",
+            "textElements": [],
+            "imageElements": []
+        }
 
-    if not os.path.isabs(master_video):
-        master_video = os.path.abspath(master_video)
-    if not os.path.isabs(output_video):
-        output_video = os.path.abspath(output_video)
+    canvas_w = template.get('canvasWidth', 1920)
+    canvas_h = template.get('canvasHeight', 1080)
+    duration = float(template.get('durationSeconds', 60))
+    master_video_rel = template.get('masterVideoPath', 'assets/templates/template_01_green_screen.mp4')
+    master_video = os.path.abspath(os.path.join(project_root, master_video_rel)) if not os.path.isabs(master_video_rel) else master_video_rel
+
+    output_video = data.get('outputVideoPath')
+    if not output_video:
+        output_video = os.path.join(project_root, 'backend', 'exports', f"output_{os.getpid()}.mp4")
+    elif not os.path.isabs(output_video):
+        output_video = os.path.abspath(os.path.join(project_root, output_video))
 
     os.makedirs(os.path.dirname(output_video), exist_ok=True)
+    temp_dir = os.path.join(os.path.dirname(output_video), f"temp_{os.getpid()}_{int(os.path.getmtime(config_path))}")
+    os.makedirs(temp_dir, exist_ok=True)
+
     ffmpeg_bin = get_ffmpeg_path()
-    temp_dir = os.path.dirname(output_video)
+    masks_dir = os.path.join(project_root, 'assets', 'masks')
+    ink_mask_video = os.path.join(masks_dir, 'ink_reveal.mp4')
+    brush_mask_video = os.path.join(masks_dir, 'brush_stroke.mp4')
 
-    print("PROGRESS: 0.20 | Preparing and framing uploaded photos...", flush=True)
+    # Resolve user dynamic text dictionary
+    user_data = data.get('userData', data)
+    user_photos = data.get('photos', {})
 
-    # Prepare user photos
-    prep_groom = os.path.join(temp_dir, f"prep_groom_{os.path.basename(output_video)}.png")
-    prep_bride = os.path.join(temp_dir, f"prep_bride_{os.path.basename(output_video)}.png")
+    # Also map direct fields if sent via standard form
+    direct_photo_fields = ['photo_1', 'photo_2', 'photo_3', 'photo_4', 'photo_5', 'womanPhoto', 'manPhoto', 'photo']
+    for pf in direct_photo_fields:
+        if data.get(pf):
+            user_photos[pf] = data.get(pf)
+        if data.get(f"{pf}Path"):
+            user_photos[pf] = data.get(f"{pf}Path")
 
-    if not woman_photo_path or not os.path.exists(woman_photo_path):
-        blank_w = Image.new('RGBA', (1240, 892), (0, 0, 0, 0))
-        blank_w.save(prep_bride, 'PNG')
-        woman_photo_path = prep_bride
-    if not man_photo_path or not os.path.exists(man_photo_path):
-        blank_m = Image.new('RGBA', (1240, 892), (0, 0, 0, 0))
-        blank_m.save(prep_groom, 'PNG')
-        man_photo_path = prep_groom
+    # If womanPhoto/manPhoto are provided, make sure photo_1/photo_2 inherit them if missing
+    if 'womanPhoto' in user_photos and 'photo_1' not in user_photos:
+        user_photos['photo_1'] = user_photos['womanPhoto']
+    if 'manPhoto' in user_photos and 'photo_2' not in user_photos:
+        user_photos['photo_2'] = user_photos['manPhoto']
 
-    txt_groom_png = os.path.join(temp_dir, f"txt_groom_{os.path.basename(output_video)}.png")
-    txt_bride_png = os.path.join(temp_dir, f"txt_bride_{os.path.basename(output_video)}.png")
-    txt_muhurtham_png = os.path.join(temp_dir, f"txt_muhurtham_{os.path.basename(output_video)}.png")
-    txt_venue_png = os.path.join(temp_dir, f"txt_venue_{os.path.basename(output_video)}.png")
+    print("PROGRESS: 0.15 | Processing and framing uploaded photographs...", flush=True)
 
-    master_lower = os.path.basename(master_video).lower()
-    is_chroma = "green_screen" in master_lower or "01" in master_lower
-    is_temp2 = "royal_gold" in master_lower or "02" in master_lower or "5.mp4" in master_lower
-    is_temp3 = "divine_god" in master_lower or "03" in master_lower or "god" in master_lower
+    image_elements = template.get('imageElements', [])
+    text_elements = template.get('textElements', [])
 
-    print("PROGRESS: 0.35 | Processing wedding details & typography...", flush=True)
-
-    # Color Palette
-    royal_purple = (85, 20, 65, 255)
-    royal_maroon = (110, 25, 40, 255)
-    sub_color = (60, 60, 70, 240)
-    gold_color = (180, 130, 20, 255)
-
-    f_large = get_best_font(52)
-    f_mid = get_best_font(28)
-    f_small = get_best_font(24)
-
-    total_duration = 102.6
-
-    if is_chroma:
-        total_duration = 102.6
-        # Base arch dimensions: 1240 x 892 at base x=680, y=0
-        base_w = 1240
-        base_h = 892
-        base_x = 680
-        base_y = 0
-
-        if 'left' in photo_placement:
-            base_x = 610
-        elif 'right' in photo_placement:
-            base_x = 750
-        elif 'full' in photo_placement:
-            base_x = 640
-            base_w = 1280
-
-        target_w = max(400, int(base_w * photo_scale))
-        target_h = max(300, int(base_h * photo_scale))
-
-        try:
-            raw_m = Image.open(man_photo_path).convert('RGB')
-            fit_image_to_rect(raw_m, target_w, target_h).save(prep_groom, 'PNG')
-        except Exception:
-            prep_groom = man_photo_path
-
-        try:
-            raw_w = Image.open(woman_photo_path).convert('RGB')
-            fit_image_to_rect(raw_w, target_w, target_h).save(prep_bride, 'PNG')
-        except Exception:
-            prep_bride = woman_photo_path
-
-        pos_x = int(base_x + photo_offset_x + (base_w - target_w) // 2)
-        pos_y = int(base_y + photo_offset_y + (base_h - target_h) // 2)
-
-        # 1. Groom Reveal Text (Left Panel x = 540)
-        img_groom_txt = Image.new('RGBA', (1920, 892), (0, 0, 0, 0))
-        d1 = ImageDraw.Draw(img_groom_txt)
-        draw_text_with_shadow(d1, (540, 410), f"చి|| {groom_name}", f_large, royal_purple)
-        draw_text_with_shadow(d1, (540, 470), "s/o", f_mid, sub_color)
-        draw_text_with_shadow(d1, (540, 520), parents_names, f_small, royal_maroon)
-        img_groom_txt.save(txt_groom_png, 'PNG')
-
-        # 2. Bride Reveal Text (Left Panel x = 540)
-        img_bride_txt = Image.new('RGBA', (1920, 892), (0, 0, 0, 0))
-        d2 = ImageDraw.Draw(img_bride_txt)
-        draw_text_with_shadow(d2, (540, 410), f"చి||ల||సౌ|| {bride_name}", f_large, royal_purple)
-        draw_text_with_shadow(d2, (540, 470), "D/o", f_mid, sub_color)
-        draw_text_with_shadow(d2, (540, 520), parents_names, f_small, royal_maroon)
-        img_bride_txt.save(txt_bride_png, 'PNG')
-
-        # 3. Sumuhurtham Text (Centered x = 960)
-        img_muh_txt = Image.new('RGBA', (1920, 892), (0, 0, 0, 0))
-        d3 = ImageDraw.Draw(img_muh_txt)
-        draw_text_with_shadow(d3, (960, 350), "సుముహూర్తం / Sumuhurtham", f_large, royal_purple)
-        draw_text_with_shadow(d3, (960, 430), event_date, f_mid, royal_maroon)
-        draw_text_with_shadow(d3, (960, 500), muhurtham_time, f_large, gold_color)
-        img_muh_txt.save(txt_muhurtham_png, 'PNG')
-
-        # 4. Venue & Reception Text (Centered x = 960)
-        img_ven_txt = Image.new('RGBA', (1920, 892), (0, 0, 0, 0))
-        d4 = ImageDraw.Draw(img_ven_txt)
-        draw_text_with_shadow(d4, (960, 360), "కళ్యాణ వేదిక & విందు / Venue", f_large, royal_purple)
-        draw_text_with_shadow(d4, (960, 440), venue, f_mid, royal_maroon)
-        draw_text_with_shadow(d4, (960, 510), rsvp, f_small, sub_color)
-        img_ven_txt.save(txt_venue_png, 'PNG')
-
-        filter_str = (
-            f"[1:v]scale={target_w}:{target_h}[groom_p];"
-            f"[2:v]scale={target_w}:{target_h}[bride_p];"
-            "[0:v]chromakey=0x00ff00:0.18:0.08[ck];"
-            "color=c=0x0E0E12:s=1920x892:d=102.6[canvas];"
-            f"[canvas][groom_p]overlay=x={pos_x}:y={pos_y}:enable='between(t,28.4,38.5)'[bg1];"
-            f"[bg1][bride_p]overlay=x={pos_x}:y={pos_y}:enable='between(t,41.2,51.5)':shortest=1[bg2];"
-            "[bg2][ck]overlay=x=0:y=0[vid];"
-            "[vid][3:v]overlay=x=0:y=0:enable='between(t,28.4,38.5)'[v_g];"
-            "[v_g][4:v]overlay=x=0:y=0:enable='between(t,41.2,51.5)'[v_b];"
-            "[v_b][5:v]overlay=x=0:y=0:enable='between(t,54.0,68.0)'[v_m];"
-            "[v_m][6:v]overlay=x=0:y=0:enable='between(t,69.0,85.0)'[final]"
-        )
-
-        cmd = [
-            ffmpeg_bin, '-y',
-            '-i', master_video,
-            '-loop', '1', '-i', prep_groom,
-            '-loop', '1', '-i', prep_bride,
-            '-loop', '1', '-i', txt_groom_png,
-            '-loop', '1', '-i', txt_bride_png,
-            '-loop', '1', '-i', txt_muhurtham_png,
-            '-loop', '1', '-i', txt_venue_png,
-            '-filter_complex', filter_str,
-            '-map', '[final]',
-            '-map', '0:a:0?',
-            '-c:v', 'libx264',
-            '-preset', 'ultrafast',
-            '-threads', '4',
-            '-crf', '22',
-            '-c:a', 'copy',
-            '-shortest',
-            '-movflags', '+faststart',
-            output_video
+    # If template has legacy/empty textElements, construct standard dynamic set
+    if not text_elements:
+        text_elements = [
+            {
+                "id": "def_ceremony",
+                "field": "ceremonyTitle",
+                "defaultText": "శుభ వివాహం / Subha Vivaham",
+                "x": canvas_w // 2,
+                "y": 80,
+                "fontSize": 44,
+                "fontFamily": "Cinzel",
+                "fontColor": "#FFD700",
+                "textAlign": "center",
+                "startTime": 2.0,
+                "endTime": min(duration, 28.0),
+                "fadeIn": 0.6,
+                "fadeOut": 0.6
+            },
+            {
+                "id": "def_names",
+                "field": "coupleNames",
+                "defaultText": f"{user_data.get('groomName', 'Sai Krishna')} & {user_data.get('brideName', 'Deepika')}",
+                "x": canvas_w // 2,
+                "y": canvas_h - 180,
+                "fontSize": 48,
+                "fontFamily": "Playfair Display",
+                "fontColor": "#FFF9E6",
+                "textAlign": "center",
+                "startTime": 28.0,
+                "endTime": min(duration, 55.0),
+                "fadeIn": 0.6,
+                "fadeOut": 0.6
+            },
+            {
+                "id": "def_venue",
+                "field": "venue",
+                "defaultText": user_data.get('venue', 'Sri Venkateswara Kalyana Mandapam, Hyderabad'),
+                "x": canvas_w // 2,
+                "y": canvas_h - 180,
+                "fontSize": 34,
+                "fontFamily": "Playfair Display",
+                "fontColor": "#FFFFFF",
+                "textAlign": "center",
+                "startTime": 56.0,
+                "endTime": duration,
+                "fadeIn": 0.6,
+                "fadeOut": 0.6
+            }
         ]
 
-    elif is_temp2:
-        total_duration = 56.0
-        target_w = int(540 * photo_scale)
-        target_h = int(680 * photo_scale)
-
-        try:
-            raw_m = Image.open(man_photo_path).convert('RGB')
-            fit_image_to_rect(raw_m, target_w, target_h).save(prep_groom, 'PNG')
-        except Exception:
-            prep_groom = man_photo_path
-
-        try:
-            raw_w = Image.open(woman_photo_path).convert('RGB')
-            fit_image_to_rect(raw_w, target_w, target_h).save(prep_bride, 'PNG')
-        except Exception:
-            prep_bride = woman_photo_path
-
-        gx = int(220 + photo_offset_x)
-        gy = int(90 + photo_offset_y)
-        bx = int(1160 + photo_offset_x)
-        by = int(90 + photo_offset_y)
-
-        # Couple text overlay for Template 2
-        img_names = Image.new('RGBA', (1920, 864), (0, 0, 0, 0))
-        d_n = ImageDraw.Draw(img_names)
-        draw_text_with_shadow(d_n, (490, 800), f"చి|| {groom_name}", f_mid, gold_color)
-        draw_text_with_shadow(d_n, (1430, 800), f"చి||ల||సౌ|| {bride_name}", f_mid, gold_color)
-        img_names.save(txt_groom_png, 'PNG')
-
-        # Muhurtham & Venue text overlay for Template 2
-        img_event = Image.new('RGBA', (1920, 864), (0, 0, 0, 0))
-        d_e = ImageDraw.Draw(img_event)
-        draw_text_with_shadow(d_e, (960, 360), ceremony_title, f_large, gold_color)
-        draw_text_with_shadow(d_e, (960, 440), f"{event_date} • {muhurtham_time}", f_mid, (255, 240, 200, 255))
-        draw_text_with_shadow(d_e, (960, 520), venue, f_small, (220, 220, 230, 240))
-        img_event.save(txt_venue_png, 'PNG')
-
-        filter_str = (
-            f"[1:v]scale={target_w}:{target_h}[groom_p];"
-            f"[2:v]scale={target_w}:{target_h}[bride_p];"
-            f"[0:v][groom_p]overlay=x={gx}:y={gy}:enable='between(t,16,38)'[v1];"
-            f"[v1][bride_p]overlay=x={bx}:y={by}:enable='between(t,16,38)'[v2];"
-            "[v2][3:v]overlay=x=0:y=0:enable='between(t,16,38)'[v3];"
-            "[v3][4:v]overlay=x=0:y=0:enable='between(t,38,55)'[final]"
-        )
-
-        cmd = [
-            ffmpeg_bin, '-y',
-            '-i', master_video,
-            '-loop', '1', '-i', prep_groom,
-            '-loop', '1', '-i', prep_bride,
-            '-loop', '1', '-i', txt_groom_png,
-            '-loop', '1', '-i', txt_venue_png,
-            '-filter_complex', filter_str,
-            '-map', '[final]',
-            '-map', '0:a:0?',
-            '-c:v', 'libx264',
-            '-preset', 'ultrafast',
-            '-threads', '4',
-            '-crf', '22',
-            '-c:a', 'copy',
-            '-shortest',
-            '-movflags', '+faststart',
-            output_video
+    # If template has empty imageElements but hasPhoto is true, create default image slot
+    if not image_elements and template.get('hasPhoto', False):
+        image_elements = [
+            {
+                "id": "def_img_1",
+                "field": "photo_1",
+                "x": 680,
+                "y": 80,
+                "width": 560,
+                "height": 720,
+                "fit": "cover",
+                "startTime": 5.0,
+                "endTime": min(duration, 25.0),
+                "animationType": "ink_reveal",
+                "animationDuration": 1.2
+            }
         ]
 
-    else:
-        # Template 3 & Occasion Portrait templates (9:16 mobile)
-        total_duration = 59.0
-        target_w = int(720 * photo_scale)
-        target_h = int(640 * photo_scale)
+    # Pre-render Image Element Assets
+    prepared_images = []
+    for idx, img_el in enumerate(image_elements):
+        field_name = img_el.get('field', f'photo_{idx+1}')
+        target_w = int(img_el.get('width', 500))
+        target_h = int(img_el.get('height', 600))
+        fit_mode = img_el.get('fit', 'cover')
 
+        src_path = user_photos.get(field_name) or user_photos.get('photo')
+        if not src_path or not os.path.exists(src_path):
+            # Check placeholder in template or default asset
+            ph = img_el.get('placeholderUrl', '')
+            if ph.startswith('/'):
+                ph = ph.lstrip('/')
+            cand_ph = os.path.join(project_root, ph)
+            if os.path.exists(cand_ph):
+                src_path = cand_ph
+            else:
+                cand_default = os.path.join(project_root, 'assets', 'candidate_screenshot.jpg')
+                if os.path.exists(cand_default):
+                    src_path = cand_default
+
+        out_prep_img = os.path.join(temp_dir, f"prep_img_{idx}.png")
+        if src_path and os.path.exists(src_path):
+            try:
+                with Image.open(src_path).convert('RGBA') as raw_img:
+                    fitted = fit_image_to_rect(raw_img, target_w, target_h, fit_mode)
+                    fitted.save(out_prep_img, 'PNG')
+            except Exception as e:
+                print(f"Error preparing photo {field_name}: {e}")
+                blank = Image.new('RGBA', (target_w, target_h), (0, 0, 0, 0))
+                blank.save(out_prep_img, 'PNG')
+        else:
+            blank = Image.new('RGBA', (target_w, target_h), (0, 0, 0, 0))
+            blank.save(out_prep_img, 'PNG')
+
+        prepared_images.append({
+            'el': img_el,
+            'path': out_prep_img,
+            'width': target_w,
+            'height': target_h,
+            'x': int(img_el.get('x', 0)),
+            'y': int(img_el.get('y', 0)),
+            'start': float(img_el.get('startTime', 0.0)),
+            'end': float(img_el.get('endTime', duration)),
+            'anim': img_el.get('animationType', 'fade'),
+            'animDur': float(img_el.get('animationDuration', 1.0))
+        })
+
+    print("PROGRESS: 0.25 | Rendering custom typography & overlays...", flush=True)
+
+    # Pre-render Text Overlays onto full-canvas transparent PNGs
+    prepared_texts = []
+    for idx, txt_el in enumerate(text_elements):
+        field_key = txt_el.get('field', '')
+        # Check user data, fallback to defaultText
+        text_val = user_data.get(field_key)
+        if not text_val:
+            if field_key == 'coupleNames':
+                text_val = f"{user_data.get('groomName', 'Sai Krishna')} & {user_data.get('brideName', 'Deepika')}"
+            else:
+                text_val = txt_el.get('defaultText', '')
+
+        if not text_val:
+            continue
+
+        font_family = txt_el.get('fontFamily', 'Cinzel')
+        font_size = int(txt_el.get('fontSize', 40))
+        font_color = txt_el.get('fontColor', '#FFD700')
+        align = txt_el.get('textAlign', 'center')
+        tx = int(txt_el.get('x', canvas_w // 2))
+        ty = int(txt_el.get('y', canvas_h // 2))
+        start_t = float(txt_el.get('startTime', 0.0))
+        end_t = float(txt_el.get('endTime', duration))
+        fade_in = float(txt_el.get('fadeIn', 0.5))
+        fade_out = float(txt_el.get('fadeOut', 0.5))
+
+        out_txt_png = os.path.join(temp_dir, f"prep_txt_{idx}.png")
+        text_img = render_text_overlay(str(text_val), font_family, font_size, font_color, align, canvas_w, canvas_h, tx, ty)
+        text_img.save(out_txt_png, 'PNG')
+
+        prepared_texts.append({
+            'el': txt_el,
+            'path': out_txt_png,
+            'start': start_t,
+            'end': end_t,
+            'fadeIn': fade_in,
+            'fadeOut': fade_out
+        })
+
+    print("PROGRESS: 0.35 | Constructing multi-track FFmpeg composition...", flush=True)
+
+    # Build FFmpeg command and complex filter graph
+    # Input 0: Master background video
+    inputs = ['-i', master_video]
+    filter_chains = []
+
+    # Canvas normalization of background layer
+    filter_chains.append(f"[0:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease,pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2,setsar=1[v_canvas]")
+    current_stream = "v_canvas"
+
+    input_index = 1
+
+    # Add Image inputs & filters
+    for idx, pimg in enumerate(prepared_images):
+        inputs.extend(['-loop', '1', '-t', str(duration), '-i', pimg['path']])
+        img_idx = input_index
+        input_index += 1
+
+        anim = pimg['anim']
+        st = pimg['start']
+        et = pimg['end']
+        w = pimg['width']
+        h = pimg['height']
+        x = pimg['x']
+        y = pimg['y']
+        anim_dur = pimg['animDur']
+        fade_out = 0.5
+
+        if anim in ['ink_reveal', 'brush_stroke']:
+            mask_video = ink_mask_video if anim == 'ink_reveal' else brush_mask_video
+            if os.path.exists(mask_video):
+                inputs.extend(['-i', mask_video])
+                mask_idx = input_index
+                input_index += 1
+
+                # Scale mask to image size, pad stop to hold last frame, alphamerge
+                filter_chains.append(f"[{mask_idx}:v]scale={w}:{h},tpad=stop=-1:stop_mode=clone[mask_{idx}]")
+                filter_chains.append(f"[{img_idx}:v][mask_{idx}]alphamerge,fade=t=out:st={max(0, et - fade_out)}:d={fade_out}:alpha=1[img_anim_{idx}]")
+            else:
+                filter_chains.append(f"[{img_idx}:v]format=rgba,fade=t=in:st={st}:d={anim_dur}:alpha=1,fade=t=out:st={max(0, et - fade_out)}:d={fade_out}:alpha=1[img_anim_{idx}]")
+        elif anim == 'fade':
+            filter_chains.append(f"[{img_idx}:v]format=rgba,fade=t=in:st={st}:d={anim_dur}:alpha=1,fade=t=out:st={max(0, et - fade_out)}:d={fade_out}:alpha=1[img_anim_{idx}]")
+        else: # none
+            filter_chains.append(f"[{img_idx}:v]format=rgba[img_anim_{idx}]")
+
+        next_stream = f"v_img_{idx}"
+        filter_chains.append(f"[{current_stream}][img_anim_{idx}]overlay={x}:{y}:enable='between(t,{st},{et})'[{next_stream}]")
+        current_stream = next_stream
+
+    # Add Text inputs & filters
+    for idx, ptxt in enumerate(prepared_texts):
+        inputs.extend(['-loop', '1', '-t', str(duration), '-i', ptxt['path']])
+        txt_idx = input_index
+        input_index += 1
+
+        st = ptxt['start']
+        et = ptxt['end']
+        fi = ptxt['fadeIn']
+        fo = ptxt['fadeOut']
+
+        filter_chains.append(f"[{txt_idx}:v]format=rgba,fade=t=in:st={st}:d={fi}:alpha=1,fade=t=out:st={max(0, et - fo)}:d={fo}:alpha=1[txt_anim_{idx}]")
+        next_stream = f"v_txt_{idx}"
+        filter_chains.append(f"[{current_stream}][txt_anim_{idx}]overlay=0:0:enable='between(t,{st},{et})'[{next_stream}]")
+        current_stream = next_stream
+
+    filter_complex_str = ';'.join(filter_chains)
+
+    # Assemble complete command
+    cmd = [ffmpeg_bin, '-y']
+    cmd.extend(inputs)
+    cmd.extend([
+        '-filter_complex', filter_complex_str,
+        '-map', f"[{current_stream}]",
+        '-map', '0:a?', # Preserve audio from original template video
+        '-c:v', 'libx264',
+        '-preset', 'veryfast',
+        '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac',
+        '-b:a', '192k',
+        '-t', str(duration),
+        output_video
+    ])
+
+    try:
+        run_ffmpeg_with_progress(cmd, total_duration_sec=duration)
+    finally:
+        # Cleanup temp directory
         try:
-            raw_w = Image.open(woman_photo_path).convert('RGB')
-            fit_image_to_rect(raw_w, target_w, target_h).save(prep_bride, 'PNG')
+            shutil.rmtree(temp_dir, ignore_errors=True)
         except Exception:
-            prep_bride = woman_photo_path
+            pass
 
-        px = int(180 + photo_offset_x)
-        py = int(240 + photo_offset_y)
-
-        # Portrait text overlay
-        img_port = Image.new('RGBA', (1080, 1920), (0, 0, 0, 0))
-        d_p = ImageDraw.Draw(img_port)
-        draw_text_with_shadow(d_p, (540, 940), f"{groom_name} & {bride_name}", f_large, gold_color)
-        draw_text_with_shadow(d_p, (540, 1020), f"{event_date} • {muhurtham_time}", f_mid, (255, 245, 220, 255))
-        draw_text_with_shadow(d_p, (540, 1100), venue, f_small, (220, 220, 230, 230))
-        img_port.save(txt_muhurtham_png, 'PNG')
-
-        filter_str = (
-            f"[1:v]scale={target_w}:{target_h}[photo_p];"
-            f"[0:v][photo_p]overlay=x={px}:y={py}:enable='between(t,12,38)'[v1];"
-            "[v1][2:v]overlay=x=0:y=0:enable='between(t,12,50)'[final]"
-        )
-
-        cmd = [
-            ffmpeg_bin, '-y',
-            '-i', master_video,
-            '-loop', '1', '-i', prep_bride,
-            '-loop', '1', '-i', txt_muhurtham_png,
-            '-filter_complex', filter_str,
-            '-map', '[final]',
-            '-map', '0:a:0?',
-            '-c:v', 'libx264',
-            '-preset', 'ultrafast',
-            '-threads', '4',
-            '-crf', '22',
-            '-c:a', 'copy',
-            '-shortest',
-            '-movflags', '+faststart',
-            output_video
-        ]
-
-    print("PROGRESS: 0.45 | Creating invitation scenes...", flush=True)
-    run_ffmpeg_with_progress(cmd, total_duration_sec=total_duration)
-
-    print(f"PROGRESS: 1.00 | Video ready!", flush=True)
+    print(f"PROGRESS: 1.00 | Rendering successfully finished: {output_video}", flush=True)
     return output_video
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        render_invitation(sys.argv[1])
-    else:
-        print("Usage: python render_engine.py <config.json>")
+    if len(sys.argv) < 2:
+        print("Usage: python render_engine.py <config_path>")
+        sys.exit(1)
+
+    config_file = sys.argv[1]
+    try:
+        render_dynamic_invitation(config_file)
+        sys.exit(0)
+    except Exception as err:
+        print(f"RENDER_ERROR: {str(err)}", file=sys.stderr)
+        sys.exit(1)

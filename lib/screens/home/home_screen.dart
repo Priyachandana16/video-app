@@ -7,7 +7,6 @@ import '../../providers/personalization_provider.dart';
 import '../../models/template_model.dart';
 import '../customization/personalization_form_screen.dart';
 import '../auth/sign_in_screen.dart';
-import 'categories_screen.dart';
 import 'wedding_preferences_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -18,8 +17,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _selectedOccasion = 'Wedding';
-  String _selectedFilter = 'All';
+  final String _selectedOccasion = 'Wedding';
 
   final List<Map<String, dynamic>> _occasions = [
     {

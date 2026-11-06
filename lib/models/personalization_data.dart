@@ -18,14 +18,18 @@ class PersonalizationData {
   double photoScale; // 0.8 - 1.5
   double photoOffsetX; // -50.0 to 50.0
   double photoOffsetY; // -50.0 to 50.0
-  
-  // Specific photo slots for woman (Bride) and man (Groom)
+
+  // Multi-slot dynamic photo mapping (photo_1, photo_2, photo_3, photo_4, photo_5, etc.)
+  Map<String, String> slotPhotoPaths;
+  Map<String, Uint8List> slotPhotoBytes;
+
+  // Specific legacy photo slots for woman (Bride) and man (Groom)
   String? womanPhotoPath;
   Uint8List? womanPhotoBytes;
   String? manPhotoPath;
   Uint8List? manPhotoBytes;
 
-  // Legacy fallback compatibility
+  // Fallback compatibility
   String? primaryPhotoPath;
   Uint8List? primaryPhotoBytes;
   List<String> additionalPhotos;
@@ -46,6 +50,8 @@ class PersonalizationData {
     this.photoScale = 1.0,
     this.photoOffsetX = 0.0,
     this.photoOffsetY = 0.0,
+    Map<String, String>? slotPhotoPaths,
+    Map<String, Uint8List>? slotPhotoBytes,
     this.womanPhotoPath,
     this.womanPhotoBytes,
     this.manPhotoPath,
@@ -53,12 +59,34 @@ class PersonalizationData {
     this.primaryPhotoPath,
     this.primaryPhotoBytes,
     List<String>? additionalPhotos,
-  }) : additionalPhotos = additionalPhotos ?? [];
+  })  : slotPhotoPaths = slotPhotoPaths ?? {},
+        slotPhotoBytes = slotPhotoBytes ?? {},
+        additionalPhotos = additionalPhotos ?? [];
 
   String get coupleTitle => '$groomName & $brideName';
 
+  String? getSlotPhotoPath(String slotKey) {
+    if (slotPhotoPaths.containsKey(slotKey) && slotPhotoPaths[slotKey] != null) {
+      return slotPhotoPaths[slotKey];
+    }
+    if (slotKey == 'photo_1' || slotKey == 'womanPhoto') return womanPhotoPath;
+    if (slotKey == 'photo_2' || slotKey == 'manPhoto') return manPhotoPath;
+    if (slotKey == 'photo') return primaryPhotoPath;
+    return null;
+  }
+
+  Uint8List? getSlotPhotoBytes(String slotKey) {
+    if (slotPhotoBytes.containsKey(slotKey) && slotPhotoBytes[slotKey] != null) {
+      return slotPhotoBytes[slotKey];
+    }
+    if (slotKey == 'photo_1' || slotKey == 'womanPhoto') return womanPhotoBytes;
+    if (slotKey == 'photo_2' || slotKey == 'manPhoto') return manPhotoBytes;
+    if (slotKey == 'photo') return primaryPhotoBytes;
+    return null;
+  }
+
   Map<String, String> toFormFields() {
-    return {
+    final fields = {
       'templateId': templateId,
       'hasPhoto': hasPhoto.toString(),
       'photoPlacement': photoPlacement,
@@ -75,6 +103,16 @@ class PersonalizationData {
       'rsvp': rsvp,
       'contactPhone': contactPhone,
     };
+
+    slotPhotoPaths.forEach((k, v) {
+      fields['${k}Path'] = v;
+    });
+
+    if (womanPhotoPath != null) fields['womanPhotoPath'] = womanPhotoPath!;
+    if (manPhotoPath != null) fields['manPhotoPath'] = manPhotoPath!;
+    if (primaryPhotoPath != null) fields['photoPath'] = primaryPhotoPath!;
+
+    return fields;
   }
 
   PersonalizationData copyWith({
@@ -93,6 +131,8 @@ class PersonalizationData {
     double? photoScale,
     double? photoOffsetX,
     double? photoOffsetY,
+    Map<String, String>? slotPhotoPaths,
+    Map<String, Uint8List>? slotPhotoBytes,
     String? womanPhotoPath,
     Uint8List? womanPhotoBytes,
     String? manPhotoPath,
@@ -117,6 +157,8 @@ class PersonalizationData {
       photoScale: photoScale ?? this.photoScale,
       photoOffsetX: photoOffsetX ?? this.photoOffsetX,
       photoOffsetY: photoOffsetY ?? this.photoOffsetY,
+      slotPhotoPaths: slotPhotoPaths ?? Map.from(this.slotPhotoPaths),
+      slotPhotoBytes: slotPhotoBytes ?? Map.from(this.slotPhotoBytes),
       womanPhotoPath: womanPhotoPath ?? this.womanPhotoPath,
       womanPhotoBytes: womanPhotoBytes ?? this.womanPhotoBytes,
       manPhotoPath: manPhotoPath ?? this.manPhotoPath,

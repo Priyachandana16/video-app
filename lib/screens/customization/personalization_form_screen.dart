@@ -149,8 +149,10 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
           (p.data.womanPhotoPath != null && p.data.womanPhotoPath!.isNotEmpty);
       final hasMan = p.data.manPhotoBytes != null ||
           (p.data.manPhotoPath != null && p.data.manPhotoPath!.isNotEmpty);
+      final hasSlotPhoto = p.data.slotPhotoPaths.isNotEmpty ||
+          p.data.slotPhotoBytes.isNotEmpty;
 
-      if (!hasWoman && !hasMan) {
+      if (!hasWoman && !hasMan && !hasSlotPhoto) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Color(0xFFC2410C),
@@ -341,10 +343,29 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
     String? localPath,
     Uint8List? bytes,
   }) {
+    return Expanded(
+      child: _buildPhotoSlotCardItem(
+        label: label,
+        slotRole: slotRole,
+        onPick: onPick,
+        onRemove: onRemove,
+        localPath: localPath,
+        bytes: bytes,
+      ),
+    );
+  }
+
+  Widget _buildPhotoSlotCardItem({
+    required String label,
+    required String slotRole,
+    required VoidCallback onPick,
+    required VoidCallback onRemove,
+    String? localPath,
+    Uint8List? bytes,
+  }) {
     final hasPhoto = bytes != null || (localPath != null && localPath.isNotEmpty);
 
-    return Expanded(
-      child: Column(
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
@@ -486,8 +507,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
             ),
           ),
         ],
-      ),
-    );
+      );
   }
 
   Widget _buildPhotoUploadSection(
@@ -535,8 +555,35 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
         ),
         const SizedBox(height: 12),
 
-        // Dynamic Photo Upload Slots
-        if (tmpl.photoSlotsCount >= 2) ...[
+        // Dynamic Multi-Photo Upload Slots from published Template Configuration
+        if (tmpl.imageElements.isNotEmpty) ...[
+          Wrap(
+            spacing: 12,
+            runSpacing: 14,
+            children: tmpl.imageElements.map((imgEl) {
+              final slotKey = imgEl.field;
+              final slotBytes = provider.data.getSlotPhotoBytes(slotKey);
+              final slotPath = provider.data.getSlotPhotoPath(slotKey);
+              final animName = imgEl.animationType == 'ink_reveal'
+                  ? 'Ink Reveal'
+                  : imgEl.animationType == 'brush_stroke'
+                      ? 'Brush Stroke'
+                      : 'Fade';
+
+              return SizedBox(
+                width: 155,
+                child: _buildPhotoSlotCardItem(
+                  label: imgEl.label.isNotEmpty ? imgEl.label : slotKey,
+                  slotRole: '$animName (${imgEl.startTime.toInt()}s-${imgEl.endTime.toInt()}s)',
+                  onPick: () => provider.pickSlotPhoto(slotKey),
+                  onRemove: () => provider.removeSlotPhoto(slotKey),
+                  localPath: slotPath,
+                  bytes: slotBytes,
+                ),
+              );
+            }).toList(),
+          ),
+        ] else if (tmpl.photoSlotsCount >= 2) ...[
           Row(
             children: [
               _buildPhotoSlotCard(

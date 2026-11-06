@@ -502,26 +502,49 @@ class ApiService {
 
       onProgress?.call(0.04, 'Processing wedding details...');
 
+      // Add multi-slot dynamic photos (photo_1..photo_5, etc.)
+      for (final entry in data.slotPhotoPaths.entries) {
+        final slotKey = entry.key;
+        final p = entry.value;
+        if (!kIsWeb && File(p).existsSync()) {
+          request.files.add(await http.MultipartFile.fromPath(slotKey, p));
+        }
+      }
+      for (final entry in data.slotPhotoBytes.entries) {
+        final slotKey = entry.key;
+        if (!request.files.any((f) => f.field == slotKey)) {
+          request.files.add(http.MultipartFile.fromBytes(
+            slotKey,
+            entry.value,
+            filename: '$slotKey.jpg',
+          ));
+        }
+      }
+
       // Add woman (Bride) photo
-      if (!kIsWeb && data.womanPhotoPath != null && File(data.womanPhotoPath!).existsSync()) {
-        request.files.add(await http.MultipartFile.fromPath('womanPhoto', data.womanPhotoPath!));
-      } else if (data.womanPhotoBytes != null) {
-        request.files.add(http.MultipartFile.fromBytes(
-          'womanPhoto',
-          data.womanPhotoBytes!,
-          filename: 'bride_photo.jpg',
-        ));
+      if (!request.files.any((f) => f.field == 'womanPhoto')) {
+        if (!kIsWeb && data.womanPhotoPath != null && File(data.womanPhotoPath!).existsSync()) {
+          request.files.add(await http.MultipartFile.fromPath('womanPhoto', data.womanPhotoPath!));
+        } else if (data.womanPhotoBytes != null) {
+          request.files.add(http.MultipartFile.fromBytes(
+            'womanPhoto',
+            data.womanPhotoBytes!,
+            filename: 'bride_photo.jpg',
+          ));
+        }
       }
 
       // Add man (Groom) photo
-      if (!kIsWeb && data.manPhotoPath != null && File(data.manPhotoPath!).existsSync()) {
-        request.files.add(await http.MultipartFile.fromPath('manPhoto', data.manPhotoPath!));
-      } else if (data.manPhotoBytes != null) {
-        request.files.add(http.MultipartFile.fromBytes(
-          'manPhoto',
-          data.manPhotoBytes!,
-          filename: 'groom_photo.jpg',
-        ));
+      if (!request.files.any((f) => f.field == 'manPhoto')) {
+        if (!kIsWeb && data.manPhotoPath != null && File(data.manPhotoPath!).existsSync()) {
+          request.files.add(await http.MultipartFile.fromPath('manPhoto', data.manPhotoPath!));
+        } else if (data.manPhotoBytes != null) {
+          request.files.add(http.MultipartFile.fromBytes(
+            'manPhoto',
+            data.manPhotoBytes!,
+            filename: 'groom_photo.jpg',
+          ));
+        }
       }
 
       // Add primary fallback photo

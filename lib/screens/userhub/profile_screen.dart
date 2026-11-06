@@ -29,7 +29,7 @@ class ProfileScreen extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.primaryGold.withOpacity(0.12),
+            color: AppColors.primaryGold.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: AppColors.primaryGold, size: 20),
@@ -51,8 +51,541 @@ class ProfileScreen extends StatelessWidget {
         ),
         trailing: trailing ??
             (onTap != null
-                ? const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.champagne)
+                ? const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: AppColors.champagne,
+                  )
                 : null),
+      ),
+    );
+  }
+
+  void _showDesignSupportSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF14141E),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 16,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGold.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.support_agent_rounded,
+                          color: AppColors.primaryGold,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Design Support Team',
+                        style: GoogleFonts.playfairDisplay(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Our dedicated video artists & typography experts are ready to assist you.',
+                style: GoogleFonts.plusJakartaSans(
+                  color: const Color(0xFF94A3B8),
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Support Member 1: Rajesh Varma
+              _buildSupportMemberCard(
+                name: 'Rajesh Varma',
+                role: 'Senior Invitation Video Designer',
+                phone: '+91 98765 43210',
+                email: 'rajesh.design@myinvitation.app',
+                specialization: 'Telugu Vivaham Mandap & Chroma Key Video Editing',
+                initials: 'RV',
+              ),
+              const SizedBox(height: 10),
+
+              // Support Member 2: Priya Chandana
+              _buildSupportMemberCard(
+                name: 'Priya Chandana',
+                role: 'Creative Lead & Customization Director',
+                phone: '+91 91234 56789',
+                email: 'priya.support@myinvitation.app',
+                specialization: 'Birthday, Festivals & Milestone Celebrations',
+                initials: 'PC',
+              ),
+              const SizedBox(height: 10),
+
+              // Support Member 3: Kiran Kumar
+              _buildSupportMemberCard(
+                name: 'Kiran Kumar',
+                role: 'Audio & Vedic Typography Specialist',
+                phone: '+91 98480 22338',
+                email: 'help@myinvitation.app',
+                specialization: 'Sanskrit Shlokas & Nadaswaram Music Sync',
+                initials: 'KK',
+              ),
+              const SizedBox(height: 16),
+
+              // Availability Banner
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1E28),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white12, width: 1),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time_rounded,
+                      color: AppColors.champagne,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Support Hours: Mon – Sun • 9:00 AM – 9:00 PM IST\nAverage response time: within 15 minutes',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: const Color(0xFFCBD5E1),
+                          fontSize: 11,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      backgroundColor: Color(0xFF166534),
+                      content: Text('Connecting to Design Support on WhatsApp (+91 98765 43210)...'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                label: Text(
+                  'Chat with Support on WhatsApp',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGold,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSupportMemberCard({
+    required String name,
+    required String role,
+    required String phone,
+    required String email,
+    required String specialization,
+    required String initials,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A24),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.goldBorder,
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primaryGold.withValues(alpha: 0.15),
+              border: Border.all(color: AppColors.primaryGold, width: 1.2),
+            ),
+            child: Center(
+              child: Text(
+                initials,
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: AppColors.primaryGold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  role,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    color: AppColors.champagne,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  specialization,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.phone_rounded, size: 12, color: AppColors.brandPink),
+                    const SizedBox(width: 4),
+                    Text(
+                      phone,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Icon(Icons.email_outlined, size: 12, color: AppColors.primaryGold),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        email,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF14141E),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 16,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGold.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.info_outline,
+                          color: AppColors.primaryGold,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'About My Invitation',
+                        style: GoogleFonts.playfairDisplay(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // App Info Card
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A24),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.goldBorder, width: 0.8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'My Invitation',
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryGold,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryGold.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'v1.0.0 (Build 2026.11)',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: AppColors.champagne,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'మీ ఆహ్వానాలను.. మనసులకు కలుపుతుంది',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        color: AppColors.champagne,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'India\'s premier AI-powered & handcrafted Royal Video Invitation Maker. Effortlessly create cinematic video invitations for Telugu Vivaham, Grand Weddings, First Birthdays, Milestones, and Sacred Festivals.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        color: const Color(0xFFCBD5E1),
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Feature Highlights
+              _buildAboutFeatureTile(
+                icon: Icons.movie_creation_outlined,
+                title: 'Full HD 1080p Video Synthesis',
+                desc: 'Hardware-accelerated MP4 rendering with authentic Nadaswaram music.',
+              ),
+              _buildAboutFeatureTile(
+                icon: Icons.crop_rotate_rounded,
+                title: 'Photo Placement & Framing Controls',
+                desc: 'Fine-tuned interactive zoom, scaling, and mandap arch alignment.',
+              ),
+              _buildAboutFeatureTile(
+                icon: Icons.security_rounded,
+                title: 'Data Privacy & Local Export',
+                desc: 'Your photos and personalized details remain private and secure.',
+              ),
+              const SizedBox(height: 12),
+
+              // Legal & Attribution
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF14141B),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Crafted with love in Hyderabad, Telangana',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: AppColors.champagne,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '© 2026 My Invitation Technologies Pvt. Ltd. All rights reserved.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: const Color(0xFF64748B),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGold,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Close',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAboutFeatureTile({
+    required IconData icon,
+    required String title,
+    required String desc,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161620),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primaryGold, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  desc,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -201,19 +734,13 @@ class ProfileScreen extends StatelessWidget {
               icon: Icons.support_agent_rounded,
               title: 'Design Support',
               subtitle: 'Need help customizing your video? Contact Us',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    backgroundColor: AppColors.surfaceHigh,
-                    content: Text('Support helpline: support@myinvitation.app'),
-                  ),
-                );
-              },
+              onTap: () => _showDesignSupportSheet(context),
             ),
             _buildProfileTile(
               icon: Icons.info_outline,
               title: 'About My Invitation',
               subtitle: 'v1.0.0 • Royal Video Invitation Maker',
+              onTap: () => _showAboutSheet(context),
             ),
             const SizedBox(height: 12),
 
@@ -222,7 +749,7 @@ class ProfileScreen extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.royalCrimson.withOpacity(0.5), width: 1),
+                border: Border.all(color: AppColors.royalCrimson.withValues(alpha: 0.5), width: 1),
               ),
               child: TextButton.icon(
                 onPressed: () async {

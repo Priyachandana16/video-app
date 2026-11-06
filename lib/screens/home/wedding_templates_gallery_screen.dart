@@ -450,7 +450,7 @@ class _WeddingTemplatesGalleryScreenState
             ),
             const SizedBox(height: 8),
             Text(
-              'We could not find any ${_currentOrientation} wedding templates ${_currentHasPhoto ? 'with photos' : 'without photos'}. Try choosing a different combination.',
+              'We could not find any $_currentOrientation wedding templates ${_currentHasPhoto ? 'with photos' : 'without photos'}. Try choosing a different combination.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 color: const Color(0xFF94A3B8),

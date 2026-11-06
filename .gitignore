@@ -48,12 +48,18 @@ app.*.map.json
 .widget_preview/
 .stitch/
 
-# Node / Backend
+# Node / Backend / Admin Dashboard
 node_modules/
 backend/node_modules/
+admin-dashboard/node_modules/
+.next/
+admin-dashboard/.next/
+out/
+admin-dashboard/out/
 backend/uploads/
 backend/exports/
 backend/data/*.json
+!backend/data/templates.json
 *.pyc
 __pycache__/
 test_mp4v.mp4

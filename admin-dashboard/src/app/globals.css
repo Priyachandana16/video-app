@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0A0A0F;
+  --bg-surface: #12121A;
+  --bg-surface-elevated: #181824;
+  --border-color: #262638;
+  --gold-primary: #D4AF37;
+  --gold-light: #FFE082;
+  --crimson-royal: #800020;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: #F8FAFC;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0D0D14;
+}
+::-webkit-scrollbar-thumb {
+  background: #2A2A3C;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D4AF37;
+}
+
+/* Ink reveal animation simulation in CSS */
+@keyframes inkSpread {
+  0% {
+    clip-path: circle(0% at 50% 50%);
+    opacity: 0.2;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    clip-path: circle(120% at 50% 50%);
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Brush wipe animation simulation in CSS */
+@keyframes brushWipe {
+  0% {
+    clip-path: polygon(0 0, 0 0, 0 100%, 0% 100%);
+    opacity: 0.3;
+  }
+  100% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    opacity: 1;
+  }
+}
+
+.anim-ink-reveal {
+  animation: inkSpread var(--anim-duration, 1.2s) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.anim-brush-stroke {
+  animation: brushWipe var(--anim-duration, 1.2s) cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.anim-fade {
+  animation: fadeIn var(--anim-duration, 1s) ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+

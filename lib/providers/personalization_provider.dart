@@ -147,6 +147,49 @@ class PersonalizationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> pickSlotPhoto(String slotKey) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 90,
+      );
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        _data.slotPhotoPaths[slotKey] = image.path;
+        _data.slotPhotoBytes[slotKey] = bytes;
+        if (slotKey == 'photo_1' || slotKey == 'womanPhoto') {
+          _data.womanPhotoPath = image.path;
+          _data.womanPhotoBytes = bytes;
+          _data.primaryPhotoPath = image.path;
+          _data.primaryPhotoBytes = bytes;
+        } else if (slotKey == 'photo_2' || slotKey == 'manPhoto') {
+          _data.manPhotoPath = image.path;
+          _data.manPhotoBytes = bytes;
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error picking photo for $slotKey: $e');
+    }
+  }
+
+  void removeSlotPhoto(String slotKey) {
+    _data.slotPhotoPaths.remove(slotKey);
+    _data.slotPhotoBytes.remove(slotKey);
+    if (slotKey == 'photo_1' || slotKey == 'womanPhoto') {
+      _data.womanPhotoPath = null;
+      _data.womanPhotoBytes = null;
+      _data.primaryPhotoPath = null;
+      _data.primaryPhotoBytes = null;
+    } else if (slotKey == 'photo_2' || slotKey == 'manPhoto') {
+      _data.manPhotoPath = null;
+      _data.manPhotoBytes = null;
+    }
+    notifyListeners();
+  }
+
   Future<void> pickPrimaryPhoto() async {
     await pickWomanPhoto();
   }

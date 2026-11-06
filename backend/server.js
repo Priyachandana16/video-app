@@ -41,6 +41,23 @@ const upload = multer({ storage });
 
 // Local persistent file store
 const DB_FILE = path.join(DATA_DIR, 'db.json');
+const TEMPLATES_FILE = path.join(DATA_DIR, 'templates.json');
+
+function loadTemplates() {
+  if (fs.existsSync(TEMPLATES_FILE)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(TEMPLATES_FILE, 'utf8'));
+      if (Array.isArray(data) && data.length > 0) return data;
+    } catch (e) {
+      console.error('Error loading templates.json:', e);
+    }
+  }
+  return TEMPLATES;
+}
+
+function saveTemplates(templates) {
+  fs.writeFileSync(TEMPLATES_FILE, JSON.stringify(templates, null, 2), 'utf8');
+}
 function loadDb() {
   if (fs.existsSync(DB_FILE)) {
     try {
@@ -551,17 +568,17 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // ----------------------------------------------------
-// TEMPLATE ROUTES
+// TEMPLATE ROUTES & MANAGEMENT (ADMIN & CLIENT)
 // ----------------------------------------------------
 
 // GET /api/templates
 app.get('/api/templates', (req, res) => {
   const { religion, orientation, hasPhoto, category } = req.query;
-
-  let results = [...TEMPLATES];
+  const allTemplates = loadTemplates();
+  let results = [...allTemplates];
 
   if (religion && religion !== 'All') {
-    results = results.filter(t => t.religion.toLowerCase() === religion.toLowerCase());
+    results = results.filter(t => (t.religion || '').toLowerCase() === religion.toLowerCase());
   }
 
   if (orientation && orientation !== 'All') {
@@ -574,7 +591,7 @@ app.get('/api/templates', (req, res) => {
   }
 
   if (category && category !== 'All') {
-    results = results.filter(t => t.category.toLowerCase() === category.toLowerCase());
+    results = results.filter(t => (t.category || '').toLowerCase() === category.toLowerCase());
   }
 
   res.json({
@@ -585,11 +602,160 @@ app.get('/api/templates', (req, res) => {
 
 // GET /api/templates/:id
 app.get('/api/templates/:id', (req, res) => {
-  const tmpl = TEMPLATES.find(t => t.id === req.params.id);
+  const allTemplates = loadTemplates();
+  const tmpl = allTemplates.find(t => t.id === req.params.id);
   if (!tmpl) {
     return res.status(404).json({ error: 'Template not found' });
   }
   res.json(tmpl);
+});
+
+// POST /api/templates - Admin creates a new invitation template
+app.post('/api/templates', (req, res) => {
+  try {
+    const allTemplates = loadTemplates();
+    const newTemplate = {
+      id: req.body.id || `tmpl_custom_${Date.now()}`,
+      title: req.body.title || 'Untitled Royal Template',
+      category: req.body.category || 'Wedding',
+      religion: req.body.religion || 'Hindu',
+      orientation: req.body.orientation || '16:9',
+      canvasWidth: req.body.canvasWidth || (req.body.orientation === '9:16' ? 1080 : 1920),
+      canvasHeight: req.body.canvasHeight || (req.body.orientation === '9:16' ? 1920 : 1080),
+      hasPhoto: req.body.hasPhoto !== false,
+      photoSlotsCount: req.body.photoSlotsCount || (req.body.imageElements ? req.body.imageElements.length : 2),
+      durationSeconds: req.body.durationSeconds || 60,
+      badgeText: req.body.badgeText || 'DYNAMIC TEMPLATE',
+      description: req.body.description || 'Configured via Admin Timeline Editor',
+      masterVideoPath: req.body.masterVideoPath || 'assets/templates/template_01_green_screen.mp4',
+      videoUrl: req.body.videoUrl || '/assets/templates/template_01_green_screen.mp4',
+      thumbnailUrl: req.body.thumbnailUrl || '/assets/templates/thumb_01_green.jpg',
+      templateThumbUrl: req.body.thumbnailUrl || '/assets/templates/thumb_01_green.jpg',
+      textElements: req.body.textElements || [],
+      imageElements: req.body.imageElements || []
+    };
+
+    allTemplates.unshift(newTemplate);
+    saveTemplates(allTemplates);
+
+    res.status(201).json({
+      success: true,
+      message: 'Template created successfully',
+      template: newTemplate
+    });
+  } catch (err) {
+    console.error('Create template error:', err);
+    res.status(500).json({ error: 'Failed to create template', message: err.message });
+  }
+});
+
+// PUT /api/templates/:id - Admin publishes/saves template configuration
+app.put('/api/templates/:id', (req, res) => {
+  try {
+    const allTemplates = loadTemplates();
+    const idx = allTemplates.findIndex(t => t.id === req.params.id);
+    if (idx === -1) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    const existing = allTemplates[idx];
+    const updated = {
+      ...existing,
+      ...req.body,
+      id: existing.id, // Immutable ID
+      textElements: req.body.textElements !== undefined ? req.body.textElements : existing.textElements,
+      imageElements: req.body.imageElements !== undefined ? req.body.imageElements : existing.imageElements,
+      photoSlotsCount: req.body.imageElements ? req.body.imageElements.length : existing.photoSlotsCount,
+      hasPhoto: (req.body.imageElements && req.body.imageElements.length > 0) || existing.hasPhoto,
+      updatedAt: new Date().toISOString()
+    };
+
+    allTemplates[idx] = updated;
+    saveTemplates(allTemplates);
+
+    res.json({
+      success: true,
+      message: 'Template configuration published successfully',
+      template: updated
+    });
+  } catch (err) {
+    console.error('Update template error:', err);
+    res.status(500).json({ error: 'Failed to update template', message: err.message });
+  }
+});
+
+// DELETE /api/templates/:id - Delete template
+app.delete('/api/templates/:id', (req, res) => {
+  try {
+    let allTemplates = loadTemplates();
+    const exists = allTemplates.some(t => t.id === req.params.id);
+    if (!exists) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+    allTemplates = allTemplates.filter(t => t.id !== req.params.id);
+    saveTemplates(allTemplates);
+    res.json({ success: true, message: 'Template removed successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete template', message: err.message });
+  }
+});
+
+// ----------------------------------------------------
+// ADMIN MEDIA ASSETS
+// ----------------------------------------------------
+
+// GET /api/admin/media-assets - List available background videos and images for editor
+app.get('/api/admin/media-assets', (req, res) => {
+  try {
+    const media = [];
+    const scanDirs = [
+      { dir: path.join(PROJECT_ROOT, 'assets', 'templates'), relPrefix: '/assets/templates' },
+      { dir: path.join(PROJECT_ROOT, 'assets'), relPrefix: '/assets' }
+    ];
+
+    for (const item of scanDirs) {
+      if (fs.existsSync(item.dir)) {
+        const files = fs.readdirSync(item.dir);
+        for (const file of files) {
+          const fullPath = path.join(item.dir, file);
+          const stat = fs.statSync(fullPath);
+          if (stat.isFile()) {
+            const ext = path.extname(file).toLowerCase();
+            const isVideo = ['.mp4', '.mov', '.webm', '.mkv'].includes(ext);
+            const isImage = ['.png', '.jpg', '.jpeg', '.webp'].includes(ext);
+            if (isVideo || isImage) {
+              const relPath = path.relative(PROJECT_ROOT, fullPath).replace(/\\/g, '/');
+              media.push({
+                name: file,
+                filePath: relPath,
+                url: `${item.relPrefix}/${file}`,
+                type: isVideo ? 'video' : 'image',
+                sizeBytes: stat.size
+              });
+            }
+          }
+        }
+      }
+    }
+    res.json({ count: media.length, assets: media });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to read media assets', message: err.message });
+  }
+});
+
+// POST /api/admin/upload-asset - Upload new background video or asset
+app.post('/api/admin/upload-asset', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  const relUrl = `/uploads/${path.basename(req.file.path)}`;
+  res.json({
+    success: true,
+    message: 'Asset uploaded successfully',
+    filename: req.file.filename,
+    filePath: path.relative(PROJECT_ROOT, req.file.path).replace(/\\/g, '/'),
+    url: relUrl
+  });
 });
 
 // ----------------------------------------------------
@@ -613,8 +779,13 @@ app.get('/api/render/jobs', (req, res) => {
   res.json(Array.from(RENDER_JOBS.values()));
 });
 
-// POST /api/render
+// POST /api/render - Multi-image & dynamic text rendering
 app.post('/api/render', upload.fields([
+  { name: 'photo_1', maxCount: 1 },
+  { name: 'photo_2', maxCount: 1 },
+  { name: 'photo_3', maxCount: 1 },
+  { name: 'photo_4', maxCount: 1 },
+  { name: 'photo_5', maxCount: 1 },
   { name: 'womanPhoto', maxCount: 1 },
   { name: 'manPhoto', maxCount: 1 },
   { name: 'photo', maxCount: 1 }
@@ -629,68 +800,71 @@ app.post('/api/render', upload.fields([
       muhurthamTime = 'Sumuhurtham: 10:24 AM',
       venue = 'Sri Venkateswara Kalyana Mandapam, Hyderabad',
       rsvp = 'With Best Compliments from Family & Friends',
-      photoPlacement = 'arch_center',
-      photoScale = '1.0',
-      photoOffsetX = '0.0',
-      photoOffsetY = '0.0',
       userId = 'usr_guest'
     } = req.body;
 
-    const template = TEMPLATES.find(t => t.id === templateId) || TEMPLATES[0];
-    const previewMode = req.body.previewMode === 'true' || req.body.previewMode === true || !req.body.fullDuration;
+    const allTemplates = loadTemplates();
+    let template = allTemplates.find(t => t.id === templateId) || allTemplates[0];
 
+    // Support inline dynamic template configuration (e.g. from Admin preview mode)
+    if (req.body.templateConfig) {
+      try {
+        const parsed = typeof req.body.templateConfig === 'string'
+          ? JSON.parse(req.body.templateConfig)
+          : req.body.templateConfig;
+        if (parsed && typeof parsed === 'object') {
+          template = { ...template, ...parsed };
+        }
+      } catch (_) {}
+    }
+
+    const previewMode = req.body.previewMode === 'true' || req.body.previewMode === true;
     const hasPhoto = req.body.hasPhoto === 'true' || req.body.hasPhoto === true || (template.hasPhoto && req.body.hasPhoto !== 'false');
 
-    // Determine woman (Bride) and man (Groom) photo paths
-    let womanPhotoPath = null;
-    let manPhotoPath = null;
-    if (req.files) {
-      if (req.files['womanPhoto'] && req.files['womanPhoto'][0]) {
-        womanPhotoPath = req.files['womanPhoto'][0].path;
-      }
-      if (req.files['manPhoto'] && req.files['manPhoto'][0]) {
-        manPhotoPath = req.files['manPhoto'][0].path;
-      }
-      if (req.files['photo'] && req.files['photo'][0]) {
-        if (!womanPhotoPath) womanPhotoPath = req.files['photo'][0].path;
-        if (!manPhotoPath) manPhotoPath = req.files['photo'][0].path;
+    // Collect uploaded photos across multi-photo slots
+    const photos = {};
+    const photoKeys = ['photo_1', 'photo_2', 'photo_3', 'photo_4', 'photo_5', 'womanPhoto', 'manPhoto', 'photo'];
+    for (const pk of photoKeys) {
+      if (req.files && req.files[pk] && req.files[pk][0]) {
+        photos[pk] = req.files[pk][0].path;
+      } else if (req.body[`${pk}Path`] && fs.existsSync(req.body[`${pk}Path`])) {
+        photos[pk] = req.body[`${pk}Path`];
       }
     }
-    if (!womanPhotoPath && req.body.womanPhotoPath && fs.existsSync(req.body.womanPhotoPath)) {
-      womanPhotoPath = req.body.womanPhotoPath;
-    }
-    if (!manPhotoPath && req.body.manPhotoPath && fs.existsSync(req.body.manPhotoPath)) {
-      manPhotoPath = req.body.manPhotoPath;
-    }
-    const photoPath = womanPhotoPath || manPhotoPath;
+
+    // Fallback bindings between woman/man and photo_1/photo_2
+    if (!photos['photo_1'] && photos['womanPhoto']) photos['photo_1'] = photos['womanPhoto'];
+    if (!photos['photo_2'] && photos['manPhoto']) photos['photo_2'] = photos['manPhoto'];
+    if (!photos['womanPhoto'] && photos['photo_1']) photos['womanPhoto'] = photos['photo_1'];
+    if (!photos['manPhoto'] && photos['photo_2']) photos['manPhoto'] = photos['photo_2'];
+    if (!photos['photo_1'] && photos['photo']) photos['photo_1'] = photos['photo'];
 
     const timestamp = Date.now();
     const jobId = `job_${timestamp}`;
     const outputFilename = `invitation_${timestamp}.mp4`;
     const outputVideoPath = path.join(EXPORTS_DIR, outputFilename);
 
-    // Write temp config JSON for python render engine
+    // Write temp config JSON for data-driven python render engine
     const configPath = path.join(DATA_DIR, `render_config_${timestamp}.json`);
     const renderConfig = {
+      template,
+      templateId: template.id,
       masterVideoPath: template.masterVideoPath,
       outputVideoPath,
       hasPhoto,
-      photoPath,
-      womanPhotoPath,
-      manPhotoPath,
-      photoPlacement: photoPlacement || 'arch_center',
-      photoScale: parseFloat(photoScale) || 1.0,
-      photoOffsetX: parseFloat(photoOffsetX) || 0.0,
-      photoOffsetY: parseFloat(photoOffsetY) || 0.0,
-      brideName,
-      groomName,
-      parentsNames: req.body.parentsNames || 'Smt. Lakshmi & Sri. Venkat Rao',
-      ceremonyTitle,
-      eventDate,
-      muhurthamTime,
-      venue,
-      rsvp,
-      previewMode: req.body.previewMode === 'true' || req.body.previewMode === true || !req.body.fullDuration,
+      photos,
+      userData: {
+        ...req.body,
+        brideName,
+        groomName,
+        parentsNames: req.body.parentsNames || 'Smt. Lakshmi & Sri. Venkat Rao',
+        ceremonyTitle,
+        eventDate,
+        muhurthamTime,
+        venue,
+        rsvp
+      },
+      previewMode,
       sampleResultPath: template.sampleResultPath
     };
 
@@ -700,12 +874,13 @@ app.post('/api/render', upload.fields([
     const jobRecord = {
       jobId,
       status: 'processing',
-      progress: 0.10,
-      step: 'Preparing your invitation...',
-      templateId,
+      progress: 0.05,
+      step: 'Initializing invitation engine...',
+      templateId: template.id,
       outputFilename,
       createdAt: new Date().toISOString()
     };
+    RENDER_JOBS.set(jobId, jobRecord);
     RENDER_JOBS.set(jobId, jobRecord);
 
     const isAsync = req.query.async === 'true' || req.body.async === 'true' || req.headers['x-async-render'] === 'true';
