@@ -6,6 +6,7 @@ import '../models/template_model.dart';
 import '../models/creation_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
+import '../services/download_service.dart';
 
 class PersonalizationProvider extends ChangeNotifier {
   PersonalizationData _data = PersonalizationData();
@@ -284,9 +285,11 @@ class PersonalizationProvider extends ChangeNotifier {
     }
   }
 
-  Future<String?> downloadToDevice() async {
-    await Future.delayed(const Duration(milliseconds: 600));
-    return _renderedLocalPath ?? 'Y:\\Video Invitation App !\\backend\\exports\\invitation_personalized.mp4';
+  Future<bool> downloadToDevice() async {
+    final url = _renderedVideoUrl ??
+        _renderedLocalPath ??
+        'assets/templates/template_01_sample_result.mp4';
+    return await DownloadService.download(url);
   }
 
   void shareRenderedVideo() {

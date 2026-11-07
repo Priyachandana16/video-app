@@ -275,7 +275,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'We couldn\'t find any templates matching "${_searchController.text}". Try searching for Wedding, Birthday, Anniversary, or Festivals.',
+              'We couldn\'t find any templates matching "${_searchController.text}". Try searching for Half Saree Ceremony, Wedding, Birthday, Housewarming, or Engagement.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 color: const Color(0xFF94A3B8),

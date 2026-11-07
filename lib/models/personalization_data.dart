@@ -35,16 +35,16 @@ class PersonalizationData {
   List<String> additionalPhotos;
 
   PersonalizationData({
-    this.templateId = 'tmpl_telugu_chroma_01',
-    this.brideName = 'Deepika',
-    this.groomName = 'Sai Krishna',
-    this.parentsNames = 'Smt. Sarojini & Sri. Rama Rao',
-    this.ceremonyTitle = 'శుభ వివాహం / Subha Vivaham',
-    this.eventDate = 'Sunday, 15 December 2026',
-    this.muhurthamTime = 'Sumuhurtham: 10:24 AM',
-    this.venue = 'Sri Venkateswara Kalyana Mandapam, Hyderabad',
-    this.rsvp = 'With Best Compliments from Family & Friends',
-    this.contactPhone = '+91 98765 43210',
+    this.templateId = '',
+    this.brideName = '',
+    this.groomName = '',
+    this.parentsNames = '',
+    this.ceremonyTitle = '',
+    this.eventDate = '',
+    this.muhurthamTime = '',
+    this.venue = '',
+    this.rsvp = '',
+    this.contactPhone = '',
     this.hasPhoto = true,
     this.photoPlacement = 'arch_center',
     this.photoScale = 1.0,
@@ -63,7 +63,14 @@ class PersonalizationData {
         slotPhotoBytes = slotPhotoBytes ?? {},
         additionalPhotos = additionalPhotos ?? [];
 
-  String get coupleTitle => '$groomName & $brideName';
+  String get coupleTitle {
+    if (groomName.isNotEmpty && brideName.isNotEmpty) {
+      return '$groomName & $brideName';
+    }
+    if (groomName.isNotEmpty) return groomName;
+    if (brideName.isNotEmpty) return brideName;
+    return '';
+  }
 
   String? getSlotPhotoPath(String slotKey) {
     if (slotPhotoPaths.containsKey(slotKey) && slotPhotoPaths[slotKey] != null) {

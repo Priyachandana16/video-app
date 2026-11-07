@@ -66,34 +66,15 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
     super.initState();
     final p = context.read<PersonalizationProvider>().data;
 
-    _groomController = TextEditingController(
-        text: p.groomName.isNotEmpty ? p.groomName : 'Sai Krishna');
-    _brideController = TextEditingController(
-        text: p.brideName.isNotEmpty ? p.brideName : 'Deepika');
-    _dateController = TextEditingController(
-        text: p.eventDate.isNotEmpty ? p.eventDate : 'Sunday, 15 December 2026');
-    _timeController = TextEditingController(
-        text: p.muhurthamTime.isNotEmpty
-            ? p.muhurthamTime
-            : 'Sumuhurtham: 10:24 AM');
-    _venueController = TextEditingController(
-        text: p.venue.isNotEmpty
-            ? p.venue
-            : 'Sri Venkateswara Kalyana Mandapam');
-    _addressController = TextEditingController(
-        text: 'Banjara Hills, Road No. 12, Hyderabad');
-    _parentsController = TextEditingController(
-        text: p.parentsNames.isNotEmpty
-            ? p.parentsNames
-            : 'Smt. Sarojini & Sri. Rama Rao');
-    _ceremonyController = TextEditingController(
-        text: p.ceremonyTitle.isNotEmpty
-            ? p.ceremonyTitle
-            : 'శుభ వివాహం / Subha Vivaham');
-    _rsvpController = TextEditingController(
-        text: p.rsvp.isNotEmpty
-            ? p.rsvp
-            : 'With Best Compliments from Family & Friends');
+    _groomController = TextEditingController(text: p.groomName);
+    _brideController = TextEditingController(text: p.brideName);
+    _dateController = TextEditingController(text: p.eventDate);
+    _timeController = TextEditingController(text: p.muhurthamTime);
+    _venueController = TextEditingController(text: p.venue);
+    _addressController = TextEditingController(text: '');
+    _parentsController = TextEditingController(text: p.parentsNames);
+    _ceremonyController = TextEditingController(text: p.ceremonyTitle);
+    _rsvpController = TextEditingController(text: p.rsvp);
   }
 
   @override

@@ -14,8 +14,24 @@ class AppConstants {
   static const String renderedOutputAsset = 'assets/templates/template_01_sample_result.mp4';
 
   // Categories & Filters
-  static const List<String> religions = ['All', 'Hindu', 'Christian', 'Muslim'];
-  static const List<String> orientations = ['All', '9:16', '16:9'];
+  static const List<String> categories = [
+    'Half Saree Ceremony',
+    'Wedding',
+    'Birthday',
+    'Housewarming',
+    'Engagement',
+    'AI-Generated Invitations',
+  ];
+  static const List<String> religions = ['Hindu', 'Muslim', 'Christian'];
+  static const List<String> orientations = ['16:9', '9:16'];
   static const List<String> photoFilters = ['All', 'With Photo', 'Without Photo'];
-  static const List<String> occasions = ['All', 'Wedding', 'Reception', 'Engagement', 'Sangeet'];
+  static const List<String> occasions = [
+    'All',
+    'Half Saree Ceremony',
+    'Wedding',
+    'Birthday',
+    'Housewarming',
+    'Engagement',
+    'AI-Generated Invitations',
+  ];
 }

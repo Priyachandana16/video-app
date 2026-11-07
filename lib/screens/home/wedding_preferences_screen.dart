@@ -6,12 +6,14 @@ import 'wedding_templates_gallery_screen.dart';
 class WeddingPreferencesScreen extends StatefulWidget {
   final String occasion;
   final String? initialOrientation;
+  final String? initialReligion;
   final bool? initialHasPhoto;
 
   const WeddingPreferencesScreen({
     super.key,
     this.occasion = 'Wedding',
     this.initialOrientation,
+    this.initialReligion,
     this.initialHasPhoto,
   });
 
@@ -23,74 +25,47 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
   // Step 1: Orientation ('16:9' or '9:16')
   String? _selectedOrientation;
 
-  // Step 2: Photo Preference ('with_photo' or 'without_photo')
-  String? _selectedPhotoPreference;
+  // Step 2: Religion ('Hindu', 'Muslim', 'Christian')
+  String? _selectedReligion = 'Hindu';
+
+  // Step 3: Photo Preference ('with_photo' or 'without_photo')
+  String? _selectedPhotoPreference = 'with_photo';
 
   String get _pageTitle {
     switch (widget.occasion) {
-      case 'First Birthday':
-        return 'First Birthday Invitation';
+      case 'Half Saree Ceremony':
+        return 'Half Saree Ceremony';
+      case 'Wedding':
+        return 'Wedding Invitation';
       case 'Birthday':
         return 'Birthday Invitation';
-      case 'Anniversary':
-        return 'Anniversary Invitation';
-      case 'Festivals':
-      case 'Festival':
-        return 'Festival Invitation';
-      case 'Wedding':
+      case 'Housewarming':
+        return 'Housewarming Invitation';
+      case 'Engagement':
+        return 'Engagement Invitation';
+      case 'AI-Generated Invitations':
+        return 'AI-Generated Invitations';
       default:
-        return 'Wedding Invitation';
+        return '${widget.occasion} Invitation';
     }
   }
 
   String get _pageSubtitle {
     switch (widget.occasion) {
-      case 'First Birthday':
-        return 'Customize your preferences to find the perfect template design for your little one\'s first birthday celebration.';
-      case 'Birthday':
-        return 'Customize your preferences to find the perfect template design for your birthday celebration.';
-      case 'Anniversary':
-        return 'Customize your preferences to find the perfect template design for your milestone wedding anniversary.';
-      case 'Festivals':
-      case 'Festival':
-        return 'Customize your preferences to find the perfect template design for your auspicious festival celebration.';
+      case 'Half Saree Ceremony':
+        return 'Select your preferred video orientation and religious traditions for your auspicious Half Saree (Langa Voni) celebration.';
       case 'Wedding':
-      default:
-        return 'Customize your preferences to find the perfect template design for your auspicious celebration.';
-    }
-  }
-
-  String get _withPhotoSubtitle {
-    switch (widget.occasion) {
-      case 'First Birthday':
-        return 'Includes baby, parents & family photo slots integrated into the video';
+        return 'Select your preferred video orientation and religious traditions to discover handcrafted royal wedding templates.';
       case 'Birthday':
-        return 'Includes birthday star & celebration photo slots integrated into the video';
-      case 'Anniversary':
-        return 'Includes couple wedding memories & portrait photo slots integrated into the video';
-      case 'Festivals':
-      case 'Festival':
-        return 'Includes family puja & celebration photo slots integrated into the video';
-      case 'Wedding':
+        return 'Choose your video orientation and theme to design a vibrant, joyful birthday invitation.';
+      case 'Housewarming':
+        return 'Select your video orientation and traditions to create an auspicious Gruhapravesham video.';
+      case 'Engagement':
+        return 'Select your video orientation and traditions to create a romantic Ring Ceremony invitation.';
+      case 'AI-Generated Invitations':
+        return 'Choose your video orientation and religious traditions to synthesize AI-crafted cinematic video invitations.';
       default:
-        return 'Includes bride, groom & couple photo slots integrated into the video';
-    }
-  }
-
-  String get _withoutPhotoSubtitle {
-    switch (widget.occasion) {
-      case 'First Birthday':
-        return 'Playful festive themes, joyful typography & celebratory music without photo slots';
-      case 'Birthday':
-        return 'Vibrant party themes, stylish typography & upbeat music without photo slots';
-      case 'Anniversary':
-        return 'Royal gold typography, romantic wishes & celebratory melodies without photo slots';
-      case 'Festivals':
-      case 'Festival':
-        return 'Sacred Vedic shlokas, traditional motifs & divine mantras without photo slots';
-      case 'Wedding':
-      default:
-        return 'Elegant traditional Vedic typography, sacred shlokas & mandapam without photo slots';
+        return 'Select your preferred video orientation and religious traditions to discover personalized templates.';
     }
   }
 
@@ -99,13 +74,23 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
     super.initState();
     if (widget.initialOrientation != null) {
       _selectedOrientation = widget.initialOrientation;
+    } else {
+      _selectedOrientation = '16:9'; // Default to Horizontal 16:9
     }
+
+    if (widget.initialReligion != null) {
+      _selectedReligion = widget.initialReligion;
+    }
+
     if (widget.initialHasPhoto != null) {
       _selectedPhotoPreference = widget.initialHasPhoto! ? 'with_photo' : 'without_photo';
     }
   }
 
-  bool get _isReady => _selectedOrientation != null && _selectedPhotoPreference != null;
+  bool get _isReady =>
+      _selectedOrientation != null &&
+      _selectedReligion != null &&
+      _selectedPhotoPreference != null;
 
   void _onViewTemplates() {
     if (!_isReady) return;
@@ -116,6 +101,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         builder: (_) => WeddingTemplatesGalleryScreen(
           occasion: widget.occasion,
           orientation: _selectedOrientation!,
+          religion: _selectedReligion!,
           hasPhoto: hasPhoto,
         ),
       ),
@@ -186,14 +172,10 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
           curve: Curves.easeOutCubic,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xFF1E1B26)
-                : const Color(0xFF14141B),
+            color: isSelected ? const Color(0xFF1E1B26) : const Color(0xFF14141B),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: isSelected
-                  ? AppColors.primaryGold
-                  : Colors.white.withValues(alpha: 0.1),
+              color: isSelected ? AppColors.primaryGold : Colors.white.withValues(alpha: 0.1),
               width: isSelected ? 2 : 1,
             ),
             boxShadow: isSelected
@@ -260,18 +242,13 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
               ),
               const SizedBox(height: 18),
 
-              // Title and ratio badge
-              Row(
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+              Text(
+                title,
+                style: GoogleFonts.plusJakartaSans(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 4),
               Container(
@@ -307,40 +284,37 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
     );
   }
 
-  Widget _buildPhotoPreferenceCard({
-    required String preferenceKey,
+  Widget _buildReligionCard({
+    required String religionKey,
     required String title,
     required String subtitle,
     required IconData icon,
     required Color accentColor,
   }) {
-    final isSelected = _selectedPhotoPreference == preferenceKey;
+    final isSelected = _selectedReligion == religionKey;
 
     return GestureDetector(
       onTap: () {
         setState(() {
-          _selectedPhotoPreference = preferenceKey;
+          _selectedReligion = religionKey;
         });
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF1E1B26)
-              : const Color(0xFF14141B),
-          borderRadius: BorderRadius.circular(18),
+          color: isSelected ? const Color(0xFF1E1B26) : const Color(0xFF14141B),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected
-                ? accentColor
-                : Colors.white.withValues(alpha: 0.1),
+            color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.1),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: accentColor.withValues(alpha: 0.25),
+                    color: accentColor.withValues(alpha: 0.22),
                     blurRadius: 14,
                     offset: const Offset(0, 3),
                   ),
@@ -350,8 +324,8 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 color: isSelected
                     ? accentColor.withValues(alpha: 0.18)
@@ -367,7 +341,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
               child: Icon(
                 icon,
                 color: isSelected ? accentColor : Colors.white70,
-                size: 22,
+                size: 20,
               ),
             ),
             const SizedBox(width: 14),
@@ -383,7 +357,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: GoogleFonts.plusJakartaSans(
@@ -403,9 +377,114 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                 shape: BoxShape.circle,
                 color: isSelected ? accentColor : Colors.transparent,
                 border: Border.all(
+                  color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check, size: 14, color: Colors.black)
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoPreferenceCard({
+    required String preferenceKey,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color accentColor,
+  }) {
+    final isSelected = _selectedPhotoPreference == preferenceKey;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedPhotoPreference = preferenceKey;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF1E1B26) : const Color(0xFF14141B),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.1),
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: accentColor.withValues(alpha: 0.22),
+                    blurRadius: 14,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : [],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? accentColor.withValues(alpha: 0.18)
+                    : Colors.white.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
                   color: isSelected
                       ? accentColor
-                      : Colors.white.withValues(alpha: 0.3),
+                      : Colors.white.withValues(alpha: 0.15),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                icon,
+                color: isSelected ? accentColor : Colors.white70,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: const Color(0xFF94A3B8),
+                      fontSize: 11,
+                      height: 1.25,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected ? accentColor : Colors.transparent,
+                border: Border.all(
+                  color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.3),
                   width: 1.5,
                 ),
               ),
@@ -458,9 +537,9 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                         height: 1.4,
                       ),
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 20),
 
-                    // STEP 1: Orientation
+                    // STEP 1: Video Orientation
                     _buildStepBadge('1', 'Choose Video Orientation'),
                     const SizedBox(height: 12),
                     Row(
@@ -477,32 +556,57 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                           orientation: '9:16',
                           title: 'Vertical',
                           ratioLabel: '9:16 Portrait',
-                          description: 'Perfect for WhatsApp Status, Reels & mobile view',
+                          description: 'Perfect for WhatsApp Status, Stories & Reels',
                           isHorizontal: false,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 26),
 
-                    // STEP 2: Photo Preference
-                    _buildStepBadge('2', 'Choose Photo Preference'),
+                    // STEP 2: Religion Selection
+                    _buildStepBadge('2', 'Select Religion & Design Style'),
+                    const SizedBox(height: 12),
+                    _buildReligionCard(
+                      religionKey: 'Hindu',
+                      title: 'Hindu',
+                      subtitle: 'Traditional Vedic motifs, sacred shlokas, diya lamps & golden mandapam',
+                      icon: Icons.temple_hindu_rounded,
+                      accentColor: AppColors.primaryGold,
+                    ),
+                    _buildReligionCard(
+                      religionKey: 'Muslim',
+                      title: 'Muslim',
+                      subtitle: 'Bismillah invocation, royal Nikah Mubarak, crescent & Arabic calligraphic elegance',
+                      icon: Icons.mosque_rounded,
+                      accentColor: const Color(0xFF10B981),
+                    ),
+                    _buildReligionCard(
+                      religionKey: 'Christian',
+                      title: 'Christian',
+                      subtitle: 'Holy Matrimony, cathedral bells, Bible scripture verses & floral cross elegance',
+                      icon: Icons.church_rounded,
+                      accentColor: const Color(0xFF60A5FA),
+                    ),
+                    const SizedBox(height: 26),
+
+                    // STEP 3: Photo Slots Preference
+                    _buildStepBadge('3', 'Photo Preference'),
                     const SizedBox(height: 12),
                     _buildPhotoPreferenceCard(
                       preferenceKey: 'with_photo',
-                      title: 'With Photo',
-                      subtitle: _withPhotoSubtitle,
+                      title: 'With Photos',
+                      subtitle: 'Includes customizable photo placeholders with animated reveals',
                       icon: Icons.add_photo_alternate_rounded,
                       accentColor: AppColors.brandPink,
                     ),
-                    const SizedBox(height: 12),
                     _buildPhotoPreferenceCard(
                       preferenceKey: 'without_photo',
-                      title: 'Without Photo',
-                      subtitle: _withoutPhotoSubtitle,
+                      title: 'Without Photos (Text & Video Only)',
+                      subtitle: 'Pure royal typography, sacred animations, and ceremonial music',
                       icon: Icons.font_download_rounded,
-                      accentColor: AppColors.primaryGold,
+                      accentColor: AppColors.champagne,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     // Selection Feedback Pill
                     if (_isReady)
@@ -526,7 +630,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Selected: ${_selectedOrientation == '16:9' ? 'Horizontal (16:9)' : 'Vertical (9:16)'} • ${_selectedPhotoPreference == 'with_photo' ? 'With Photo' : 'Without Photo'}',
+                                'Selected: ${_selectedOrientation == '16:9' ? 'Horizontal (16:9)' : 'Vertical (9:16)'} • $_selectedReligion • ${_selectedPhotoPreference == 'with_photo' ? 'With Photo' : 'Without Photo'}',
                                 style: GoogleFonts.plusJakartaSans(
                                   color: AppColors.champagne,
                                   fontSize: 12,

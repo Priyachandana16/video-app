@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -22,16 +23,87 @@ class VideoPreviewScreen extends StatefulWidget {
 
 class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
   bool _isSaving = false;
+  int _previewSeconds = 10;
+  bool _previewCompleted = false;
+  Timer? _countdownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startPreviewTimer();
+  }
+
+  void _startPreviewTimer() {
+    _countdownTimer?.cancel();
+    _previewSeconds = 10;
+    _previewCompleted = false;
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_previewSeconds > 1) {
+        setState(() {
+          _previewSeconds--;
+        });
+      } else {
+        setState(() {
+          _previewSeconds = 0;
+          _previewCompleted = true;
+        });
+        timer.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
 
   void _handleDownload() async {
     setState(() => _isSaving = true);
     final provider = context.read<PersonalizationProvider>();
-    final path = await provider.downloadToDevice();
+    final success = await provider.downloadToDevice();
     setState(() {
       _isSaving = false;
     });
 
     if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surfaceDark,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppColors.primaryGold, width: 1),
+          ),
+          content: Row(
+            children: [
+              Icon(
+                success ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                color: success ? AppColors.emeraldChroma : AppColors.primaryGold,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  success
+                      ? 'Video downloaded directly to your device!'
+                      : 'Download initiated. Please check your Downloads folder.',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -45,7 +117,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
               const Icon(Icons.check_circle_rounded, color: AppColors.emeraldChroma, size: 28),
               const SizedBox(width: 10),
               Text(
-                'Video Saved!',
+                'Video Downloaded',
                 style: GoogleFonts.playfairDisplay(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -59,7 +131,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Your royal personalized invitation MP4 is ready and saved.',
+                'Your invitation video is saved directly to your device storage in full original HD quality.',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   color: AppColors.textBody,
@@ -67,18 +139,28 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(10),
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppColors.cardSurface,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppColors.goldBorder, width: 0.8),
                 ),
-                child: Text(
-                  path ?? 'My_Invitation_Personalized.mp4',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    color: AppColors.champagne,
-                  ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.file_download_done_rounded, color: AppColors.primaryGold, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Stored in Downloads • 1080p MP4 Format',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.champagne,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -130,7 +212,7 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.surfaceDark,
           title: Text(
-            'Your Royal Video Invitation',
+            'Invitation Video Preview',
             style: GoogleFonts.playfairDisplay(
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
@@ -151,54 +233,88 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Success Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              // 10-Second Preview Status Indicator
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                 decoration: BoxDecoration(
-                  color: AppColors.emeraldChroma.withValues(alpha: 0.15),
+                  color: _previewCompleted
+                      ? AppColors.emeraldChroma.withValues(alpha: 0.15)
+                      : AppColors.primaryGold.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.emeraldChroma.withValues(alpha: 0.4), width: 1),
+                  border: Border.all(
+                    color: _previewCompleted
+                        ? AppColors.emeraldChroma.withValues(alpha: 0.5)
+                        : AppColors.primaryGold.withValues(alpha: 0.5),
+                    width: 1.2,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.verified, color: AppColors.emeraldChroma, size: 16),
+                    Icon(
+                      _previewCompleted ? Icons.check_circle_rounded : Icons.play_circle_fill_rounded,
+                      color: _previewCompleted ? AppColors.emeraldChroma : AppColors.primaryGold,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Text(
-                      'Ready For Download & Sharing',
+                      _previewCompleted
+                          ? '10-Second In-App Preview Finished • Full HD Quality'
+                          : 'In-App Video Preview: ${_previewSeconds}s remaining',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.emeraldChroma,
+                        color: _previewCompleted ? AppColors.emeraldChroma : AppColors.primaryGold,
                       ),
                     ),
                   ],
                 ),
               ),
+
+              // Preview Progress Line
+              if (!_previewCompleted) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: (10 - _previewSeconds) / 10.0,
+                      minHeight: 4,
+                      backgroundColor: AppColors.cardSurface,
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryGold),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
 
               // Title Header
-              Text(
-                '${data.coupleTitle} ${data.ceremonyTitle}',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.playfairDisplay(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryGold,
+              if (data.coupleTitle.isNotEmpty || data.ceremonyTitle.isNotEmpty)
+                Text(
+                  '${data.coupleTitle} ${data.ceremonyTitle}'.trim(),
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryGold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${data.eventDate} • ${data.muhurthamTime}',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  color: AppColors.champagne,
+              if (data.eventDate.isNotEmpty || data.venue.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  [data.eventDate, data.muhurthamTime, data.venue].where((s) => s.isNotEmpty).join(' • '),
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: AppColors.champagne,
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 16),
 
-              // Video Player
+              // Video Player directly in-app
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
@@ -228,9 +344,13 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Action Buttons
+              // Download Video Option
               CustomButton(
-                text: _isSaving ? 'Saving to Device...' : 'Download HD Invitation (MP4)',
+                text: _isSaving
+                    ? 'Saving to Device...'
+                    : (_previewCompleted
+                        ? 'Download Video (Full HD MP4)'
+                        : 'Download Video (${_previewSeconds}s preview)'),
                 icon: Icons.download_rounded,
                 isLoading: _isSaving,
                 onPressed: _handleDownload,

@@ -60,8 +60,8 @@ export default function VisualTimelineEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
-  // Ghosting / Show Inactive Elements toggle (defaults to false so inactive elements disappear when their time passes)
-  const [showInactiveElements, setShowInactiveElements] = useState(false);
+  // Ghosting / Show Inactive Elements toggle (defaults to true in admin studio so all elements are visible and editable)
+  const [showInactiveElements, setShowInactiveElements] = useState(true);
 
   // Inspector tab: 'inspector' or 'layers'
   const [inspectorTab, setInspectorTab] = useState<'inspector' | 'layers'>('inspector');
@@ -537,14 +537,18 @@ export default function VisualTimelineEditor({
 
   // Resolve dynamic display text
   const resolveDisplayText = (txtEl: TextElementConfig) => {
+    // When editing in studio, defaultText takes precedence so admins can customize text and see results immediately
+    if (txtEl.defaultText && txtEl.defaultText.trim() !== '') {
+      return txtEl.defaultText;
+    }
     const key = txtEl.field as keyof typeof previewUserData;
-    if (previewUserData[key]) {
+    if (previewUserData[key] && previewUserData[key].trim() !== '') {
       return previewUserData[key];
     }
     if (txtEl.field === 'coupleNames') {
-      return `${previewUserData.groomName} & ${previewUserData.brideName}`;
+      return `${previewUserData.groomName || 'Groom'} & ${previewUserData.brideName || 'Bride'}`;
     }
-    return txtEl.defaultText;
+    return txtEl.label || 'Text Element';
   };
 
   // Formatting duration helper
@@ -816,23 +820,25 @@ export default function VisualTimelineEditor({
                 const scale = getScale();
                 const left = txtEl.x * scale;
                 const top = txtEl.y * scale;
-                const fontSize = Math.max(12, txtEl.fontSize * scale);
+                const fontSize = Math.max(12, (txtEl.fontSize || 36) * scale);
                 const displayText = resolveDisplayText(txtEl);
 
                 // Text fade-in / fade-out progress
                 let textOpacity = 1;
-                if (isVisible) {
+                if (isSelected) {
+                  textOpacity = 1; // Always fully visible when selected
+                } else if (isVisible) {
                   const elapsed = currentTime - txtEl.startTime;
                   const remaining = txtEl.endTime - currentTime;
                   const fadeIn = txtEl.fadeIn || 0.5;
                   const fadeOut = txtEl.fadeOut || 0.5;
                   if (elapsed < fadeIn && fadeIn > 0) {
-                    textOpacity = Math.max(0.05, elapsed / fadeIn);
+                    textOpacity = Math.max(0.15, elapsed / fadeIn);
                   } else if (remaining < fadeOut && fadeOut > 0) {
-                    textOpacity = Math.max(0.05, remaining / fadeOut);
+                    textOpacity = Math.max(0.15, remaining / fadeOut);
                   }
                 } else {
-                  textOpacity = 0.35;
+                  textOpacity = 0.65; // Clear ghosting when inactive so editor can see and drag
                 }
 
                 return (
@@ -850,14 +856,21 @@ export default function VisualTimelineEditor({
                           : 'translate(0, -50%)',
                       opacity: textOpacity,
                     }}
-                    className={`absolute cursor-move select-none transition-opacity ${
+                    className={`absolute cursor-move select-none transition-all ${
                       isSelected
-                        ? 'z-40 ring-2 ring-amber-400 ring-offset-2 ring-offset-transparent rounded px-1.5 py-0.5'
+                        ? 'z-50 ring-2 ring-amber-400 ring-offset-2 ring-offset-black/60 bg-black/50 backdrop-blur-xs rounded px-2.5 py-1 shadow-2xl'
                         : isVisible
-                        ? 'z-20 hover:ring-1 hover:ring-amber-300/70 hover:ring-offset-1 rounded px-1.5 py-0.5'
-                        : 'z-10 ring-1 ring-dashed ring-amber-400/40 rounded px-1.5 py-0.5'
+                        ? 'z-40 hover:ring-1 hover:ring-amber-300/80 bg-black/20 rounded px-1.5 py-0.5'
+                        : 'z-30 ring-1 ring-dashed ring-amber-400/60 bg-amber-950/30 rounded px-1.5 py-0.5'
                     }`}
                   >
+                    {/* Element identifier badge when selected or hovered */}
+                    {(isSelected || !isVisible) && (
+                      <div className="absolute -top-6 left-0 px-1.5 py-0.5 rounded bg-black/90 text-[10px] font-mono font-medium text-amber-300 border border-amber-500/50 pointer-events-none whitespace-nowrap z-50 shadow-md">
+                        {txtEl.field || txtEl.label} ({txtEl.startTime}s - {txtEl.endTime}s) {!isVisible && '• Inactive'}
+                      </div>
+                    )}
+
                     {/* Raw, pristine styled text only */}
                     <span
                       style={{
@@ -865,7 +878,7 @@ export default function VisualTimelineEditor({
                         fontSize: `${fontSize}px`,
                         color: txtEl.fontColor || '#FFD700',
                         textAlign: txtEl.textAlign,
-                        textShadow: '0 2px 8px rgba(0,0,0,0.9), 0 0 2px #000, 0 1px 3px rgba(0,0,0,0.8)',
+                        textShadow: '0 2px 8px rgba(0,0,0,0.95), 0 0 4px #000, 0 1px 3px rgba(0,0,0,0.9)',
                       }}
                       className="block leading-tight whitespace-nowrap font-semibold pointer-events-none"
                     >
@@ -875,10 +888,10 @@ export default function VisualTimelineEditor({
                     {/* Small anchor handle dots on corners when selected to indicate draggable object */}
                     {isSelected && (
                       <>
-                        <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-amber-400 shadow-sm pointer-events-none" />
-                        <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 shadow-sm pointer-events-none" />
-                        <div className="absolute -bottom-1 -left-1 w-2 h-2 rounded-full bg-amber-400 shadow-sm pointer-events-none" />
-                        <div className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full bg-amber-400 shadow-sm pointer-events-none" />
+                        <div className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm pointer-events-none" />
+                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm pointer-events-none" />
+                        <div className="absolute -bottom-1 -left-1 w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm pointer-events-none" />
+                        <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm pointer-events-none" />
                       </>
                     )}
                   </div>

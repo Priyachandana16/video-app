@@ -61,7 +61,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  void _showDesignSupportSheet(BuildContext context) {
+  void _showCustomerSupportSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF14141E),
@@ -111,7 +111,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        'Design Support Team',
+                        'Customer Care & Support',
                         style: GoogleFonts.playfairDisplay(
                           color: Colors.white,
                           fontSize: 18,
@@ -128,7 +128,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Our dedicated video artists & typography experts are ready to assist you.',
+                'Need assistance customizing your video invitation? We are here to help.',
                 style: GoogleFonts.plusJakartaSans(
                   color: const Color(0xFF94A3B8),
                   fontSize: 12,
@@ -136,38 +136,73 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // Support Member 1: Rajesh Varma
-              _buildSupportMemberCard(
-                name: 'Rajesh Varma',
-                role: 'Senior Invitation Video Designer',
-                phone: '+91 98765 43210',
-                email: 'rajesh.design@myinvitation.app',
-                specialization: 'Telugu Vivaham Mandap & Chroma Key Video Editing',
-                initials: 'RV',
+              // Contact Channels Card
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A24),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.goldBorder, width: 0.8),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.phone_in_talk_rounded, size: 18, color: AppColors.primaryGold),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Phone Support',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                            ),
+                            Text(
+                              '+91 98765 43210',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const Divider(color: Colors.white12, height: 18),
+                    Row(
+                      children: [
+                        const Icon(Icons.email_outlined, size: 18, color: AppColors.champagne),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Email Helpdesk',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                            ),
+                            Text(
+                              'support@myinvitation.app',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
-
-              // Support Member 2: Priya Chandana
-              _buildSupportMemberCard(
-                name: 'Priya Chandana',
-                role: 'Creative Lead & Customization Director',
-                phone: '+91 91234 56789',
-                email: 'priya.support@myinvitation.app',
-                specialization: 'Birthday, Festivals & Milestone Celebrations',
-                initials: 'PC',
-              ),
-              const SizedBox(height: 10),
-
-              // Support Member 3: Kiran Kumar
-              _buildSupportMemberCard(
-                name: 'Kiran Kumar',
-                role: 'Audio & Vedic Typography Specialist',
-                phone: '+91 98480 22338',
-                email: 'help@myinvitation.app',
-                specialization: 'Sanskrit Shlokas & Nadaswaram Music Sync',
-                initials: 'KK',
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
               // Availability Banner
               Container(
@@ -206,14 +241,14 @@ class ProfileScreen extends StatelessWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       backgroundColor: Color(0xFF166534),
-                      content: Text('Connecting to Design Support on WhatsApp (+91 98765 43210)...'),
+                      content: Text('Connecting to Customer Support (+91 98765 43210)...'),
                       duration: Duration(seconds: 2),
                     ),
                   );
                 },
                 icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
                 label: Text(
-                  'Chat with Support on WhatsApp',
+                  'Chat with Support',
                   style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -232,111 +267,6 @@ class ProfileScreen extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildSupportMemberCard({
-    required String name,
-    required String role,
-    required String phone,
-    required String email,
-    required String specialization,
-    required String initials,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A24),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.goldBorder,
-          width: 0.8,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primaryGold.withValues(alpha: 0.15),
-              border: Border.all(color: AppColors.primaryGold, width: 1.2),
-            ),
-            child: Center(
-              child: Text(
-                initials,
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: AppColors.primaryGold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  role,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    color: AppColors.champagne,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  specialization,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 10,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.phone_rounded, size: 12, color: AppColors.brandPink),
-                    const SizedBox(width: 4),
-                    Text(
-                      phone,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Icon(Icons.email_outlined, size: 12, color: AppColors.primaryGold),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        email,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -448,7 +378,7 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'మీ ఆహ్వానాలను.. మనసులకు కలుపుతుంది',
+                      'Connecting Invitations to Hearts',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         color: AppColors.champagne,
@@ -457,7 +387,7 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'India\'s premier AI-powered & handcrafted Royal Video Invitation Maker. Effortlessly create cinematic video invitations for Telugu Vivaham, Grand Weddings, First Birthdays, Milestones, and Sacred Festivals.',
+                      'Premier Video Invitation Generator. Effortlessly create cinematic video invitations for Weddings, Half Saree Ceremonies, Birthdays, Housewarmings, Engagements, and AI-Generated Celebrations.',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         color: const Color(0xFFCBD5E1),
@@ -473,12 +403,12 @@ class ProfileScreen extends StatelessWidget {
               _buildAboutFeatureTile(
                 icon: Icons.movie_creation_outlined,
                 title: 'Full HD 1080p Video Synthesis',
-                desc: 'Hardware-accelerated MP4 rendering with authentic Nadaswaram music.',
+                desc: 'Hardware-accelerated MP4 rendering with authentic ceremonial music.',
               ),
               _buildAboutFeatureTile(
                 icon: Icons.crop_rotate_rounded,
-                title: 'Photo Placement & Framing Controls',
-                desc: 'Fine-tuned interactive zoom, scaling, and mandap arch alignment.',
+                title: 'Horizontal & Vertical Orientations',
+                desc: 'Support for both 16:9 Landscape and 9:16 Portrait story videos.',
               ),
               _buildAboutFeatureTile(
                 icon: Icons.security_rounded,
@@ -487,7 +417,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // Legal & Attribution
+              // Legal & Copyright
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -498,21 +428,11 @@ class ProfileScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      'Crafted with love in Hyderabad, Telangana',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.plusJakartaSans(
-                        color: AppColors.champagne,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '© 2026 My Invitation Technologies Pvt. Ltd. All rights reserved.',
+                      '© 2026 My Invitation. All rights reserved.',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.plusJakartaSans(
                         color: const Color(0xFF64748B),
-                        fontSize: 10,
+                        fontSize: 11,
                       ),
                     ),
                   ],
@@ -696,7 +616,7 @@ class ProfileScreen extends StatelessWidget {
                       Column(
                         children: [
                           Text(
-                            'HD 720p',
+                            'HD 1080p',
                             style: GoogleFonts.playfairDisplay(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -719,22 +639,17 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Profile Options
+            // Profile Options - NO Language Dropdown, NO Designer/Developer Info
             _buildProfileTile(
               icon: Icons.palette_outlined,
               title: 'App Theme',
               subtitle: 'Midnight Obsidian & Kundan Gold',
             ),
             _buildProfileTile(
-              icon: Icons.language_rounded,
-              title: 'Default Language',
-              subtitle: 'English / తెలుగు (Telugu)',
-            ),
-            _buildProfileTile(
               icon: Icons.support_agent_rounded,
-              title: 'Design Support',
+              title: 'Help & Customer Care',
               subtitle: 'Need help customizing your video? Contact Us',
-              onTap: () => _showDesignSupportSheet(context),
+              onTap: () => _showCustomerSupportSheet(context),
             ),
             _buildProfileTile(
               icon: Icons.info_outline,

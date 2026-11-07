@@ -21,18 +21,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Map<String, dynamic>> _occasions = [
     {
-      'title': 'First Birthday',
-      'count': '44+ designs',
-      'icon': Icons.card_giftcard_rounded,
-      'color': const Color(0xFF162E3B), // Teal / Dark Blue
-      'borderColor': const Color(0xFF38BDF8),
-    },
-    {
-      'title': 'Birthday',
-      'count': '21+ designs',
-      'icon': Icons.celebration_rounded,
-      'color': const Color(0xFF1C476E), // Ocean Blue
-      'borderColor': const Color(0xFF60A5FA),
+      'title': 'Half Saree Ceremony',
+      'count': '35+ designs',
+      'icon': Icons.auto_awesome_rounded,
+      'color': const Color(0xFF381B2E), // Rich Violet / Saree Silk
+      'borderColor': const Color(0xFFE879F9),
     },
     {
       'title': 'Wedding',
@@ -42,18 +35,32 @@ class _HomeScreenState extends State<HomeScreen> {
       'borderColor': const Color(0xFFFF5277),
     },
     {
-      'title': 'Anniversary',
-      'count': '42+ designs',
-      'icon': Icons.auto_awesome_rounded,
-      'color': const Color(0xFF361726), // Deep Plum
-      'borderColor': const Color(0xFFF472B6),
+      'title': 'Birthday',
+      'count': '45+ designs',
+      'icon': Icons.celebration_rounded,
+      'color': const Color(0xFF1C476E), // Ocean Blue
+      'borderColor': const Color(0xFF60A5FA),
     },
     {
-      'title': 'Festivals',
-      'count': '29+ designs',
-      'icon': Icons.flare_rounded,
-      'color': const Color(0xFF382312), // Bronze / Warm Earth
+      'title': 'Housewarming',
+      'count': '30+ designs',
+      'icon': Icons.home_rounded,
+      'color': const Color(0xFF382312), // Bronze / Warm Diya
       'borderColor': const Color(0xFFFBBF24),
+    },
+    {
+      'title': 'Engagement',
+      'count': '40+ designs',
+      'icon': Icons.diamond_rounded,
+      'color': const Color(0xFF1D3328), // Emerald / Jade
+      'borderColor': const Color(0xFF34D399),
+    },
+    {
+      'title': 'AI-Generated Invitations',
+      'count': 'AI Magic',
+      'icon': Icons.psychology_alt_rounded,
+      'color': const Color(0xFF26183D), // Deep Purple / Galaxy
+      'borderColor': const Color(0xFFA78BFA),
     },
   ];
 
@@ -458,7 +465,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'View all 10 occasions',
+                        'View all categories',
                         style: GoogleFonts.plusJakartaSans(
                           color: const Color(0xFF94A3B8),
                           fontSize: 13,
