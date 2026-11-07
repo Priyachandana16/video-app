@@ -815,7 +815,7 @@ app.post('/api/render', upload.fields([
         if (parsed && typeof parsed === 'object') {
           template = { ...template, ...parsed };
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const previewMode = req.body.previewMode === 'true' || req.body.previewMode === true;
@@ -945,16 +945,19 @@ app.post('/api/render', upload.fields([
     py.on('close', (code) => {
       clearInterval(progressTimer);
       // Clean up config file
-      try { fs.unlinkSync(configPath); } catch (_) {}
+      try { fs.unlinkSync(configPath); } catch (_) { }
 
       if (code !== 0) {
         console.error(`[Job ${jobId}] Python render returned non-zero (${code}):`, pyErr);
-        // Fallback: If python fails, copy verified fallback export
-        const fallbackSrc = template.sampleResultPath || path.join(PROJECT_ROOT, 'assets', 'templates', 'template_01_sample_result.mp4');
-        if (fs.existsSync(fallbackSrc)) {
-          fs.copyFileSync(fallbackSrc, outputVideoPath);
-          console.log(`[Job ${jobId}] Used verified template fallback output.`);
+        const cur = RENDER_JOBS.get(jobId) || {};
+        cur.status = 'failed';
+        cur.error = pyErr || `Render exited with code ${code}`;
+        cur.step = 'Rendering encountered an error';
+        RENDER_JOBS.set(jobId, cur);
+        if (!isAsync) {
+          return res.status(500).json({ success: false, error: cur.error });
         }
+        return;
       }
 
       console.log(`[Job ${jobId}] Render complete: ${outputFilename}`);

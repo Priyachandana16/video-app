@@ -60,25 +60,24 @@ def get_best_font(font_family, size):
             continue
     return ImageFont.load_default()
 
-def render_text_overlay(text, font_family, font_size, font_color, align, canvas_w, canvas_h, target_x, target_y):
-    """Render antialiased text onto a transparent RGBA image at canvas coordinates."""
-    img = Image.new('RGBA', (canvas_w, canvas_h), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
+def render_text_image(text, font_family, font_size, font_color, align, max_box_w=1600):
+    """Render antialiased text onto a tightly-bounded RGBA image, returning (img, w, h)."""
     font = get_best_font(font_family, font_size)
+    dummy_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
+    dummy_draw = ImageDraw.Draw(dummy_img)
 
     rgb = hex_to_rgb(font_color, (255, 215, 0))
     fill_color = rgb if len(rgb) == 4 else (*rgb, 255)
     shadow_color = (15, 15, 20, 220)
 
-    # Word wrapping if text is long
-    max_text_width = int(canvas_w * 0.85)
+    # Word wrapping
     words = text.split(' ')
     lines = []
     cur_line = []
     for w in words:
         test_line = ' '.join(cur_line + [w])
-        bbox = draw.textbbox((0, 0), test_line, font=font)
-        if bbox[2] - bbox[0] > max_text_width and cur_line:
+        bbox = dummy_draw.textbbox((0, 0), test_line, font=font)
+        if bbox[2] - bbox[0] > max_box_w and cur_line:
             lines.append(' '.join(cur_line))
             cur_line = [w]
         else:
@@ -86,31 +85,34 @@ def render_text_overlay(text, font_family, font_size, font_color, align, canvas_
     if cur_line:
         lines.append(' '.join(cur_line))
 
-    line_height = int(font_size * 1.25)
-    total_h = len(lines) * line_height
-    start_y = target_y - (total_h // 2)
+    line_height = int(font_size * 1.3)
+    measured_widths = [dummy_draw.textbbox((0, 0), l, font=font)[2] - dummy_draw.textbbox((0, 0), l, font=font)[0] for l in lines]
+    max_w = max(measured_widths) if measured_widths else 100
+    total_w = max_w + 30
+    total_h = len(lines) * line_height + 20
+
+    img = Image.new('RGBA', (total_w, total_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
 
     for i, line in enumerate(lines):
-        bbox = draw.textbbox((0, 0), line, font=font)
-        lw = bbox[2] - bbox[0]
+        lw = measured_widths[i]
         if align == 'left':
-            lx = target_x
+            lx = 10
         elif align == 'right':
-            lx = target_x - lw
+            lx = total_w - 10 - lw
         else: # center
-            lx = target_x - (lw // 2)
+            lx = (total_w - lw) // 2
 
-        ly = start_y + (i * line_height)
-        # Drop shadow for readability over rich video
+        ly = 10 + (i * line_height)
         for ox, oy in [(-2, -2), (2, -2), (-2, 2), (2, 2), (3, 3)]:
             draw.text((lx + ox, ly + oy), line, font=font, fill=shadow_color)
         draw.text((lx, ly), line, font=font, fill=fill_color)
 
-    return img
+    return img, total_w, total_h
 
 def run_ffmpeg_with_progress(cmd, total_duration_sec=60.0):
     """Run FFmpeg and stream live PROGRESS: 0.XX | <step> lines to stdout."""
-    print("PROGRESS: 0.40 | Assembling composition timeline...", flush=True)
+    print("PROGRESS: 0.38 | Launching accelerated video compositor...", flush=True)
 
     proc = subprocess.Popen(
         cmd,
@@ -123,8 +125,10 @@ def run_ffmpeg_with_progress(cmd, total_duration_sec=60.0):
     time_pattern = re.compile(r'time=(\d+):(\d+):(\d+\.\d+)')
     last_reported_pct = 0.40
 
+    err_lines = []
     if proc.stderr:
         for line in proc.stderr:
+            err_lines.append(line.strip())
             match = time_pattern.search(line)
             if match:
                 hrs, mins, secs = int(match.group(1)), int(match.group(2)), float(match.group(3))
@@ -133,12 +137,12 @@ def run_ffmpeg_with_progress(cmd, total_duration_sec=60.0):
                 current_pct = 0.40 + (0.55 * ratio)
                 if current_pct - last_reported_pct >= 0.04 or current_pct >= 0.94:
                     last_reported_pct = current_pct
-                    print(f"PROGRESS: {current_pct:.2f} | Rendering high-definition video...", flush=True)
+                    print(f"PROGRESS: {current_pct:.2f} | Rendering high-definition invitation video...", flush=True)
 
     proc.wait()
     if proc.returncode != 0:
-        err_output = proc.stderr.read() if proc.stderr else "Unknown error"
-        raise RuntimeError(f"FFmpeg failed with exit code {proc.returncode}: {err_output[-400:]}")
+        err_msg = "\n".join(err_lines[-15:]) if err_lines else "Unknown FFmpeg error"
+        raise RuntimeError(f"FFmpeg failed with exit code {proc.returncode}: {err_msg}")
 
     print("PROGRESS: 0.98 | Finalizing MP4 invitation...", flush=True)
 
@@ -179,7 +183,7 @@ def render_dynamic_invitation(config_path):
 
     canvas_w = template.get('canvasWidth', 1920)
     canvas_h = template.get('canvasHeight', 1080)
-    duration = float(template.get('durationSeconds', 60))
+    duration = float(template.get('durationSeconds', 102))
     master_video_rel = template.get('masterVideoPath', 'assets/templates/template_01_green_screen.mp4')
     master_video = os.path.abspath(os.path.join(project_root, master_video_rel)) if not os.path.isabs(master_video_rel) else master_video_rel
 
@@ -202,7 +206,7 @@ def render_dynamic_invitation(config_path):
     user_data = data.get('userData', data)
     user_photos = data.get('photos', {})
 
-    # Also map direct fields if sent via standard form
+    # Map direct fields if sent via standard form
     direct_photo_fields = ['photo_1', 'photo_2', 'photo_3', 'photo_4', 'photo_5', 'womanPhoto', 'manPhoto', 'photo']
     for pf in direct_photo_fields:
         if data.get(pf):
@@ -210,7 +214,6 @@ def render_dynamic_invitation(config_path):
         if data.get(f"{pf}Path"):
             user_photos[pf] = data.get(f"{pf}Path")
 
-    # If womanPhoto/manPhoto are provided, make sure photo_1/photo_2 inherit them if missing
     if 'womanPhoto' in user_photos and 'photo_1' not in user_photos:
         user_photos['photo_1'] = user_photos['womanPhoto']
     if 'manPhoto' in user_photos and 'photo_2' not in user_photos:
@@ -221,88 +224,31 @@ def render_dynamic_invitation(config_path):
     image_elements = template.get('imageElements', [])
     text_elements = template.get('textElements', [])
 
-    # If template has legacy/empty textElements, construct standard dynamic set
-    if not text_elements:
-        text_elements = [
-            {
-                "id": "def_ceremony",
-                "field": "ceremonyTitle",
-                "defaultText": "శుభ వివాహం / Subha Vivaham",
-                "x": canvas_w // 2,
-                "y": 80,
-                "fontSize": 44,
-                "fontFamily": "Cinzel",
-                "fontColor": "#FFD700",
-                "textAlign": "center",
-                "startTime": 2.0,
-                "endTime": min(duration, 28.0),
-                "fadeIn": 0.6,
-                "fadeOut": 0.6
-            },
-            {
-                "id": "def_names",
-                "field": "coupleNames",
-                "defaultText": f"{user_data.get('groomName', 'Sai Krishna')} & {user_data.get('brideName', 'Deepika')}",
-                "x": canvas_w // 2,
-                "y": canvas_h - 180,
-                "fontSize": 48,
-                "fontFamily": "Playfair Display",
-                "fontColor": "#FFF9E6",
-                "textAlign": "center",
-                "startTime": 28.0,
-                "endTime": min(duration, 55.0),
-                "fadeIn": 0.6,
-                "fadeOut": 0.6
-            },
-            {
-                "id": "def_venue",
-                "field": "venue",
-                "defaultText": user_data.get('venue', 'Sri Venkateswara Kalyana Mandapam, Hyderabad'),
-                "x": canvas_w // 2,
-                "y": canvas_h - 180,
-                "fontSize": 34,
-                "fontFamily": "Playfair Display",
-                "fontColor": "#FFFFFF",
-                "textAlign": "center",
-                "startTime": 56.0,
-                "endTime": duration,
-                "fadeIn": 0.6,
-                "fadeOut": 0.6
-            }
-        ]
+    # Filter chains & inputs
+    inputs = ['-i', master_video]
+    filter_chains = []
+    filter_chains.append(f"[0:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease,pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2,setsar=1[v_canvas]")
+    current_stream = "v_canvas"
+    input_idx = 1
 
-    # If template has empty imageElements but hasPhoto is true, create default image slot
-    if not image_elements and template.get('hasPhoto', False):
-        image_elements = [
-            {
-                "id": "def_img_1",
-                "field": "photo_1",
-                "x": 680,
-                "y": 80,
-                "width": 560,
-                "height": 720,
-                "fit": "cover",
-                "startTime": 5.0,
-                "endTime": min(duration, 25.0),
-                "animationType": "ink_reveal",
-                "animationDuration": 1.2
-            }
-        ]
-
-    # Pre-render Image Element Assets
-    prepared_images = []
+    # 1. Image Elements
     for idx, img_el in enumerate(image_elements):
         field_name = img_el.get('field', f'photo_{idx+1}')
         target_w = int(img_el.get('width', 500))
         target_h = int(img_el.get('height', 600))
         fit_mode = img_el.get('fit', 'cover')
+        st = float(img_el.get('startTime', 0))
+        et = float(img_el.get('endTime', duration))
+        dur = max(0.5, et - st)
+        anim = img_el.get('animationType', 'fade')
+        anim_dur = min(dur, float(img_el.get('animationDuration', 1.5)))
+        x = int(img_el.get('x', 0))
+        y = int(img_el.get('y', 0))
+        fade_out = 0.5
 
         src_path = user_photos.get(field_name) or user_photos.get('photo')
         if not src_path or not os.path.exists(src_path):
-            # Check placeholder in template or default asset
-            ph = img_el.get('placeholderUrl', '')
-            if ph.startswith('/'):
-                ph = ph.lstrip('/')
+            ph = img_el.get('placeholderUrl', '').lstrip('/')
             cand_ph = os.path.join(project_root, ph)
             if os.path.exists(cand_ph):
                 src_path = cand_ph
@@ -311,40 +257,52 @@ def render_dynamic_invitation(config_path):
                 if os.path.exists(cand_default):
                     src_path = cand_default
 
-        out_prep_img = os.path.join(temp_dir, f"prep_img_{idx}.png")
+        out_img_path = os.path.join(temp_dir, f"prep_img_{idx}.png")
         if src_path and os.path.exists(src_path):
             try:
                 with Image.open(src_path).convert('RGBA') as raw_img:
                     fitted = fit_image_to_rect(raw_img, target_w, target_h, fit_mode)
-                    fitted.save(out_prep_img, 'PNG')
+                    fitted.save(out_img_path, 'PNG')
             except Exception as e:
                 print(f"Error preparing photo {field_name}: {e}")
-                blank = Image.new('RGBA', (target_w, target_h), (0, 0, 0, 0))
-                blank.save(out_prep_img, 'PNG')
+                Image.new('RGBA', (target_w, target_h), (0, 0, 0, 0)).save(out_img_path, 'PNG')
         else:
-            blank = Image.new('RGBA', (target_w, target_h), (0, 0, 0, 0))
-            blank.save(out_prep_img, 'PNG')
+            Image.new('RGBA', (target_w, target_h), (0, 0, 0, 0)).save(out_img_path, 'PNG')
 
-        prepared_images.append({
-            'el': img_el,
-            'path': out_prep_img,
-            'width': target_w,
-            'height': target_h,
-            'x': int(img_el.get('x', 0)),
-            'y': int(img_el.get('y', 0)),
-            'start': float(img_el.get('startTime', 0.0)),
-            'end': float(img_el.get('endTime', duration)),
-            'anim': img_el.get('animationType', 'fade'),
-            'animDur': float(img_el.get('animationDuration', 1.0))
-        })
+        # Add image input (strictly loops for dur seconds)
+        inputs.extend(['-loop', '1', '-t', f"{dur:.2f}", '-i', out_img_path])
+        img_input_id = input_idx
+        input_idx += 1
+
+        mask_video = ink_mask_video if anim == 'ink_reveal' else brush_mask_video
+        if anim in ['ink_reveal', 'brush_stroke'] and os.path.exists(mask_video):
+            # Mask input strictly runs for dur seconds
+            inputs.extend(['-t', f"{dur:.2f}", '-i', mask_video])
+            mask_input_id = input_idx
+            input_idx += 1
+
+            pts_factor = anim_dur / 2.0
+            pad_dur = max(0.0, dur - anim_dur)
+            filter_chains.append(
+                f"[{mask_input_id}:v]scale={target_w}:{target_h},setpts={pts_factor:.3f}*PTS,tpad=stop_mode=clone:stop_duration={pad_dur:.2f},trim=duration={dur:.2f}[mask_p_{idx}]"
+            )
+            filter_chains.append(
+                f"[{img_input_id}:v][mask_p_{idx}]alphamerge,fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[img_timed_{idx}]"
+            )
+        else:
+            filter_chains.append(
+                f"[{img_input_id}:v]format=rgba,fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[img_timed_{idx}]"
+            )
+
+        next_stream = f"v_img_{idx}"
+        filter_chains.append(f"[{current_stream}][img_timed_{idx}]overlay={x}:{y}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]")
+        current_stream = next_stream
 
     print("PROGRESS: 0.25 | Rendering custom typography & overlays...", flush=True)
 
-    # Pre-render Text Overlays onto full-canvas transparent PNGs
-    prepared_texts = []
+    # 2. Text Elements
     for idx, txt_el in enumerate(text_elements):
         field_key = txt_el.get('field', '')
-        # Check user data, fallback to defaultText
         text_val = user_data.get(field_key)
         if not text_val:
             if field_key == 'coupleNames':
@@ -355,118 +313,65 @@ def render_dynamic_invitation(config_path):
         if not text_val:
             continue
 
-        font_family = txt_el.get('fontFamily', 'Cinzel')
-        font_size = int(txt_el.get('fontSize', 40))
-        font_color = txt_el.get('fontColor', '#FFD700')
+        st = float(txt_el.get('startTime', 0))
+        et = float(txt_el.get('endTime', duration))
+        dur = max(0.5, et - st)
+        fi = float(txt_el.get('fadeIn', 0.5))
+        fo = float(txt_el.get('fadeOut', 0.5))
+        cx = int(txt_el.get('x', canvas_w // 2))
+        cy = int(txt_el.get('y', canvas_h // 2))
+
+        txt_img, bw, bh = render_text_image(
+            str(text_val),
+            txt_el.get('fontFamily', 'Cinzel'),
+            int(txt_el.get('fontSize', 40)),
+            txt_el.get('fontColor', '#FFD700'),
+            txt_el.get('textAlign', 'center')
+        )
+        out_txt_path = os.path.join(temp_dir, f"prep_txt_{idx}.png")
+        txt_img.save(out_txt_path, 'PNG')
+
         align = txt_el.get('textAlign', 'center')
-        tx = int(txt_el.get('x', canvas_w // 2))
-        ty = int(txt_el.get('y', canvas_h // 2))
-        start_t = float(txt_el.get('startTime', 0.0))
-        end_t = float(txt_el.get('endTime', duration))
-        fade_in = float(txt_el.get('fadeIn', 0.5))
-        fade_out = float(txt_el.get('fadeOut', 0.5))
+        if align == 'left':
+            ox = cx
+        elif align == 'right':
+            ox = cx - bw
+        else:
+            ox = cx - (bw // 2)
+        oy = cy - (bh // 2)
 
-        out_txt_png = os.path.join(temp_dir, f"prep_txt_{idx}.png")
-        text_img = render_text_overlay(str(text_val), font_family, font_size, font_color, align, canvas_w, canvas_h, tx, ty)
-        text_img.save(out_txt_png, 'PNG')
+        inputs.extend(['-loop', '1', '-t', f"{dur:.2f}", '-i', out_txt_path])
+        txt_input_id = input_idx
+        input_idx += 1
 
-        prepared_texts.append({
-            'el': txt_el,
-            'path': out_txt_png,
-            'start': start_t,
-            'end': end_t,
-            'fadeIn': fade_in,
-            'fadeOut': fade_out
-        })
-
-    print("PROGRESS: 0.35 | Constructing multi-track FFmpeg composition...", flush=True)
-
-    # Build FFmpeg command and complex filter graph
-    # Input 0: Master background video
-    inputs = ['-i', master_video]
-    filter_chains = []
-
-    # Canvas normalization of background layer
-    filter_chains.append(f"[0:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease,pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2,setsar=1[v_canvas]")
-    current_stream = "v_canvas"
-
-    input_index = 1
-
-    # Add Image inputs & filters
-    for idx, pimg in enumerate(prepared_images):
-        inputs.extend(['-loop', '1', '-t', str(duration), '-i', pimg['path']])
-        img_idx = input_index
-        input_index += 1
-
-        anim = pimg['anim']
-        st = pimg['start']
-        et = pimg['end']
-        w = pimg['width']
-        h = pimg['height']
-        x = pimg['x']
-        y = pimg['y']
-        anim_dur = pimg['animDur']
-        fade_out = 0.5
-
-        if anim in ['ink_reveal', 'brush_stroke']:
-            mask_video = ink_mask_video if anim == 'ink_reveal' else brush_mask_video
-            if os.path.exists(mask_video):
-                inputs.extend(['-i', mask_video])
-                mask_idx = input_index
-                input_index += 1
-
-                # Scale mask to image size, pad stop to hold last frame, alphamerge
-                filter_chains.append(f"[{mask_idx}:v]scale={w}:{h},tpad=stop=-1:stop_mode=clone[mask_{idx}]")
-                filter_chains.append(f"[{img_idx}:v][mask_{idx}]alphamerge,fade=t=out:st={max(0, et - fade_out)}:d={fade_out}:alpha=1[img_anim_{idx}]")
-            else:
-                filter_chains.append(f"[{img_idx}:v]format=rgba,fade=t=in:st={st}:d={anim_dur}:alpha=1,fade=t=out:st={max(0, et - fade_out)}:d={fade_out}:alpha=1[img_anim_{idx}]")
-        elif anim == 'fade':
-            filter_chains.append(f"[{img_idx}:v]format=rgba,fade=t=in:st={st}:d={anim_dur}:alpha=1,fade=t=out:st={max(0, et - fade_out)}:d={fade_out}:alpha=1[img_anim_{idx}]")
-        else: # none
-            filter_chains.append(f"[{img_idx}:v]format=rgba[img_anim_{idx}]")
-
-        next_stream = f"v_img_{idx}"
-        filter_chains.append(f"[{current_stream}][img_anim_{idx}]overlay={x}:{y}:enable='between(t,{st},{et})'[{next_stream}]")
-        current_stream = next_stream
-
-    # Add Text inputs & filters
-    for idx, ptxt in enumerate(prepared_texts):
-        inputs.extend(['-loop', '1', '-t', str(duration), '-i', ptxt['path']])
-        txt_idx = input_index
-        input_index += 1
-
-        st = ptxt['start']
-        et = ptxt['end']
-        fi = ptxt['fadeIn']
-        fo = ptxt['fadeOut']
-
-        filter_chains.append(f"[{txt_idx}:v]format=rgba,fade=t=in:st={st}:d={fi}:alpha=1,fade=t=out:st={max(0, et - fo)}:d={fo}:alpha=1[txt_anim_{idx}]")
+        filter_chains.append(
+            f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={fi:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
+        )
         next_stream = f"v_txt_{idx}"
-        filter_chains.append(f"[{current_stream}][txt_anim_{idx}]overlay=0:0:enable='between(t,{st},{et})'[{next_stream}]")
+        filter_chains.append(f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]")
         current_stream = next_stream
 
-    filter_complex_str = ';'.join(filter_chains)
+    filter_complex = ';'.join(filter_chains)
 
-    # Assemble complete command
-    cmd = [ffmpeg_bin, '-y']
-    cmd.extend(inputs)
-    cmd.extend([
-        '-filter_complex', filter_complex_str,
+    cmd = [
+        ffmpeg_bin, '-y',
+        *inputs,
+        '-filter_complex', filter_complex,
         '-map', f"[{current_stream}]",
-        '-map', '0:a?', # Preserve audio from original template video
+        '-map', '0:a?',
         '-c:v', 'libx264',
-        '-preset', 'veryfast',
+        '-preset', 'ultrafast',
+        '-threads', '0',
         '-pix_fmt', 'yuv420p',
         '-c:a', 'aac',
         '-b:a', '192k',
         '-t', str(duration),
         output_video
-    ])
+    ]
 
     try:
         run_ffmpeg_with_progress(cmd, total_duration_sec=duration)
     finally:
-        # Cleanup temp directory
         try:
             shutil.rmtree(temp_dir, ignore_errors=True)
         except Exception:

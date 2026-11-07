@@ -572,7 +572,7 @@ class ApiService {
           // Poll job status with real updates
           final serverHost = baseUrl.replaceAll('/api', '');
           int attempts = 0;
-          while (attempts < 60) {
+          while (attempts < 120) {
             await Future.delayed(const Duration(milliseconds: 1000));
             attempts++;
             try {
@@ -593,6 +593,11 @@ class ApiService {
                     'videoUrl': fullUrl,
                     'downloadPath': job['downloadPath'],
                     'creationId': job['creationId'],
+                  };
+                } else if (job['status'] == 'failed') {
+                  return {
+                    'success': false,
+                    'error': job['error'] ?? 'Video rendering failed on backend engine.',
                   };
                 }
               }
