@@ -60,14 +60,24 @@ export default function VisualTimelineEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
-  // Ghosting / Show Inactive Elements toggle (defaults to true so text is ALWAYS visible)
-  const [showInactiveElements, setShowInactiveElements] = useState(true);
+  // Ghosting / Show Inactive Elements toggle (defaults to false so inactive elements disappear when their time passes)
+  const [showInactiveElements, setShowInactiveElements] = useState(false);
 
   // Inspector tab: 'inspector' or 'layers'
   const [inspectorTab, setInspectorTab] = useState<'inspector' | 'layers'>('inspector');
 
   // Timeline track filter: 'all' | 'text' | 'image'
   const [trackFilter, setTrackFilter] = useState<'all' | 'text' | 'image'>('all');
+
+  // Timeline Track Dragging & Trimming State (mode: 'start' trims startTime, 'end' trims endTime, 'move' shifts block)
+  const [timelineDrag, setTimelineDrag] = useState<{
+    id: string;
+    type: 'text' | 'image';
+    mode: 'start' | 'end' | 'move';
+    startX: number;
+    initialStart: number;
+    initialEnd: number;
+  } | null>(null);
 
   // Test data injection for live preview
   const [previewUserData, setPreviewUserData] = useState({
@@ -109,7 +119,7 @@ export default function VisualTimelineEditor({
   const selectedTextElement = template.textElements.find((t) => t.id === selectedElementId);
   const selectedImageElement = template.imageElements.find((i) => i.id === selectedElementId);
 
-  // Video playback sync
+  // Video playback sync with high-precision 60 FPS requestAnimationFrame loop
   const togglePlay = () => {
     if (!videoRef.current) return;
     if (isPlaying) {
@@ -121,8 +131,24 @@ export default function VisualTimelineEditor({
     }
   };
 
+  useEffect(() => {
+    let animId: number;
+    const syncFrame = () => {
+      if (videoRef.current && !videoRef.current.paused) {
+        setCurrentTime(videoRef.current.currentTime);
+        animId = requestAnimationFrame(syncFrame);
+      }
+    };
+    if (isPlaying) {
+      animId = requestAnimationFrame(syncFrame);
+    }
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [isPlaying]);
+
   const handleTimeUpdate = () => {
-    if (videoRef.current) {
+    if (videoRef.current && !isPlaying) {
       setCurrentTime(videoRef.current.currentTime);
     }
   };
@@ -138,6 +164,30 @@ export default function VisualTimelineEditor({
   const stepFrame = (forward: boolean) => {
     const step = 1 / 30; // 30 fps
     seekTo(currentTime + (forward ? step : -step));
+  };
+
+  // Timeline track dragging & handle trimming start
+  const handleTimelineDragStart = (
+    e: React.MouseEvent,
+    id: string,
+    type: 'text' | 'image',
+    mode: 'start' | 'end' | 'move',
+    startTime: number,
+    endTime: number
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedElementId(id);
+    setSelectedType(type);
+    setInspectorTab('inspector');
+    setTimelineDrag({
+      id,
+      type,
+      mode,
+      startX: e.clientX,
+      initialStart: startTime,
+      initialEnd: endTime,
+    });
   };
 
   // Convert canvas coordinates to preview overlay scale
@@ -193,12 +243,15 @@ export default function VisualTimelineEditor({
       animationDuration: 1.2,
       placeholderUrl: `/assets/candidate_logo${(nextSlotNum % 4) + 1}.png`,
     };
-    setTemplate((prev) => ({
-      ...prev,
-      imageElements: [...prev.imageElements, newEl],
-      photoSlotsCount: prev.imageElements.length + 1,
-      hasPhoto: true,
-    }));
+    setTemplate((prev) => {
+      const updatedImages = [...prev.imageElements, newEl];
+      return {
+        ...prev,
+        imageElements: updatedImages,
+        photoSlotsCount: updatedImages.length,
+        hasPhoto: true,
+      };
+    });
     setSelectedElementId(newId);
     setSelectedType('image');
     setInspectorTab('inspector');
@@ -211,10 +264,15 @@ export default function VisualTimelineEditor({
         textElements: prev.textElements.filter((t) => t.id !== id),
       }));
     } else {
-      setTemplate((prev) => ({
-        ...prev,
-        imageElements: prev.imageElements.filter((i) => i.id !== id),
-      }));
+      setTemplate((prev) => {
+        const remainingImages = prev.imageElements.filter((i) => i.id !== id);
+        return {
+          ...prev,
+          imageElements: remainingImages,
+          photoSlotsCount: remainingImages.length,
+          hasPhoto: remainingImages.length > 0,
+        };
+      });
     }
     if (selectedElementId === id) {
       setSelectedElementId(null);
@@ -274,6 +332,48 @@ export default function VisualTimelineEditor({
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
+      // Timeline dragging and trimming
+      if (timelineDrag && timelineRef.current) {
+        const rect = timelineRef.current.getBoundingClientRect();
+        const deltaPx = e.clientX - timelineDrag.startX;
+        const deltaSec = (deltaPx / rect.width) * duration;
+
+        if (timelineDrag.mode === 'start') {
+          const rawNewStart = timelineDrag.initialStart + deltaSec;
+          const clampedStart = Math.max(0, Math.min(timelineDrag.initialEnd - 0.5, rawNewStart));
+          const finalStart = Math.round(clampedStart * 10) / 10;
+          if (timelineDrag.type === 'text') {
+            updateTextElement(timelineDrag.id, { startTime: finalStart });
+          } else {
+            updateImageElement(timelineDrag.id, { startTime: finalStart });
+          }
+          seekTo(finalStart);
+        } else if (timelineDrag.mode === 'end') {
+          const rawNewEnd = timelineDrag.initialEnd + deltaSec;
+          const clampedEnd = Math.max(timelineDrag.initialStart + 0.5, Math.min(duration, rawNewEnd));
+          const finalEnd = Math.round(clampedEnd * 10) / 10;
+          if (timelineDrag.type === 'text') {
+            updateTextElement(timelineDrag.id, { endTime: finalEnd });
+          } else {
+            updateImageElement(timelineDrag.id, { endTime: finalEnd });
+          }
+          seekTo(finalEnd);
+        } else if (timelineDrag.mode === 'move') {
+          const blockDuration = timelineDrag.initialEnd - timelineDrag.initialStart;
+          const rawNewStart = timelineDrag.initialStart + deltaSec;
+          const clampedStart = Math.max(0, Math.min(duration - blockDuration, rawNewStart));
+          const finalStart = Math.round(clampedStart * 10) / 10;
+          const finalEnd = Math.round((finalStart + blockDuration) * 10) / 10;
+          if (timelineDrag.type === 'text') {
+            updateTextElement(timelineDrag.id, { startTime: finalStart, endTime: finalEnd });
+          } else {
+            updateImageElement(timelineDrag.id, { startTime: finalStart, endTime: finalEnd });
+          }
+          seekTo(finalStart);
+        }
+        return;
+      }
+
       if (!isDragging && !isResizing) return;
       const scale = getScale();
       const deltaX = (e.clientX - dragStart.x) / scale;
@@ -324,13 +424,14 @@ export default function VisualTimelineEditor({
         });
       }
     },
-    [isDragging, isResizing, selectedElementId, selectedType, dragStart, elementStartPos, resizeHandle, getScale, canvasWidth, canvasHeight]
+    [isDragging, isResizing, selectedElementId, selectedType, dragStart, elementStartPos, resizeHandle, getScale, canvasWidth, canvasHeight, timelineDrag, duration]
   );
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     setIsResizing(false);
     setResizeHandle(null);
+    setTimelineDrag(null);
   }, []);
 
   useEffect(() => {
@@ -355,15 +456,20 @@ export default function VisualTimelineEditor({
   const handleSaveTemplate = async () => {
     setIsSaving(true);
     try {
+      const payload: InvitationTemplate = {
+        ...template,
+        photoSlotsCount: template.imageElements.length,
+        hasPhoto: template.imageElements.length > 0,
+      };
       const res = await fetch(`/api/templates/${template.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(template),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (res.ok) {
         setSaveToast('Template configuration published successfully!');
-        onSave(template);
+        onSave(payload);
         setTimeout(() => setSaveToast(null), 3500);
       } else {
         alert(`Error saving template: ${data.error || 'Unknown error'}`);
@@ -576,18 +682,28 @@ export default function VisualTimelineEditor({
               className="w-full h-full object-cover pointer-events-none"
               muted={isMuted}
               playsInline
-              onTimeUpdate={handleTimeUpdate}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
               onEnded={() => setIsPlaying(false)}
+              onSeeked={() => {
+                if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
+              }}
+              onTimeUpdate={handleTimeUpdate}
             />
 
             {/* Canvas Interactive Overlay Layer */}
             <div className="absolute inset-0 pointer-events-auto overflow-hidden">
               {/* Image Placeholders */}
-              {template.imageElements.map((imgEl) => {
+              {template.imageElements.map((imgEl, idx) => {
                 const isVisible = currentTime >= imgEl.startTime && currentTime <= imgEl.endTime;
                 const isSelected = selectedElementId === imgEl.id;
 
-                if (!isVisible && !showInactiveElements && !isSelected) return null;
+                // When playing, inactive elements are completely hidden
+                if (isPlaying) {
+                  if (!isVisible) return null;
+                } else {
+                  if (!isVisible && !showInactiveElements && !isSelected) return null;
+                }
 
                 const scale = getScale();
                 const left = imgEl.x * scale;
@@ -595,15 +711,27 @@ export default function VisualTimelineEditor({
                 const width = imgEl.width * scale;
                 const height = imgEl.height * scale;
 
-                // Animation class
-                const animClass =
-                  imgEl.animationType === 'ink_reveal'
-                    ? 'anim-ink-reveal'
-                    : imgEl.animationType === 'brush_stroke'
-                    ? 'anim-brush-stroke'
-                    : imgEl.animationType === 'fade'
-                    ? 'anim-fade'
-                    : '';
+                // Procedural brush/ink animation synced to playhead scrubbing
+                const animDur = imgEl.animationDuration || 1.2;
+                const elapsed = Math.max(0, currentTime - imgEl.startTime);
+                const progress = isVisible ? Math.min(1, elapsed / animDur) : (showInactiveElements ? 1 : 0);
+
+                let clipPath = 'none';
+                let animOpacity = 1;
+                let animTransform = 'none';
+
+                if (imgEl.animationType === 'ink_reveal') {
+                  const radius = progress >= 1 ? 140 : progress * 140;
+                  clipPath = progress >= 1 ? 'none' : `circle(${radius}% at 50% 50%)`;
+                  animTransform = `scale(${0.92 + 0.08 * progress})`;
+                  animOpacity = progress < 0.1 ? progress * 10 : 1;
+                } else if (imgEl.animationType === 'brush_stroke') {
+                  const p = progress * 100;
+                  clipPath = progress >= 1 ? 'none' : `polygon(0% 0%, ${Math.min(100, p * 1.15)}% 0%, ${p}% 100%, 0% 100%)`;
+                  animOpacity = Math.min(1, progress * 2.5);
+                } else if (imgEl.animationType === 'fade') {
+                  animOpacity = progress;
+                }
 
                 return (
                   <div
@@ -614,9 +742,8 @@ export default function VisualTimelineEditor({
                       top: `${top}px`,
                       width: `${width}px`,
                       height: `${height}px`,
-                      opacity: !isVisible ? 0.45 : 1,
-                      '--anim-duration': `${imgEl.animationDuration || 1.2}s`,
-                    } as React.CSSProperties}
+                      opacity: !isVisible ? 0.35 : 1,
+                    }}
                     className={`absolute cursor-move transition-shadow z-10 ${
                       isSelected
                         ? 'ring-2 ring-purple-500 shadow-xl shadow-purple-500/40 z-30'
@@ -625,10 +752,18 @@ export default function VisualTimelineEditor({
                         : 'border border-dashed border-purple-500/50 hover:border-purple-300 z-10'
                     }`}
                   >
-                    {/* Inner image representation with reveal animation */}
-                    <div className={`w-full h-full relative overflow-hidden bg-purple-950/40 backdrop-blur-xs ${animClass}`}>
+                    {/* Inner image representation with procedural reveal animation */}
+                    <div
+                      style={{
+                        clipPath,
+                        opacity: animOpacity,
+                        transform: animTransform,
+                        transition: isPlaying ? 'none' : 'clip-path 0.05s ease-out, transform 0.05s ease-out',
+                      }}
+                      className="w-full h-full relative overflow-hidden bg-purple-950/40 backdrop-blur-xs"
+                    >
                       <img
-                        src={imgEl.placeholderUrl || '/assets/candidate_screenshot.jpg'}
+                        src={imgEl.placeholderUrl || `/assets/candidate_logo${(idx % 4) + 1}.png`}
                         alt={imgEl.label}
                         className={`w-full h-full ${imgEl.fit === 'contain' ? 'object-contain' : 'object-cover'}`}
                         onError={(e) => {
@@ -636,7 +771,7 @@ export default function VisualTimelineEditor({
                         }}
                       />
                       {/* Photo slot tag */}
-                      <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-purple-200 border border-purple-400/40">
+                      <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-purple-200 border border-purple-400/40 pointer-events-none">
                         {imgEl.field} ({imgEl.animationType}) {!isVisible && '• Inactive'}
                       </div>
                     </div>
@@ -666,18 +801,39 @@ export default function VisualTimelineEditor({
                 );
               })}
 
-              {/* Text Elements - Always rendered clearly with high-contrast editor pill */}
+              {/* Text Elements - Clean Typography Only, NO CSS Black Box or Debug Metadata */}
               {template.textElements.map((txtEl) => {
                 const isVisible = currentTime >= txtEl.startTime && currentTime <= txtEl.endTime;
                 const isSelected = selectedElementId === txtEl.id;
 
-                if (!isVisible && !showInactiveElements && !isSelected) return null;
+                // When playing, inactive elements are strictly hidden
+                if (isPlaying) {
+                  if (!isVisible) return null;
+                } else {
+                  if (!isVisible && !showInactiveElements && !isSelected) return null;
+                }
 
                 const scale = getScale();
                 const left = txtEl.x * scale;
                 const top = txtEl.y * scale;
                 const fontSize = Math.max(12, txtEl.fontSize * scale);
                 const displayText = resolveDisplayText(txtEl);
+
+                // Text fade-in / fade-out progress
+                let textOpacity = 1;
+                if (isVisible) {
+                  const elapsed = currentTime - txtEl.startTime;
+                  const remaining = txtEl.endTime - currentTime;
+                  const fadeIn = txtEl.fadeIn || 0.5;
+                  const fadeOut = txtEl.fadeOut || 0.5;
+                  if (elapsed < fadeIn && fadeIn > 0) {
+                    textOpacity = Math.max(0.05, elapsed / fadeIn);
+                  } else if (remaining < fadeOut && fadeOut > 0) {
+                    textOpacity = Math.max(0.05, remaining / fadeOut);
+                  }
+                } else {
+                  textOpacity = 0.35;
+                }
 
                 return (
                   <div
@@ -692,68 +848,38 @@ export default function VisualTimelineEditor({
                           : txtEl.textAlign === 'right'
                           ? 'translate(-100%, -50%)'
                           : 'translate(0, -50%)',
+                      opacity: textOpacity,
                     }}
-                    className={`absolute cursor-move transition-all select-none group ${
+                    className={`absolute cursor-move select-none transition-opacity ${
                       isSelected
-                        ? 'z-40 ring-2 ring-amber-400 bg-black/85 backdrop-blur-sm rounded-lg p-2.5 shadow-2xl shadow-amber-500/40 border border-amber-300'
+                        ? 'z-40 ring-2 ring-amber-400 ring-offset-2 ring-offset-transparent rounded px-1.5 py-0.5'
                         : isVisible
-                        ? 'z-20 bg-black/60 backdrop-blur-xs rounded-md p-1.5 border border-amber-500/50 hover:border-amber-400 hover:bg-black/80 shadow-lg'
-                        : 'z-15 bg-black/45 backdrop-blur-xs rounded-md p-1.5 border border-dashed border-amber-400/50 opacity-60 hover:opacity-100 hover:border-amber-300'
+                        ? 'z-20 hover:ring-1 hover:ring-amber-300/70 hover:ring-offset-1 rounded px-1.5 py-0.5'
+                        : 'z-10 ring-1 ring-dashed ring-amber-400/40 rounded px-1.5 py-0.5'
                     }`}
                   >
-                    {/* Top Tag Bar with Field Name and Timings */}
-                    <div className="flex items-center gap-1.5 mb-1 pointer-events-none">
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide uppercase flex items-center gap-1 ${
-                          isSelected
-                            ? 'bg-amber-500 text-black shadow-sm'
-                            : isVisible
-                            ? 'bg-amber-900/80 text-amber-200 border border-amber-500/40'
-                            : 'bg-slate-800 text-slate-300 border border-slate-700'
-                        }`}
-                      >
-                        <Type className="w-2.5 h-2.5" />
-                        {txtEl.field}
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-400">
-                        {txtEl.startTime}s - {txtEl.endTime}s
-                      </span>
-                      {!isVisible && (
-                        <span className="text-[9px] font-semibold text-amber-400/80 italic">
-                          (Inactive)
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Actual Rendered Text with High Readability */}
-                    <div
+                    {/* Raw, pristine styled text only */}
+                    <span
                       style={{
                         fontFamily: txtEl.fontFamily || 'Cinzel',
                         fontSize: `${fontSize}px`,
                         color: txtEl.fontColor || '#FFD700',
                         textAlign: txtEl.textAlign,
-                        textShadow: '0 2px 6px rgba(0,0,0,0.95), 0 0 1px #000, 0 0 8px rgba(0,0,0,0.8)',
+                        textShadow: '0 2px 8px rgba(0,0,0,0.9), 0 0 2px #000, 0 1px 3px rgba(0,0,0,0.8)',
                       }}
-                      className="block leading-tight whitespace-nowrap font-semibold px-1"
+                      className="block leading-tight whitespace-nowrap font-semibold pointer-events-none"
                     >
                       {displayText}
-                    </div>
+                    </span>
 
-                    {/* Coordinate & Jump Helper when selected */}
+                    {/* Small anchor handle dots on corners when selected to indicate draggable object */}
                     {isSelected && (
-                      <div className="mt-1 flex items-center justify-between text-[9px] font-mono text-amber-300/90 pt-1 border-t border-amber-500/30">
-                        <span>X: {txtEl.x}px • Y: {txtEl.y}px</span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            seekTo(txtEl.startTime);
-                          }}
-                          className="text-amber-400 hover:underline hover:text-white pointer-events-auto"
-                        >
-                          Jump to {txtEl.startTime}s
-                        </button>
-                      </div>
+                      <>
+                        <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-amber-400 shadow-sm pointer-events-none" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 shadow-sm pointer-events-none" />
+                        <div className="absolute -bottom-1 -left-1 w-2 h-2 rounded-full bg-amber-400 shadow-sm pointer-events-none" />
+                        <div className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full bg-amber-400 shadow-sm pointer-events-none" />
+                      </>
                     )}
                   </div>
                 );
@@ -1632,31 +1758,60 @@ export default function VisualTimelineEditor({
               const leftPct = (txtEl.startTime / duration) * 100;
               const widthPct = Math.max(2, ((txtEl.endTime - txtEl.startTime) / duration) * 100);
               const isSelected = selectedElementId === txtEl.id;
+              const isDraggingThis = timelineDrag && timelineDrag.id === txtEl.id;
 
               return (
                 <div key={txtEl.id} className="relative h-7 rounded bg-[#12121C] border border-[#1E1E2C] flex items-center">
                   <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedElementId(txtEl.id);
-                      setSelectedType('text');
-                      setInspectorTab('inspector');
-                      seekTo(txtEl.startTime);
-                    }}
                     style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-                    className={`absolute top-0.5 bottom-0.5 rounded-lg px-2 flex items-center justify-between text-[11px] font-semibold transition-all ${
+                    className={`absolute top-0.5 bottom-0.5 rounded-lg flex items-center justify-between text-[11px] font-semibold transition-shadow ${
                       isSelected
                         ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/30 ring-2 ring-amber-200 z-20'
-                        : 'bg-amber-950/70 hover:bg-amber-900/90 text-amber-200 border border-amber-500/40'
+                        : 'bg-amber-950/70 hover:bg-amber-900/90 text-amber-200 border border-amber-500/40 z-10'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 truncate">
-                      <Type className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{txtEl.field}: &ldquo;{txtEl.defaultText}&rdquo;</span>
+                    {/* Left Trim Handle */}
+                    <div
+                      onMouseDown={(e) => handleTimelineDragStart(e, txtEl.id, 'text', 'start', txtEl.startTime, txtEl.endTime)}
+                      className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize hover:bg-amber-300/50 flex items-center justify-center rounded-l z-30 group/handle"
+                      title="Drag left/right to trim start time"
+                    >
+                      <div className="w-0.5 h-3 bg-amber-200/80 group-hover/handle:bg-white rounded-full pointer-events-none" />
                     </div>
-                    <span className="text-[9px] font-mono opacity-80 shrink-0 ml-1">
-                      {txtEl.startTime}s - {txtEl.endTime}s
-                    </span>
+
+                    {/* Middle Draggable Track Body */}
+                    <div
+                      onMouseDown={(e) => handleTimelineDragStart(e, txtEl.id, 'text', 'move', txtEl.startTime, txtEl.endTime)}
+                      className="flex-1 h-full flex items-center justify-between px-3 cursor-grab active:cursor-grabbing overflow-hidden select-none"
+                    >
+                      <div className="flex items-center gap-1.5 truncate pointer-events-none">
+                        <Type className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{txtEl.field}: &ldquo;{txtEl.defaultText}&rdquo;</span>
+                      </div>
+                      <span className="text-[9px] font-mono opacity-80 shrink-0 ml-1 pointer-events-none">
+                        {txtEl.startTime}s - {txtEl.endTime}s
+                      </span>
+                    </div>
+
+                    {/* Right Trim Handle */}
+                    <div
+                      onMouseDown={(e) => handleTimelineDragStart(e, txtEl.id, 'text', 'end', txtEl.startTime, txtEl.endTime)}
+                      className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize hover:bg-amber-300/50 flex items-center justify-center rounded-r z-30 group/handle"
+                      title="Drag left/right to trim end time"
+                    >
+                      <div className="w-0.5 h-3 bg-amber-200/80 group-hover/handle:bg-white rounded-full pointer-events-none" />
+                    </div>
+
+                    {/* Live Timing Tooltip when dragging */}
+                    {isDraggingThis && (
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black/95 text-amber-300 text-[10px] font-mono px-2 py-0.5 rounded shadow-xl border border-amber-500/50 pointer-events-none whitespace-nowrap z-50">
+                        {timelineDrag.mode === 'start'
+                          ? `Start: ${txtEl.startTime.toFixed(1)}s`
+                          : timelineDrag.mode === 'end'
+                          ? `End: ${txtEl.endTime.toFixed(1)}s`
+                          : `${txtEl.startTime.toFixed(1)}s - ${txtEl.endTime.toFixed(1)}s (${(txtEl.endTime - txtEl.startTime).toFixed(1)}s)`}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -1668,31 +1823,60 @@ export default function VisualTimelineEditor({
               const leftPct = (imgEl.startTime / duration) * 100;
               const widthPct = Math.max(2, ((imgEl.endTime - imgEl.startTime) / duration) * 100);
               const isSelected = selectedElementId === imgEl.id;
+              const isDraggingThis = timelineDrag && timelineDrag.id === imgEl.id;
 
               return (
                 <div key={imgEl.id} className="relative h-7 rounded bg-[#12121C] border border-[#1E1E2C] flex items-center">
                   <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedElementId(imgEl.id);
-                      setSelectedType('image');
-                      setInspectorTab('inspector');
-                      seekTo(imgEl.startTime);
-                    }}
                     style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-                    className={`absolute top-0.5 bottom-0.5 rounded-lg px-2 flex items-center justify-between text-[11px] font-semibold transition-all ${
+                    className={`absolute top-0.5 bottom-0.5 rounded-lg flex items-center justify-between text-[11px] font-semibold transition-shadow ${
                       isSelected
                         ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30 ring-2 ring-purple-300 z-20'
-                        : 'bg-purple-900/60 hover:bg-purple-800/80 text-purple-200 border border-purple-500/40'
+                        : 'bg-purple-900/60 hover:bg-purple-800/80 text-purple-200 border border-purple-500/40 z-10'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 truncate">
-                      <ImageIcon className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{imgEl.field} ({imgEl.animationType})</span>
+                    {/* Left Trim Handle */}
+                    <div
+                      onMouseDown={(e) => handleTimelineDragStart(e, imgEl.id, 'image', 'start', imgEl.startTime, imgEl.endTime)}
+                      className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize hover:bg-purple-400/50 flex items-center justify-center rounded-l z-30 group/handle"
+                      title="Drag left/right to trim start time"
+                    >
+                      <div className="w-0.5 h-3 bg-purple-200/80 group-hover/handle:bg-white rounded-full pointer-events-none" />
                     </div>
-                    <span className="text-[9px] font-mono opacity-80 shrink-0 ml-1">
-                      {imgEl.startTime}s - {imgEl.endTime}s
-                    </span>
+
+                    {/* Middle Draggable Track Body */}
+                    <div
+                      onMouseDown={(e) => handleTimelineDragStart(e, imgEl.id, 'image', 'move', imgEl.startTime, imgEl.endTime)}
+                      className="flex-1 h-full flex items-center justify-between px-3 cursor-grab active:cursor-grabbing overflow-hidden select-none"
+                    >
+                      <div className="flex items-center gap-1.5 truncate pointer-events-none">
+                        <ImageIcon className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{imgEl.field} ({imgEl.animationType})</span>
+                      </div>
+                      <span className="text-[9px] font-mono opacity-80 shrink-0 ml-1 pointer-events-none">
+                        {imgEl.startTime}s - {imgEl.endTime}s
+                      </span>
+                    </div>
+
+                    {/* Right Trim Handle */}
+                    <div
+                      onMouseDown={(e) => handleTimelineDragStart(e, imgEl.id, 'image', 'end', imgEl.startTime, imgEl.endTime)}
+                      className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize hover:bg-purple-400/50 flex items-center justify-center rounded-r z-30 group/handle"
+                      title="Drag left/right to trim end time"
+                    >
+                      <div className="w-0.5 h-3 bg-purple-200/80 group-hover/handle:bg-white rounded-full pointer-events-none" />
+                    </div>
+
+                    {/* Live Timing Tooltip when dragging */}
+                    {isDraggingThis && (
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black/95 text-purple-300 text-[10px] font-mono px-2 py-0.5 rounded shadow-xl border border-purple-500/50 pointer-events-none whitespace-nowrap z-50">
+                        {timelineDrag.mode === 'start'
+                          ? `Start: ${imgEl.startTime.toFixed(1)}s`
+                          : timelineDrag.mode === 'end'
+                          ? `End: ${imgEl.endTime.toFixed(1)}s`
+                          : `${imgEl.startTime.toFixed(1)}s - ${imgEl.endTime.toFixed(1)}s (${(imgEl.endTime - imgEl.startTime).toFixed(1)}s)`}
+                      </div>
+                    )}
                   </div>
                 </div>
               );

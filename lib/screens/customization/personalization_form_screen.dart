@@ -52,7 +52,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
       religion: 'Hindu',
       orientation: '16:9',
       hasPhoto: true,
-      photoSlotsCount: 2,
+      photoSlotsCount: 5,
       durationSeconds: 102,
       badgeText: 'CHROMA PRO',
       description: 'Traditional Telugu Vivaham',
@@ -543,7 +543,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '${tmpl.photoSlotsCount} slots required',
+                '${tmpl.photoSlotsCount} ${tmpl.photoSlotsCount == 1 ? "photo" : "photos"} required',
                 style: GoogleFonts.plusJakartaSans(
                   color: AppColors.champagne,
                   fontSize: 11,

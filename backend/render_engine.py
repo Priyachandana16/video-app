@@ -307,7 +307,7 @@ def render_dynamic_invitation(config_path):
             if os.path.exists(cand_ph):
                 src_path = cand_ph
             else:
-                cand_default = os.path.join(project_root, 'assets', 'candidate_screenshot.jpg')
+                cand_default = os.path.join(project_root, 'assets', 'candidate_logo1.png')
                 if os.path.exists(cand_default):
                     src_path = cand_default
 

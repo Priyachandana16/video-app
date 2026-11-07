@@ -20,19 +20,19 @@
     "textElements": [
       {
         "id": "txt_1",
-        "field": "ceremonyTitle",
+        "field": "brideName",
         "label": "Ceremony Title",
         "defaultText": "శుభ వివాహం / Subha Vivaham",
-        "x": 960,
-        "y": 80,
+        "x": 1499,
+        "y": 504,
         "fontSize": 44,
-        "fontFamily": "Cinzel",
+        "fontFamily": "Montserrat",
         "fontColor": "#FFD700",
         "textAlign": "center",
-        "startTime": 2.0,
-        "endTime": 27.0,
-        "fadeIn": 0.8,
-        "fadeOut": 0.8
+        "startTime": 2,
+        "endTime": 27,
+        "fadeIn": 0.1,
+        "fadeOut": 0
       },
       {
         "id": "txt_2",
@@ -45,8 +45,8 @@
         "fontFamily": "Cinzel",
         "fontColor": "#FFE082",
         "textAlign": "center",
-        "startTime": 28.0,
-        "endTime": 39.0,
+        "startTime": 28,
+        "endTime": 39,
         "fadeIn": 0.6,
         "fadeOut": 0.6
       },
@@ -61,8 +61,8 @@
         "fontFamily": "Cinzel",
         "fontColor": "#FFE082",
         "textAlign": "center",
-        "startTime": 40.0,
-        "endTime": 51.0,
+        "startTime": 40,
+        "endTime": 51,
         "fadeIn": 0.6,
         "fadeOut": 0.6
       },
@@ -77,8 +77,8 @@
         "fontFamily": "Cinzel",
         "fontColor": "#FFFFFF",
         "textAlign": "center",
-        "startTime": 52.0,
-        "endTime": 76.0,
+        "startTime": 52,
+        "endTime": 76,
         "fadeIn": 0.8,
         "fadeOut": 0.8
       },
@@ -93,8 +93,8 @@
         "fontFamily": "Playfair Display",
         "fontColor": "#E2E8F0",
         "textAlign": "center",
-        "startTime": 77.0,
-        "endTime": 101.0,
+        "startTime": 77,
+        "endTime": 101,
         "fadeIn": 0.8,
         "fadeOut": 0.8
       },
@@ -109,8 +109,8 @@
         "fontFamily": "Cinzel",
         "fontColor": "#D4AF37",
         "textAlign": "center",
-        "startTime": 77.0,
-        "endTime": 101.0,
+        "startTime": 77,
+        "endTime": 101,
         "fadeIn": 0.8,
         "fadeOut": 0.8
       }
@@ -120,16 +120,16 @@
         "id": "img_1",
         "field": "photo_1",
         "label": "Photo 1: Bride Solo Portrait",
-        "x": 680,
-        "y": 80,
-        "width": 560,
-        "height": 720,
+        "x": 125,
+        "y": 317,
+        "width": 271,
+        "height": 323,
         "fit": "cover",
-        "startTime": 5.0,
-        "endTime": 12.0,
+        "startTime": 5,
+        "endTime": 12,
         "animationType": "ink_reveal",
-        "animationDuration": 1.2,
-        "placeholderUrl": "/assets/candidate_screenshot.jpg"
+        "animationDuration": 2.9,
+        "placeholderUrl": "/assets/candidate_logo1.png"
       },
       {
         "id": "img_2",
@@ -140,8 +140,8 @@
         "width": 560,
         "height": 720,
         "fit": "cover",
-        "startTime": 13.0,
-        "endTime": 20.0,
+        "startTime": 13,
+        "endTime": 20,
         "animationType": "brush_stroke",
         "animationDuration": 1.2,
         "placeholderUrl": "/assets/candidate_logo1.png"
@@ -155,8 +155,8 @@
         "width": 560,
         "height": 720,
         "fit": "cover",
-        "startTime": 21.0,
-        "endTime": 29.0,
+        "startTime": 21,
+        "endTime": 29,
         "animationType": "ink_reveal",
         "animationDuration": 1.2,
         "placeholderUrl": "/assets/candidate_logo2.png"
@@ -170,8 +170,8 @@
         "width": 560,
         "height": 720,
         "fit": "cover",
-        "startTime": 30.0,
-        "endTime": 39.0,
+        "startTime": 30,
+        "endTime": 39,
         "animationType": "brush_stroke",
         "animationDuration": 1.2,
         "placeholderUrl": "/assets/meshy1.png"
@@ -185,13 +185,14 @@
         "width": 560,
         "height": 720,
         "fit": "cover",
-        "startTime": 41.0,
-        "endTime": 51.0,
+        "startTime": 41,
+        "endTime": 51,
         "animationType": "fade",
-        "animationDuration": 1.0,
+        "animationDuration": 1,
         "placeholderUrl": "/assets/meshy2.png"
       }
-    ]
+    ],
+    "updatedAt": "2026-11-07T05:39:22.253Z"
   },
   {
     "id": "tmpl_telugu_gold_02",
@@ -223,8 +224,8 @@
         "fontFamily": "Cinzel",
         "fontColor": "#FFD700",
         "textAlign": "center",
-        "startTime": 1.0,
-        "endTime": 14.0,
+        "startTime": 1,
+        "endTime": 14,
         "fadeIn": 0.6,
         "fadeOut": 0.6
       },
@@ -239,8 +240,8 @@
         "fontFamily": "Playfair Display",
         "fontColor": "#FFF9E6",
         "textAlign": "center",
-        "startTime": 15.0,
-        "endTime": 29.0,
+        "startTime": 15,
+        "endTime": 29,
         "fadeIn": 0.6,
         "fadeOut": 0.6
       },
@@ -255,8 +256,8 @@
         "fontFamily": "Playfair Display",
         "fontColor": "#FFF9E6",
         "textAlign": "center",
-        "startTime": 15.0,
-        "endTime": 29.0,
+        "startTime": 15,
+        "endTime": 29,
         "fadeIn": 0.6,
         "fadeOut": 0.6
       },
@@ -271,8 +272,8 @@
         "fontFamily": "Cinzel",
         "fontColor": "#FFD700",
         "textAlign": "center",
-        "startTime": 30.0,
-        "endTime": 44.0,
+        "startTime": 30,
+        "endTime": 44,
         "fadeIn": 0.6,
         "fadeOut": 0.6
       },
@@ -287,8 +288,8 @@
         "fontFamily": "Playfair Display",
         "fontColor": "#FFFFFF",
         "textAlign": "center",
-        "startTime": 45.0,
-        "endTime": 55.0,
+        "startTime": 45,
+        "endTime": 55,
         "fadeIn": 0.6,
         "fadeOut": 0.6
       }
@@ -303,11 +304,11 @@
         "width": 500,
         "height": 650,
         "fit": "cover",
-        "startTime": 5.0,
-        "endTime": 14.0,
+        "startTime": 5,
+        "endTime": 14,
         "animationType": "ink_reveal",
-        "animationDuration": 1.0,
-        "placeholderUrl": "/assets/candidate_screenshot.jpg"
+        "animationDuration": 1,
+        "placeholderUrl": "/assets/candidate_logo1.png"
       },
       {
         "id": "img_gold_2",
@@ -318,10 +319,10 @@
         "width": 500,
         "height": 650,
         "fit": "cover",
-        "startTime": 15.0,
-        "endTime": 24.0,
+        "startTime": 15,
+        "endTime": 24,
         "animationType": "brush_stroke",
-        "animationDuration": 1.0,
+        "animationDuration": 1,
         "placeholderUrl": "/assets/candidate_logo1.png"
       },
       {
@@ -333,10 +334,10 @@
         "width": 500,
         "height": 650,
         "fit": "cover",
-        "startTime": 25.0,
-        "endTime": 34.0,
+        "startTime": 25,
+        "endTime": 34,
         "animationType": "ink_reveal",
-        "animationDuration": 1.0,
+        "animationDuration": 1,
         "placeholderUrl": "/assets/candidate_logo2.png"
       },
       {
@@ -348,10 +349,10 @@
         "width": 500,
         "height": 650,
         "fit": "cover",
-        "startTime": 35.0,
-        "endTime": 44.0,
+        "startTime": 35,
+        "endTime": 44,
         "animationType": "fade",
-        "animationDuration": 1.0,
+        "animationDuration": 1,
         "placeholderUrl": "/assets/meshy3.png"
       }
     ]
@@ -386,8 +387,8 @@
         "fontFamily": "Cinzel",
         "fontColor": "#FFD700",
         "textAlign": "center",
-        "startTime": 1.0,
-        "endTime": 15.0,
+        "startTime": 1,
+        "endTime": 15,
         "fadeIn": 0.6,
         "fadeOut": 0.6
       },
@@ -402,8 +403,8 @@
         "fontFamily": "Playfair Display",
         "fontColor": "#FFF8E7",
         "textAlign": "center",
-        "startTime": 16.0,
-        "endTime": 34.0,
+        "startTime": 16,
+        "endTime": 34,
         "fadeIn": 0.6,
         "fadeOut": 0.6
       },
@@ -418,8 +419,8 @@
         "fontFamily": "Playfair Display",
         "fontColor": "#FFF8E7",
         "textAlign": "center",
-        "startTime": 16.0,
-        "endTime": 34.0,
+        "startTime": 16,
+        "endTime": 34,
         "fadeIn": 0.6,
         "fadeOut": 0.6
       },
@@ -434,8 +435,8 @@
         "fontFamily": "Cinzel",
         "fontColor": "#FFD700",
         "textAlign": "center",
-        "startTime": 35.0,
-        "endTime": 58.0,
+        "startTime": 35,
+        "endTime": 58,
         "fadeIn": 0.6,
         "fadeOut": 0.6
       },
@@ -450,8 +451,8 @@
         "fontFamily": "Playfair Display",
         "fontColor": "#E2E8F0",
         "textAlign": "center",
-        "startTime": 35.0,
-        "endTime": 58.0,
+        "startTime": 35,
+        "endTime": 58,
         "fadeIn": 0.6,
         "fadeOut": 0.6
       }
@@ -466,11 +467,11 @@
         "width": 600,
         "height": 780,
         "fit": "cover",
-        "startTime": 6.0,
-        "endTime": 15.0,
+        "startTime": 6,
+        "endTime": 15,
         "animationType": "ink_reveal",
         "animationDuration": 1.2,
-        "placeholderUrl": "/assets/candidate_screenshot.jpg"
+        "placeholderUrl": "/assets/candidate_logo1.png"
       },
       {
         "id": "img_div_2",
@@ -481,8 +482,8 @@
         "width": 600,
         "height": 780,
         "fit": "cover",
-        "startTime": 16.0,
-        "endTime": 25.0,
+        "startTime": 16,
+        "endTime": 25,
         "animationType": "brush_stroke",
         "animationDuration": 1.2,
         "placeholderUrl": "/assets/candidate_logo1.png"
@@ -496,8 +497,8 @@
         "width": 600,
         "height": 780,
         "fit": "cover",
-        "startTime": 26.0,
-        "endTime": 35.0,
+        "startTime": 26,
+        "endTime": 35,
         "animationType": "ink_reveal",
         "animationDuration": 1.2,
         "placeholderUrl": "/assets/candidate_logo2.png"
@@ -511,10 +512,10 @@
         "width": 600,
         "height": 780,
         "fit": "cover",
-        "startTime": 36.0,
-        "endTime": 46.0,
+        "startTime": 36,
+        "endTime": 46,
         "animationType": "fade",
-        "animationDuration": 1.0,
+        "animationDuration": 1,
         "placeholderUrl": "/assets/meshy1.png"
       }
     ]
@@ -549,8 +550,8 @@
         "fontFamily": "Cinzel",
         "fontColor": "#FFD700",
         "textAlign": "center",
-        "startTime": 1.0,
-        "endTime": 15.0,
+        "startTime": 1,
+        "endTime": 15,
         "fadeIn": 0.8,
         "fadeOut": 0.8
       },
@@ -565,8 +566,8 @@
         "fontFamily": "Playfair Display",
         "fontColor": "#FFFDF5",
         "textAlign": "center",
-        "startTime": 16.0,
-        "endTime": 35.0,
+        "startTime": 16,
+        "endTime": 35,
         "fadeIn": 0.8,
         "fadeOut": 0.8
       },
@@ -581,8 +582,8 @@
         "fontFamily": "Cinzel",
         "fontColor": "#FFD700",
         "textAlign": "center",
-        "startTime": 16.0,
-        "endTime": 35.0,
+        "startTime": 16,
+        "endTime": 35,
         "fadeIn": 0.8,
         "fadeOut": 0.8
       },
@@ -597,8 +598,8 @@
         "fontFamily": "Playfair Display",
         "fontColor": "#FFFFFF",
         "textAlign": "center",
-        "startTime": 36.0,
-        "endTime": 55.0,
+        "startTime": 36,
+        "endTime": 55,
         "fadeIn": 0.8,
         "fadeOut": 0.8
       }
@@ -606,4 +607,3 @@
     "imageElements": []
   }
 ]
-

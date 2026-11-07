@@ -665,8 +665,8 @@ app.put('/api/templates/:id', (req, res) => {
       id: existing.id, // Immutable ID
       textElements: req.body.textElements !== undefined ? req.body.textElements : existing.textElements,
       imageElements: req.body.imageElements !== undefined ? req.body.imageElements : existing.imageElements,
-      photoSlotsCount: req.body.imageElements ? req.body.imageElements.length : existing.photoSlotsCount,
-      hasPhoto: (req.body.imageElements && req.body.imageElements.length > 0) || existing.hasPhoto,
+      photoSlotsCount: req.body.imageElements ? req.body.imageElements.length : (req.body.photoSlotsCount !== undefined ? req.body.photoSlotsCount : existing.photoSlotsCount),
+      hasPhoto: req.body.imageElements ? (req.body.imageElements.length > 0) : (req.body.hasPhoto !== undefined ? req.body.hasPhoto : existing.hasPhoto),
       updatedAt: new Date().toISOString()
     };
 
