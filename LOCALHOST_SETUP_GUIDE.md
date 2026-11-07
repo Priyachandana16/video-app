@@ -62,3 +62,4 @@ If you want to open the invitation app on a phone or another laptop connected to
 2. Open on the phone's browser:
    * `http://<YOUR_IP>:8085` (Flutter Web App)
    * `http://<YOUR_IP>:3001` (Admin Studio)
+

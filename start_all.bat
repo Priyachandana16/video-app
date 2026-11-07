@@ -35,3 +35,4 @@ echo Keep the 3 command windows open while testing.
 echo Run stop_all.bat whenever you want to shut them down.
 echo.
 pause
+

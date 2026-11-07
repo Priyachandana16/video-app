@@ -56,3 +56,4 @@ echo You are now ready to run the app.
 echo Simply double-click 'start_all.bat' to launch everything!
 echo.
 pause
+

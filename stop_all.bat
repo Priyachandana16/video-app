@@ -19,3 +19,4 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3001 ^| findstr LISTENING') 
 echo All services stopped cleanly.
 echo.
 pause
+

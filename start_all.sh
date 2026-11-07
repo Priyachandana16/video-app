@@ -32,3 +32,4 @@ echo "Press Ctrl+C to stop all services."
 
 trap "kill $BACKEND_PID $WEB_PID $ADMIN_PID 2>/dev/null; exit" SIGINT SIGTERM
 wait
+
