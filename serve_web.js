@@ -30,8 +30,8 @@ const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
   res.setHeader('Access-Control-Allow-Headers', '*');
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+  res.setHeader('Access-Control-Expose-Headers', '*');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(200);
@@ -119,6 +119,10 @@ function serveStaticFile(filePath, res, req) {
       'Accept-Ranges': 'bytes',
       'Content-Length': chunksize,
       'Content-Type': contentType,
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+      'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
     });
     file.pipe(res);
     return;
@@ -130,7 +134,11 @@ function serveStaticFile(filePath, res, req) {
     'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
     'Pragma': 'no-cache',
     'Expires': '0',
-    'Accept-Ranges': 'bytes'
+    'Accept-Ranges': 'bytes',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+    'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length',
+    'Cross-Origin-Resource-Policy': 'cross-origin',
   });
 
   fs.createReadStream(filePath).pipe(res);

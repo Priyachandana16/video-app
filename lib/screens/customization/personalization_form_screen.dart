@@ -13,10 +13,12 @@ import 'review_details_screen.dart';
 
 class PersonalizationFormScreen extends StatefulWidget {
   final TemplateModel? template;
+  final bool? hasPhotoPreference;
 
   const PersonalizationFormScreen({
     super.key,
     this.template,
+    this.hasPhotoPreference,
   });
 
   @override
@@ -38,6 +40,14 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
   late TextEditingController _rsvpController;
 
   bool _isGenerating = false;
+
+  bool get _isWithPhotos {
+    if (widget.hasPhotoPreference != null) {
+      return widget.hasPhotoPreference! && _getActiveTemplate().hasPhoto;
+    }
+    final providerHasPhoto = context.read<PersonalizationProvider>().data.hasPhoto;
+    return providerHasPhoto && _getActiveTemplate().hasPhoto;
+  }
 
   TemplateModel _getActiveTemplate() {
     if (widget.template != null) return widget.template!;
@@ -64,7 +74,11 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
   @override
   void initState() {
     super.initState();
-    final p = context.read<PersonalizationProvider>().data;
+    final provider = context.read<PersonalizationProvider>();
+    if (widget.hasPhotoPreference != null) {
+      provider.setPhotoPreference(widget.hasPhotoPreference!);
+    }
+    final p = provider.data;
 
     _groomController = TextEditingController(text: p.groomName);
     _brideController = TextEditingController(text: p.brideName);
@@ -186,8 +200,8 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
     final tmpl = _getActiveTemplate();
     final p = context.read<PersonalizationProvider>();
 
-    // Validate photos if required by template
-    if (tmpl.hasPhoto) {
+    // Validate photos ONLY if user selected With Photos AND template requires them
+    if (_isWithPhotos && tmpl.hasPhoto) {
       final hasWoman = p.data.womanPhotoBytes != null ||
           (p.data.womanPhotoPath != null && p.data.womanPhotoPath!.isNotEmpty);
       final hasMan = p.data.manPhotoBytes != null ||
@@ -228,7 +242,10 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
       final tmpl = _getActiveTemplate();
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => ReviewDetailsScreen(template: tmpl),
+          builder: (_) => ReviewDetailsScreen(
+            template: tmpl,
+            hasPhoto: _isWithPhotos,
+          ),
         ),
       );
     }
@@ -342,19 +359,19 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                       padding:
                           const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
-                        color: tmpl.hasPhoto
+                        color: (_isWithPhotos && tmpl.hasPhoto)
                             ? AppColors.brandPink.withValues(alpha: 0.15)
-                            : Colors.white.withValues(alpha: 0.08),
+                            : const Color(0xFF10B981).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        tmpl.hasPhoto
+                        (_isWithPhotos && tmpl.hasPhoto)
                             ? '${tmpl.photoSlotsCount} Photos'
-                            : 'Without Photo',
+                            : 'Without Photos',
                         style: GoogleFonts.plusJakartaSans(
-                          color: tmpl.hasPhoto
+                          color: (_isWithPhotos && tmpl.hasPhoto)
                               ? const Color(0xFFFF7597)
-                              : Colors.white70,
+                              : const Color(0xFF6EE7B7),
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                         ),
@@ -652,8 +669,18 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
           Row(
             children: [
               _buildPhotoSlotCard(
-                label: 'Couple Photo',
-                slotRole: 'జంట ఫోటో',
+                label: tmpl.category == 'Half Saree Ceremony'
+                    ? "Girl's Photo (చిరంజీవి ఫోటో)"
+                    : (tmpl.category == 'Birthday'
+                        ? "Birthday Star's Photo"
+                        : (tmpl.category == 'Housewarming'
+                            ? "Family Home Photo"
+                            : "Couple Photo")),
+                slotRole: tmpl.category == 'Half Saree Ceremony'
+                    ? 'లంగా వోణి ఫోటో'
+                    : (tmpl.category == 'Birthday'
+                        ? 'బర్త్‌డే ఫోటో'
+                        : 'జంట ఫోటో'),
                 onPick: provider.pickWomanPhoto,
                 onRemove: provider.removeWomanPhoto,
                 localPath: provider.data.womanPhotoPath,
@@ -1154,10 +1181,10 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
               children: [
                 // 1. Template Preview Banner
                 _buildTemplatePreviewHeader(tmpl),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                // 2. Photo Upload Section (Rendered ONLY if template.hasPhoto == true)
-                if (tmpl.hasPhoto)
+                // 2. Photo Upload Section (Rendered ONLY if user selected With Photos AND template supports them)
+                if (_isWithPhotos)
                   _buildPhotoUploadSection(provider, tmpl),
 
                 // 3. Wedding Information Fields

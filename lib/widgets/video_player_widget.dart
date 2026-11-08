@@ -85,8 +85,11 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> with WidgetsBindi
     });
   }
 
-  void _initController() {
+  Future<void> _initController() async {
     _controlsTimer?.cancel();
+    _disposeController();
+
+    if (!mounted) return;
     setState(() {
       _isInitialized = false;
       _hasError = false;
@@ -99,91 +102,101 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> with WidgetsBindi
       cleanSrc = cleanSrc.substring(1);
     }
 
-    VideoPlayerController controller;
-
-    if (cleanSrc.startsWith('http://') || cleanSrc.startsWith('https://')) {
-      controller = VideoPlayerController.networkUrl(Uri.parse(cleanSrc));
-    } else if (cleanSrc.startsWith('/exports/')) {
-      controller = VideoPlayerController.networkUrl(
-        Uri.parse(kIsWeb ? cleanSrc : 'http://localhost:5000$cleanSrc'),
-      );
-    } else if (cleanSrc.startsWith('assets/') || widget.isAsset) {
-      if (kIsWeb) {
-        final webPath = cleanSrc.startsWith('/') ? cleanSrc : '/$cleanSrc';
-        controller = VideoPlayerController.networkUrl(Uri.parse(webPath));
-      } else {
-        controller = VideoPlayerController.asset(cleanSrc);
-      }
-    } else if (!kIsWeb && File(cleanSrc).existsSync()) {
-      controller = VideoPlayerController.file(File(cleanSrc));
-    } else {
-      final fallbackAsset = widget.aspectRatio < 1
-          ? 'assets/templates/template_03_sample_result.mp4'
-          : 'assets/templates/template_01_sample_result.mp4';
-      controller = kIsWeb
-          ? VideoPlayerController.networkUrl(Uri.parse('/$fallbackAsset'))
-          : VideoPlayerController.asset(fallbackAsset);
+    // Build list of candidate sources to try
+    final List<String> candidates = [];
+    if (cleanSrc.isNotEmpty) {
+      candidates.add(cleanSrc);
     }
+    // If it's sample_result, also add corresponding master video
+    if (cleanSrc.contains('sample_result')) {
+      final master = cleanSrc
+          .replaceAll('template_03_sample_result', 'template_03_divine_god')
+          .replaceAll('template_02_sample_result', 'template_02_royal_gold')
+          .replaceAll('template_01_sample_result', 'template_01_green_screen');
+      if (!candidates.contains(master)) candidates.add(master);
+    }
+    // Fallback based on orientation
+    final defaultFallback = widget.aspectRatio < 1
+        ? 'assets/templates/template_03_sample_result.mp4'
+        : 'assets/templates/template_01_sample_result.mp4';
+    if (!candidates.contains(defaultFallback)) candidates.add(defaultFallback);
 
-    _controller = controller;
+    final masterFallback = widget.aspectRatio < 1
+        ? 'assets/templates/template_03_divine_god.mp4'
+        : 'assets/templates/template_02_royal_gold.mp4';
+    if (!candidates.contains(masterFallback)) candidates.add(masterFallback);
 
-    controller.initialize().then((_) {
-      if (!mounted) return;
-      setState(() {
-        _isInitialized = true;
-        _hasError = false;
-      });
-      controller.setLooping(widget.looping);
-      controller.setVolume(_isMuted ? 0.0 : 1.0);
-      if (widget.autoPlay) {
-        controller.play();
-        _scheduleControlsAutoHide();
+    bool initialized = false;
+
+    for (final src in candidates) {
+      final List<VideoPlayerController Function()> loaders = [];
+
+      if (src.startsWith('http://') || src.startsWith('https://')) {
+        loaders.add(() => VideoPlayerController.networkUrl(Uri.parse(src)));
+      } else if (src.startsWith('/exports/')) {
+        loaders.add(() => VideoPlayerController.networkUrl(
+          kIsWeb ? Uri.base.resolve(src) : Uri.parse('http://localhost:5000$src'),
+        ));
+      } else {
+        // Asset-based path
+        final assetPath = src.startsWith('assets/') ? src : 'assets/$src';
+        final webUrl = Uri.base.resolve(src.startsWith('/') ? src : '/$src');
+
+        if (kIsWeb) {
+          // On Web, try networkUrl with resolved absolute URI, then VideoPlayerController.asset
+          loaders.add(() => VideoPlayerController.networkUrl(webUrl));
+          loaders.add(() => VideoPlayerController.asset(assetPath));
+        } else {
+          loaders.add(() => VideoPlayerController.asset(assetPath));
+          if (File(src).existsSync()) {
+            loaders.add(() => VideoPlayerController.file(File(src)));
+          }
+        }
       }
-      controller.addListener(_onControllerUpdate);
-    }).catchError((err) {
-      debugPrint('Error initializing video player for $cleanSrc: $err');
-      if (!mounted) return;
 
-      // Fallback attempt with known asset
-      final fallbackAsset = widget.aspectRatio < 1
-          ? 'assets/templates/template_03_sample_result.mp4'
-          : 'assets/templates/template_01_sample_result.mp4';
+      for (final createCtrl in loaders) {
+        VideoPlayerController? ctrl;
+        try {
+          ctrl = createCtrl();
+          await ctrl.initialize();
+          if (!mounted) {
+            ctrl.dispose();
+            return;
+          }
 
-      if (cleanSrc != fallbackAsset) {
-        final fallbackController = kIsWeb
-            ? VideoPlayerController.networkUrl(Uri.parse('/$fallbackAsset'))
-            : VideoPlayerController.asset(fallbackAsset);
+          _controller = ctrl;
+          _isInitialized = true;
+          _hasError = false;
 
-        _controller = fallbackController;
-        fallbackController.initialize().then((_) {
-          if (!mounted) return;
-          setState(() {
-            _isInitialized = true;
-            _hasError = false;
-          });
-          fallbackController.setLooping(widget.looping);
-          fallbackController.setVolume(_isMuted ? 0.0 : 1.0);
+          ctrl.setLooping(widget.looping);
+          ctrl.setVolume(_isMuted ? 0.0 : 1.0);
+
           if (widget.autoPlay) {
-            fallbackController.play();
+            ctrl.play().catchError((e) {
+              debugPrint('Autoplay prevented by browser: $e');
+            });
             _scheduleControlsAutoHide();
           }
-          fallbackController.addListener(_onControllerUpdate);
-        }).catchError((e2) {
-          debugPrint('Secondary fallback failed: $e2');
-          if (mounted) {
-            setState(() {
-              _hasError = true;
-              _errorMessage = 'Video could not be played. Tap to retry.';
-            });
-          }
-        });
-      } else {
-        setState(() {
-          _hasError = true;
-          _errorMessage = 'Failed to load video. Tap to retry.';
-        });
+
+          ctrl.addListener(_onControllerUpdate);
+          initialized = true;
+          setState(() {});
+          return;
+        } catch (e) {
+          debugPrint('Failed to load video using candidate: $src, error: $e');
+          try {
+            ctrl?.dispose();
+          } catch (_) {}
+        }
       }
-    });
+    }
+
+    if (!initialized && mounted) {
+      setState(() {
+        _hasError = true;
+        _errorMessage = 'Failed to load video. Tap to retry.';
+      });
+    }
   }
 
   @override

@@ -55,16 +55,12 @@ class _WeddingTemplatesGalleryScreenState
         hasPhoto: _currentHasPhoto,
       );
 
-      // Graceful fallback if exact combination has no templates
+      // Only search across occasions with the EXACT same orientation, religion, and hasPhoto preference
       if (templates.isEmpty) {
         templates = await ApiService.instance.getTemplates(
           orientation: _currentOrientation,
           religion: _currentReligion,
-        );
-      }
-      if (templates.isEmpty) {
-        templates = await ApiService.instance.getTemplates(
-          orientation: _currentOrientation,
+          hasPhoto: _currentHasPhoto,
         );
       }
 
@@ -86,17 +82,22 @@ class _WeddingTemplatesGalleryScreenState
 
   void _onSelectTemplate(TemplateModel tmpl) {
     context.read<TemplateProvider>().selectTemplate(tmpl);
-    context.read<PersonalizationProvider>().updateTemplate(tmpl);
+    context.read<PersonalizationProvider>().updateTemplate(tmpl, hasPhoto: _currentHasPhoto);
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PersonalizationFormScreen(template: tmpl),
+        builder: (_) => PersonalizationFormScreen(
+          template: tmpl,
+          hasPhotoPreference: _currentHasPhoto,
+        ),
       ),
     );
   }
 
   void _showVideoPreviewDialog(TemplateModel tmpl) {
     final isVertical = tmpl.orientation == '9:16';
-    final videoPath = tmpl.sampleResultPath ?? tmpl.masterVideoPath;
+    final videoPath = (!tmpl.hasPhoto)
+        ? tmpl.masterVideoPath
+        : (tmpl.sampleResultPath ?? tmpl.masterVideoPath);
 
     showDialog(
       context: context,
@@ -394,6 +395,43 @@ class _WeddingTemplatesGalleryScreenState
                           ),
                         ),
                       ),
+                      const SizedBox(width: 6),
+
+                      // Photo Preference badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _currentHasPhoto
+                              ? AppColors.brandPink.withValues(alpha: 0.15)
+                              : const Color(0xFF10B981).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _currentHasPhoto
+                                ? AppColors.brandPink.withValues(alpha: 0.4)
+                                : const Color(0xFF10B981).withValues(alpha: 0.4),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _currentHasPhoto ? Icons.photo_library_outlined : Icons.font_download_rounded,
+                              size: 12,
+                              color: _currentHasPhoto ? AppColors.brandPink : const Color(0xFF34D399),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _currentHasPhoto ? 'With Photos' : 'Without Photos',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: _currentHasPhoto ? const Color(0xFFFF7597) : const Color(0xFF6EE7B7),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -425,41 +463,91 @@ class _WeddingTemplatesGalleryScreenState
           ),
           const SizedBox(height: 10),
 
-          // Quick Religion Switcher Pills
+          // Quick Switcher Row: Religion pills + Photo Preference toggle
           Row(
-            children: ['Hindu', 'Muslim', 'Christian'].map((rel) {
-              final isSelected = _currentReligion == rel;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _currentReligion = rel;
-                    });
-                    _loadTemplates();
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primaryGold : const Color(0xFF1E1E28),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected ? AppColors.primaryGold : Colors.white12,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: ['Hindu', 'Muslim', 'Christian'].map((rel) {
+                  final isSelected = _currentReligion == rel;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _currentReligion = rel;
+                        });
+                        _loadTemplates();
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primaryGold : const Color(0xFF1E1E28),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primaryGold : Colors.white12,
+                          ),
+                        ),
+                        child: Text(
+                          rel,
+                          style: GoogleFonts.plusJakartaSans(
+                            color: isSelected ? Colors.black : Colors.white70,
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
-                    child: Text(
-                      rel,
-                      style: GoogleFonts.plusJakartaSans(
-                        color: isSelected ? Colors.black : Colors.white70,
-                        fontSize: 11,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                      ),
+                  );
+                }).toList(),
+              ),
+
+              // Photo Mode Toggle Pill
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _currentHasPhoto = !_currentHasPhoto;
+                  });
+                  context.read<PersonalizationProvider>().setPhotoPreference(_currentHasPhoto);
+                  _loadTemplates();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _currentHasPhoto
+                        ? AppColors.brandPink.withValues(alpha: 0.15)
+                        : const Color(0xFF10B981).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _currentHasPhoto
+                          ? AppColors.brandPink.withValues(alpha: 0.45)
+                          : const Color(0xFF10B981).withValues(alpha: 0.45),
+                      width: 1,
                     ),
                   ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _currentHasPhoto ? Icons.photo_library_outlined : Icons.font_download_rounded,
+                        size: 11,
+                        color: _currentHasPhoto ? AppColors.brandPink : const Color(0xFF34D399),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _currentHasPhoto ? 'With Photos' : 'Without Photos',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: _currentHasPhoto ? const Color(0xFFFF7597) : const Color(0xFF6EE7B7),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              );
-            }).toList(),
+              ),
+            ],
           ),
         ],
       ),

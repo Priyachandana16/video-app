@@ -72,7 +72,11 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
     }
     if (progress < 0.15) return 'Preparing your invitation...';
     if (progress < 0.35) return 'Processing wedding details...';
-    if (progress < 0.55) return 'Preparing uploaded photos...';
+    if (progress < 0.55) {
+      return provider.data.hasPhoto
+          ? 'Preparing uploaded photos...'
+          : 'Composing sacred typography & animations...';
+    }
     if (progress < 0.75) return 'Creating invitation scenes...';
     if (progress < 0.95) return 'Rendering your invitation video...';
     if (progress < 1.0) return 'Finalizing video...';

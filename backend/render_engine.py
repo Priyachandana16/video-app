@@ -219,9 +219,17 @@ def render_dynamic_invitation(config_path):
     if 'manPhoto' in user_photos and 'photo_2' not in user_photos:
         user_photos['photo_2'] = user_photos['manPhoto']
 
-    print("PROGRESS: 0.15 | Processing and framing uploaded photographs...", flush=True)
+    has_photo = data.get('hasPhoto', True)
+    if isinstance(has_photo, str):
+        has_photo = has_photo.lower() in ['true', '1', 'yes']
 
-    image_elements = template.get('imageElements', [])
+    if has_photo:
+        print("PROGRESS: 0.15 | Processing and framing uploaded photographs...", flush=True)
+        image_elements = template.get('imageElements', [])
+    else:
+        print("PROGRESS: 0.15 | Preparing pristine typography & sacred animations (Without Photos)...", flush=True)
+        image_elements = []
+        user_photos = {}
     text_elements = template.get('textElements', [])
 
     # Filter chains & inputs

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../providers/personalization_provider.dart';
 import 'wedding_templates_gallery_screen.dart';
 
 class WeddingPreferencesScreen extends StatefulWidget {
@@ -96,6 +98,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
     if (!_isReady) return;
 
     final hasPhoto = _selectedPhotoPreference == 'with_photo';
+    context.read<PersonalizationProvider>().setPhotoPreference(hasPhoto);
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => WeddingTemplatesGalleryScreen(
@@ -112,8 +115,8 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
     return Row(
       children: [
         Container(
-          width: 20,
-          height: 20,
+          width: 22,
+          height: 22,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [AppColors.primaryGold, AppColors.deepGold],
@@ -142,7 +145,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
           title,
           style: GoogleFonts.plusJakartaSans(
             color: Colors.white,
-            fontSize: 13,
+            fontSize: 13.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.2,
           ),
@@ -170,7 +173,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: isSelected ? const Color(0xFF1E1B26) : const Color(0xFF14141B),
             borderRadius: BorderRadius.circular(14),
@@ -196,8 +199,8 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    width: isHorizontal ? 38 : 24,
-                    height: isHorizontal ? 24 : 38,
+                    width: isHorizontal ? 40 : 26,
+                    height: isHorizontal ? 26 : 40,
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppColors.primaryGold.withValues(alpha: 0.2)
@@ -215,7 +218,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                         isHorizontal
                             ? Icons.crop_landscape_rounded
                             : Icons.crop_portrait_rounded,
-                        size: 14,
+                        size: 15,
                         color: isSelected ? AppColors.primaryGold : Colors.white70,
                       ),
                     ),
@@ -246,7 +249,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                 title,
                 style: GoogleFonts.plusJakartaSans(
                   color: Colors.white,
-                  fontSize: 13,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -275,8 +278,8 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.plusJakartaSans(
                   color: const Color(0xFF94A3B8),
-                  fontSize: 9.5,
-                  height: 1.2,
+                  fontSize: 10,
+                  height: 1.25,
                 ),
               ),
             ],
@@ -304,8 +307,8 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9.5),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF1E1B26) : const Color(0xFF14141B),
           borderRadius: BorderRadius.circular(12),
@@ -326,8 +329,8 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         child: Row(
           children: [
             Container(
-              width: 32,
-              height: 32,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 color: isSelected
                     ? accentColor.withValues(alpha: 0.18)
@@ -343,10 +346,10 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
               child: Icon(
                 icon,
                 color: isSelected ? accentColor : Colors.white70,
-                size: 16,
+                size: 17,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,7 +358,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                     title,
                     style: GoogleFonts.plusJakartaSans(
                       color: Colors.white,
-                      fontSize: 13,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -365,8 +368,8 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       color: const Color(0xFF94A3B8),
-                      fontSize: 10,
-                      height: 1.2,
+                      fontSize: 10.5,
+                      height: 1.25,
                     ),
                   ),
                 ],
@@ -412,8 +415,8 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF1E1B26) : const Color(0xFF14141B),
           borderRadius: BorderRadius.circular(12),
@@ -434,8 +437,8 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         child: Row(
           children: [
             Container(
-              width: 32,
-              height: 32,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 color: isSelected
                     ? accentColor.withValues(alpha: 0.18)
@@ -451,10 +454,10 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
               child: Icon(
                 icon,
                 color: isSelected ? accentColor : Colors.white70,
-                size: 16,
+                size: 17,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -463,7 +466,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                     title,
                     style: GoogleFonts.plusJakartaSans(
                       color: Colors.white,
-                      fontSize: 13,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -473,8 +476,8 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       color: const Color(0xFF94A3B8),
-                      fontSize: 10,
-                      height: 1.2,
+                      fontSize: 10.5,
+                      height: 1.25,
                     ),
                   ),
                 ],
@@ -524,185 +527,197 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         centerTitle: false,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final availableHeight = constraints.maxHeight;
+            // Proportional vertical spacing so content fills the page naturally
+            final double sectionGap = (availableHeight > 720) ? 14.0 : (availableHeight > 640 ? 10.0 : 6.0);
+            final double stepHeaderGap = (availableHeight > 720) ? 9.0 : 6.0;
+
+            return ScrollConfiguration(
+              // Completely suppress scrollbar on all platforms
+              behavior: ScrollConfiguration.of(context).copyWith(
+                scrollbars: false,
+                overscroll: false,
+              ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Subtitle Intro
-                    Text(
-                      _pageSubtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.plusJakartaSans(
-                        color: const Color(0xFF94A3B8),
-                        fontSize: 11.5,
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // STEP 1: Video Orientation
-                    _buildStepBadge('1', 'Choose Video Orientation'),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _buildOrientationCard(
-                          orientation: '16:9',
-                          title: 'Horizontal',
-                          ratioLabel: '16:9 Landscape',
-                          description: 'Optimized for TV, screens & widescreen',
-                          isHorizontal: true,
-                        ),
-                        const SizedBox(width: 10),
-                        _buildOrientationCard(
-                          orientation: '9:16',
-                          title: 'Vertical',
-                          ratioLabel: '9:16 Portrait',
-                          description: 'Perfect for WhatsApp Status, Stories & Reels',
-                          isHorizontal: false,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // STEP 2: Religion Selection
-                    _buildStepBadge('2', 'Select Religion & Design Style'),
-                    const SizedBox(height: 8),
-                    _buildReligionCard(
-                      religionKey: 'Hindu',
-                      title: 'Hindu',
-                      subtitle: 'Traditional Vedic motifs, sacred shlokas, diya lamps & golden mandapam',
-                      icon: Icons.temple_hindu_rounded,
-                      accentColor: AppColors.primaryGold,
-                    ),
-                    _buildReligionCard(
-                      religionKey: 'Muslim',
-                      title: 'Muslim',
-                      subtitle: 'Bismillah invocation, royal Nikah Mubarak, crescent & Arabic calligraphic elegance',
-                      icon: Icons.mosque_rounded,
-                      accentColor: const Color(0xFF10B981),
-                    ),
-                    _buildReligionCard(
-                      religionKey: 'Christian',
-                      title: 'Christian',
-                      subtitle: 'Holy Matrimony, cathedral bells, Bible scripture verses & floral cross elegance',
-                      icon: Icons.church_rounded,
-                      accentColor: const Color(0xFF60A5FA),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // STEP 3: Photo Slots Preference
-                    _buildStepBadge('3', 'Photo Preference'),
-                    const SizedBox(height: 8),
-                    _buildPhotoPreferenceCard(
-                      preferenceKey: 'with_photo',
-                      title: 'With Photos',
-                      subtitle: 'Includes customizable photo placeholders with animated reveals',
-                      icon: Icons.add_photo_alternate_rounded,
-                      accentColor: AppColors.brandPink,
-                    ),
-                    _buildPhotoPreferenceCard(
-                      preferenceKey: 'without_photo',
-                      title: 'Without Photos (Text & Video Only)',
-                      subtitle: 'Pure royal typography, sacred animations, and ceremonial music',
-                      icon: Icons.font_download_rounded,
-                      accentColor: AppColors.champagne,
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Selection Feedback Pill
-                    if (_isReady)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF171720),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: AppColors.primaryGold.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.auto_awesome,
-                              color: AppColors.primaryGold,
-                              size: 14,
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - 12,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Subtitle Intro
+                          Text(
+                            _pageSubtitle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.plusJakartaSans(
+                              color: const Color(0xFF94A3B8),
+                              fontSize: 12,
+                              height: 1.35,
                             ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Selected: ${_selectedOrientation == '16:9' ? 'Horizontal (16:9)' : 'Vertical (9:16)'} • $_selectedReligion • ${_selectedPhotoPreference == 'with_photo' ? 'With Photo' : 'Without Photo'}',
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: AppColors.champagne,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                          ),
+                          SizedBox(height: sectionGap),
+
+                          // STEP 1: Video Orientation
+                          _buildStepBadge('1', 'Choose Video Orientation'),
+                          SizedBox(height: stepHeaderGap),
+                          Row(
+                            children: [
+                              _buildOrientationCard(
+                                orientation: '16:9',
+                                title: 'Horizontal',
+                                ratioLabel: '16:9 Landscape',
+                                description: 'Optimized for TV, screens & widescreen video',
+                                isHorizontal: true,
+                              ),
+                              const SizedBox(width: 10),
+                              _buildOrientationCard(
+                                orientation: '9:16',
+                                title: 'Vertical',
+                                ratioLabel: '9:16 Portrait',
+                                description: 'Perfect for WhatsApp Status, Stories & Reels',
+                                isHorizontal: false,
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: sectionGap),
+
+                          // STEP 2: Religion Selection
+                          _buildStepBadge('2', 'Select Religion & Design Style'),
+                          SizedBox(height: stepHeaderGap),
+                          _buildReligionCard(
+                            religionKey: 'Hindu',
+                            title: 'Hindu',
+                            subtitle: 'Traditional Vedic motifs, sacred shlokas, diya lamps & golden mandapam',
+                            icon: Icons.temple_hindu_rounded,
+                            accentColor: AppColors.primaryGold,
+                          ),
+                          _buildReligionCard(
+                            religionKey: 'Muslim',
+                            title: 'Muslim',
+                            subtitle: 'Bismillah invocation, royal Nikah Mubarak, crescent & Arabic calligraphy',
+                            icon: Icons.mosque_rounded,
+                            accentColor: const Color(0xFF10B981),
+                          ),
+                          _buildReligionCard(
+                            religionKey: 'Christian',
+                            title: 'Christian',
+                            subtitle: 'Holy Matrimony, cathedral bells, Bible scripture verses & floral cross',
+                            icon: Icons.church_rounded,
+                            accentColor: const Color(0xFF60A5FA),
+                          ),
+                          SizedBox(height: sectionGap),
+
+                          // STEP 3: Photo Slots Preference
+                          _buildStepBadge('3', 'Photo Preference'),
+                          SizedBox(height: stepHeaderGap),
+                          _buildPhotoPreferenceCard(
+                            preferenceKey: 'with_photo',
+                            title: 'With Photos',
+                            subtitle: 'Includes customizable photo placeholders with animated reveals',
+                            icon: Icons.add_photo_alternate_rounded,
+                            accentColor: AppColors.brandPink,
+                          ),
+                          _buildPhotoPreferenceCard(
+                            preferenceKey: 'without_photo',
+                            title: 'Without Photos (Text & Video Only)',
+                            subtitle: 'Pure royal typography, sacred animations, and ceremonial music',
+                            icon: Icons.font_download_rounded,
+                            accentColor: AppColors.champagne,
+                          ),
+                          SizedBox(height: stepHeaderGap),
+
+                          // Selection Feedback Pill
+                          if (_isReady)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF171720),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: AppColors.primaryGold.withValues(alpha: 0.3),
+                                  width: 1,
                                 ),
                               ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.auto_awesome,
+                                    color: AppColors.primaryGold,
+                                    size: 15,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Selected: ${_selectedOrientation == '16:9' ? 'Horizontal (16:9)' : 'Vertical (9:16)'} • $_selectedReligion • ${_selectedPhotoPreference == 'with_photo' ? 'With Photo' : 'Without Photo'}',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        color: AppColors.champagne,
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
-                        ),
+                        ],
                       ),
-                    const SizedBox(height: 6),
-                  ],
-                ),
-              ),
-            ),
 
-            // Bottom Sticky View Templates Button
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0E0E12),
-                border: Border(
-                  top: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                height: 46,
-                child: ElevatedButton(
-                  onPressed: _isReady ? _onViewTemplates : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryGold,
-                    disabledBackgroundColor: const Color(0xFF1E1E26),
-                    foregroundColor: Colors.black,
-                    disabledForegroundColor: const Color(0xFF64748B),
-                    elevation: _isReady ? 6 : 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(23),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'View Templates',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.3,
+                      // Bottom Sticky View Templates Button integrated seamlessly
+                      Padding(
+                        padding: EdgeInsets.only(top: sectionGap, bottom: 4),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: _isReady ? _onViewTemplates : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryGold,
+                              disabledBackgroundColor: const Color(0xFF1E1E26),
+                              foregroundColor: Colors.black,
+                              disabledForegroundColor: const Color(0xFF64748B),
+                              elevation: _isReady ? 6 : 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'View Templates',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 18,
+                                  color: _isReady ? Colors.black : const Color(0xFF64748B),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 16,
-                        color: _isReady ? Colors.black : const Color(0xFF64748B),
                       ),
                     ],
                   ),
                 ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

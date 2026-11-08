@@ -819,25 +819,29 @@ app.post('/api/render', upload.fields([
     }
 
     const previewMode = req.body.previewMode === 'true' || req.body.previewMode === true;
-    const hasPhoto = req.body.hasPhoto === 'true' || req.body.hasPhoto === true || (template.hasPhoto && req.body.hasPhoto !== 'false');
+    const hasPhoto = (req.body.hasPhoto === 'false' || req.body.hasPhoto === false)
+      ? false
+      : (req.body.hasPhoto === 'true' || req.body.hasPhoto === true || (template.hasPhoto === true && req.body.hasPhoto !== 'false'));
 
-    // Collect uploaded photos across multi-photo slots
+    // Collect uploaded photos across multi-photo slots (strictly only when hasPhoto is true)
     const photos = {};
-    const photoKeys = ['photo_1', 'photo_2', 'photo_3', 'photo_4', 'photo_5', 'womanPhoto', 'manPhoto', 'photo'];
-    for (const pk of photoKeys) {
-      if (req.files && req.files[pk] && req.files[pk][0]) {
-        photos[pk] = req.files[pk][0].path;
-      } else if (req.body[`${pk}Path`] && fs.existsSync(req.body[`${pk}Path`])) {
-        photos[pk] = req.body[`${pk}Path`];
+    if (hasPhoto) {
+      const photoKeys = ['photo_1', 'photo_2', 'photo_3', 'photo_4', 'photo_5', 'womanPhoto', 'manPhoto', 'photo'];
+      for (const pk of photoKeys) {
+        if (req.files && req.files[pk] && req.files[pk][0]) {
+          photos[pk] = req.files[pk][0].path;
+        } else if (req.body[`${pk}Path`] && fs.existsSync(req.body[`${pk}Path`])) {
+          photos[pk] = req.body[`${pk}Path`];
+        }
       }
-    }
 
-    // Fallback bindings between woman/man and photo_1/photo_2
-    if (!photos['photo_1'] && photos['womanPhoto']) photos['photo_1'] = photos['womanPhoto'];
-    if (!photos['photo_2'] && photos['manPhoto']) photos['photo_2'] = photos['manPhoto'];
-    if (!photos['womanPhoto'] && photos['photo_1']) photos['womanPhoto'] = photos['photo_1'];
-    if (!photos['manPhoto'] && photos['photo_2']) photos['manPhoto'] = photos['photo_2'];
-    if (!photos['photo_1'] && photos['photo']) photos['photo_1'] = photos['photo'];
+      // Fallback bindings between woman/man and photo_1/photo_2
+      if (!photos['photo_1'] && photos['womanPhoto']) photos['photo_1'] = photos['womanPhoto'];
+      if (!photos['photo_2'] && photos['manPhoto']) photos['photo_2'] = photos['manPhoto'];
+      if (!photos['womanPhoto'] && photos['photo_1']) photos['womanPhoto'] = photos['photo_1'];
+      if (!photos['manPhoto'] && photos['photo_2']) photos['manPhoto'] = photos['photo_2'];
+      if (!photos['photo_1'] && photos['photo']) photos['photo_1'] = photos['photo'];
+    }
 
     const timestamp = Date.now();
     const jobId = `job_${timestamp}`;

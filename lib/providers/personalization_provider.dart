@@ -38,15 +38,40 @@ class PersonalizationProvider extends ChangeNotifier {
     loadCreations();
   }
 
-  void updateTemplate(TemplateModel template) {
+  void setPhotoPreference(bool hasPhoto) {
+    _data.hasPhoto = hasPhoto;
+    if (!hasPhoto) {
+      _data.clearPhotos();
+    }
+    notifyListeners();
+  }
+
+  void updateTemplate(TemplateModel template, {bool? hasPhoto}) {
     _data.templateId = template.id;
-    _data.hasPhoto = template.hasPhoto;
+    if (hasPhoto != null) {
+      _data.hasPhoto = hasPhoto;
+    } else {
+      _data.hasPhoto = template.hasPhoto;
+    }
+    if (!_data.hasPhoto) {
+      _data.clearPhotos();
+    } else {
+      // Validate existing photo slots against the new template's slots
+      final validSlots = template.imageElements.map((e) => e.field).toSet();
+      if (validSlots.isNotEmpty) {
+        _data.slotPhotoPaths.removeWhere((k, v) => !validSlots.contains(k));
+        _data.slotPhotoBytes.removeWhere((k, v) => !validSlots.contains(k));
+      }
+    }
     notifyListeners();
   }
 
   void updateTemplateId(String templateId, {bool? hasPhoto}) {
     _data.templateId = templateId;
-    if (hasPhoto != null) _data.hasPhoto = hasPhoto;
+    if (hasPhoto != null) {
+      _data.hasPhoto = hasPhoto;
+      if (!hasPhoto) _data.clearPhotos();
+    }
     notifyListeners();
   }
 

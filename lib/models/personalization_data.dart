@@ -92,6 +92,22 @@ class PersonalizationData {
     return null;
   }
 
+  void clearPhotos() {
+    slotPhotoPaths.clear();
+    slotPhotoBytes.clear();
+    womanPhotoPath = null;
+    womanPhotoBytes = null;
+    manPhotoPath = null;
+    manPhotoBytes = null;
+    primaryPhotoPath = null;
+    primaryPhotoBytes = null;
+    additionalPhotos.clear();
+    photoPlacement = 'arch_center';
+    photoScale = 1.0;
+    photoOffsetX = 0.0;
+    photoOffsetY = 0.0;
+  }
+
   Map<String, String> toFormFields() {
     final fields = {
       'templateId': templateId,
@@ -111,13 +127,15 @@ class PersonalizationData {
       'contactPhone': contactPhone,
     };
 
-    slotPhotoPaths.forEach((k, v) {
-      fields['${k}Path'] = v;
-    });
+    if (hasPhoto) {
+      slotPhotoPaths.forEach((k, v) {
+        fields['${k}Path'] = v;
+      });
 
-    if (womanPhotoPath != null) fields['womanPhotoPath'] = womanPhotoPath!;
-    if (manPhotoPath != null) fields['manPhotoPath'] = manPhotoPath!;
-    if (primaryPhotoPath != null) fields['photoPath'] = primaryPhotoPath!;
+      if (womanPhotoPath != null) fields['womanPhotoPath'] = womanPhotoPath!;
+      if (manPhotoPath != null) fields['manPhotoPath'] = manPhotoPath!;
+      if (primaryPhotoPath != null) fields['photoPath'] = primaryPhotoPath!;
+    }
 
     return fields;
   }

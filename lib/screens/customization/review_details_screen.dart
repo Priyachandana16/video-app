@@ -10,10 +10,12 @@ import '../rendering/video_processing_screen.dart';
 
 class ReviewDetailsScreen extends StatelessWidget {
   final TemplateModel template;
+  final bool? hasPhoto;
 
   const ReviewDetailsScreen({
     super.key,
     required this.template,
+    this.hasPhoto,
   });
 
   Widget _buildSummaryRow(String label, String value, {bool isGold = false}) {
@@ -192,8 +194,8 @@ class ReviewDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Dual Photo Timeframe Placements (only shown if template.hasPhoto)
-            if (template.hasPhoto) ...[
+            // Ceremony Photo Placements (Rendered ONLY if user selected With Photos)
+            if ((hasPhoto ?? template.hasPhoto) && data.hasPhoto) ...[
               Text(
                 'Ceremony Photo Placements',
                 style: GoogleFonts.playfairDisplay(
