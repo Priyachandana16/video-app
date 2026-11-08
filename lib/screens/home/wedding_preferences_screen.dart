@@ -112,8 +112,8 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
     return Row(
       children: [
         Container(
-          width: 24,
-          height: 24,
+          width: 20,
+          height: 20,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [AppColors.primaryGold, AppColors.deepGold],
@@ -122,7 +122,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
             boxShadow: [
               BoxShadow(
                 color: AppColors.primaryGold.withValues(alpha: 0.35),
-                blurRadius: 8,
+                blurRadius: 6,
               ),
             ],
           ),
@@ -131,20 +131,20 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
               number,
               style: GoogleFonts.plusJakartaSans(
                 color: Colors.black,
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w800,
               ),
             ),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Text(
           title,
           style: GoogleFonts.plusJakartaSans(
             color: Colors.white,
-            fontSize: 15,
+            fontSize: 13,
             fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
+            letterSpacing: 0.2,
           ),
         ),
       ],
@@ -168,22 +168,22 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
           });
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: isSelected ? const Color(0xFF1E1B26) : const Color(0xFF14141B),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isSelected ? AppColors.primaryGold : Colors.white.withValues(alpha: 0.1),
-              width: isSelected ? 2 : 1,
+              width: isSelected ? 1.5 : 1,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: AppColors.primaryGold.withValues(alpha: 0.25),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
+                      color: AppColors.primaryGold.withValues(alpha: 0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
                   ]
                 : [],
@@ -196,18 +196,18 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    width: isHorizontal ? 52 : 32,
-                    height: isHorizontal ? 32 : 52,
+                    width: isHorizontal ? 38 : 24,
+                    height: isHorizontal ? 24 : 38,
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppColors.primaryGold.withValues(alpha: 0.2)
                           : Colors.white.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                       border: Border.all(
                         color: isSelected
                             ? AppColors.primaryGold
                             : Colors.white.withValues(alpha: 0.25),
-                        width: 1.5,
+                        width: 1.2,
                       ),
                     ),
                     child: Center(
@@ -215,15 +215,15 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                         isHorizontal
                             ? Icons.crop_landscape_rounded
                             : Icons.crop_portrait_rounded,
-                        size: 18,
+                        size: 14,
                         color: isSelected ? AppColors.primaryGold : Colors.white70,
                       ),
                     ),
                   ),
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    width: 22,
-                    height: 22,
+                    width: 18,
+                    height: 18,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: isSelected ? AppColors.primaryGold : Colors.transparent,
@@ -231,50 +231,52 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                         color: isSelected
                             ? AppColors.primaryGold
                             : Colors.white.withValues(alpha: 0.3),
-                        width: 1.5,
+                        width: 1.2,
                       ),
                     ),
                     child: isSelected
-                        ? const Icon(Icons.check, size: 14, color: Colors.black)
+                        ? const Icon(Icons.check, size: 12, color: Colors.black)
                         : null,
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 6),
 
               Text(
                 title,
                 style: GoogleFonts.plusJakartaSans(
                   color: Colors.white,
-                  fontSize: 15,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppColors.primaryGold.withValues(alpha: 0.2)
                       : Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   ratioLabel,
                   style: GoogleFonts.plusJakartaSans(
                     color: isSelected ? AppColors.richGold : const Color(0xFF94A3B8),
-                    fontSize: 11,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(
                 description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.plusJakartaSans(
                   color: const Color(0xFF94A3B8),
-                  fontSize: 11,
-                  height: 1.3,
+                  fontSize: 9.5,
+                  height: 1.2,
                 ),
               ),
             ],
@@ -300,23 +302,23 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         });
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
+        duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF1E1B26) : const Color(0xFF14141B),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.1),
-            width: isSelected ? 2 : 1,
+            width: isSelected ? 1.5 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: accentColor.withValues(alpha: 0.22),
-                    blurRadius: 14,
-                    offset: const Offset(0, 3),
+                    color: accentColor.withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ]
               : [],
@@ -324,13 +326,13 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: isSelected
                     ? accentColor.withValues(alpha: 0.18)
                     : Colors.white.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isSelected
                       ? accentColor
@@ -341,10 +343,10 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
               child: Icon(
                 icon,
                 color: isSelected ? accentColor : Colors.white70,
-                size: 20,
+                size: 16,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,17 +355,18 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                     title,
                     style: GoogleFonts.plusJakartaSans(
                       color: Colors.white,
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 2),
                   Text(
                     subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       color: const Color(0xFF94A3B8),
-                      fontSize: 11,
-                      height: 1.25,
+                      fontSize: 10,
+                      height: 1.2,
                     ),
                   ),
                 ],
@@ -371,18 +374,18 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
             ),
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: 22,
-              height: 22,
+              width: 18,
+              height: 18,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isSelected ? accentColor : Colors.transparent,
                 border: Border.all(
                   color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.3),
-                  width: 1.5,
+                  width: 1.2,
                 ),
               ),
               child: isSelected
-                  ? const Icon(Icons.check, size: 14, color: Colors.black)
+                  ? const Icon(Icons.check, size: 12, color: Colors.black)
                   : null,
             ),
           ],
@@ -407,23 +410,23 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         });
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
+        duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF1E1B26) : const Color(0xFF14141B),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.1),
-            width: isSelected ? 2 : 1,
+            width: isSelected ? 1.5 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: accentColor.withValues(alpha: 0.22),
-                    blurRadius: 14,
-                    offset: const Offset(0, 3),
+                    color: accentColor.withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ]
               : [],
@@ -431,13 +434,13 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: isSelected
                     ? accentColor.withValues(alpha: 0.18)
                     : Colors.white.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isSelected
                       ? accentColor
@@ -448,10 +451,10 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
               child: Icon(
                 icon,
                 color: isSelected ? accentColor : Colors.white70,
-                size: 20,
+                size: 16,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -460,17 +463,18 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                     title,
                     style: GoogleFonts.plusJakartaSans(
                       color: Colors.white,
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 2),
                   Text(
                     subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(
                       color: const Color(0xFF94A3B8),
-                      fontSize: 11,
-                      height: 1.25,
+                      fontSize: 10,
+                      height: 1.2,
                     ),
                   ),
                 ],
@@ -478,18 +482,18 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
             ),
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: 22,
-              height: 22,
+              width: 18,
+              height: 18,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isSelected ? accentColor : Colors.transparent,
                 border: Border.all(
                   color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.3),
-                  width: 1.5,
+                  width: 1.2,
                 ),
               ),
               child: isSelected
-                  ? const Icon(Icons.check, size: 14, color: Colors.black)
+                  ? const Icon(Icons.check, size: 12, color: Colors.black)
                   : null,
             ),
           ],
@@ -524,34 +528,36 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Subtitle Intro
                     Text(
                       _pageSubtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.plusJakartaSans(
                         color: const Color(0xFF94A3B8),
-                        fontSize: 13,
-                        height: 1.4,
+                        fontSize: 11.5,
+                        height: 1.3,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
 
                     // STEP 1: Video Orientation
                     _buildStepBadge('1', 'Choose Video Orientation'),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
                         _buildOrientationCard(
                           orientation: '16:9',
                           title: 'Horizontal',
                           ratioLabel: '16:9 Landscape',
-                          description: 'Optimized for TV, screens, and widescreen video',
+                          description: 'Optimized for TV, screens & widescreen',
                           isHorizontal: true,
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         _buildOrientationCard(
                           orientation: '9:16',
                           title: 'Vertical',
@@ -561,11 +567,11 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 26),
+                    const SizedBox(height: 12),
 
                     // STEP 2: Religion Selection
                     _buildStepBadge('2', 'Select Religion & Design Style'),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     _buildReligionCard(
                       religionKey: 'Hindu',
                       title: 'Hindu',
@@ -587,11 +593,11 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                       icon: Icons.church_rounded,
                       accentColor: const Color(0xFF60A5FA),
                     ),
-                    const SizedBox(height: 26),
+                    const SizedBox(height: 12),
 
                     // STEP 3: Photo Slots Preference
                     _buildStepBadge('3', 'Photo Preference'),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     _buildPhotoPreferenceCard(
                       preferenceKey: 'with_photo',
                       title: 'With Photos',
@@ -606,15 +612,15 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                       icon: Icons.font_download_rounded,
                       accentColor: AppColors.champagne,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
 
                     // Selection Feedback Pill
                     if (_isReady)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: const Color(0xFF171720),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: AppColors.primaryGold.withValues(alpha: 0.3),
                             width: 1,
@@ -625,15 +631,15 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                             const Icon(
                               Icons.auto_awesome,
                               color: AppColors.primaryGold,
-                              size: 16,
+                              size: 14,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 'Selected: ${_selectedOrientation == '16:9' ? 'Horizontal (16:9)' : 'Vertical (9:16)'} • $_selectedReligion • ${_selectedPhotoPreference == 'with_photo' ? 'With Photo' : 'Without Photo'}',
                                 style: GoogleFonts.plusJakartaSans(
                                   color: AppColors.champagne,
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -641,7 +647,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                           ],
                         ),
                       ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 6),
                   ],
                 ),
               ),
@@ -649,7 +655,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
 
             // Bottom Sticky View Templates Button
             Container(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               decoration: BoxDecoration(
                 color: const Color(0xFF0E0E12),
                 border: Border(
@@ -661,7 +667,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
               ),
               child: SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 46,
                 child: ElevatedButton(
                   onPressed: _isReady ? _onViewTemplates : null,
                   style: ElevatedButton.styleFrom(
@@ -669,9 +675,9 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                     disabledBackgroundColor: const Color(0xFF1E1E26),
                     foregroundColor: Colors.black,
                     disabledForegroundColor: const Color(0xFF64748B),
-                    elevation: _isReady ? 8 : 0,
+                    elevation: _isReady ? 6 : 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(26),
+                      borderRadius: BorderRadius.circular(23),
                     ),
                   ),
                   child: Row(
@@ -680,15 +686,15 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                       Text(
                         'View Templates',
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 15,
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
+                          letterSpacing: 0.3,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Icon(
                         Icons.arrow_forward_rounded,
-                        size: 18,
+                        size: 16,
                         color: _isReady ? Colors.black : const Color(0xFF64748B),
                       ),
                     ],

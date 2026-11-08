@@ -14,6 +14,8 @@ class CustomTextField extends StatelessWidget {
   final TextInputType keyboardType;
   final int maxLines;
   final String? Function(String?)? validator;
+  final bool readOnly;
+  final VoidCallback? onTap;
 
   const CustomTextField({
     super.key,
@@ -28,6 +30,8 @@ class CustomTextField extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.maxLines = 1,
     this.validator,
+    this.readOnly = false,
+    this.onTap,
   });
 
   @override
@@ -53,23 +57,27 @@ class CustomTextField extends StatelessWidget {
           keyboardType: keyboardType,
           maxLines: maxLines,
           validator: validator,
+          readOnly: readOnly,
+          onTap: onTap,
           style: GoogleFonts.plusJakartaSans(
             fontSize: 14,
-            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary, // Strong primary text for entered values
           ),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.plusJakartaSans(
               fontSize: 14,
-              color: AppColors.textMuted,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF94A3B8), // Subtle light-grey example text with clear contrast
             ),
             filled: true,
             fillColor: AppColors.inputBackground,
             prefixIcon: prefixIcon != null
-                ? Icon(prefixIcon, color: AppColors.primaryGold.withOpacity(0.8), size: 20)
+                ? Icon(prefixIcon, color: AppColors.primaryGold.withValues(alpha: 0.85), size: 20)
                 : null,
             suffixIcon: suffixIcon,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: const BorderSide(color: AppColors.inputBorder, width: 1),

@@ -175,24 +175,25 @@ class _WeddingTemplatesGalleryScreenState
                     ),
                     const SizedBox(height: 14),
 
-                    // In-App Video Player
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white12),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: ConstrainedBox(
+                    // Exact 9:16 (Portrait) or 16:9 (Landscape) Video Player Container
+                    Center(
+                      child: Container(
                         constraints: BoxConstraints(
-                          maxHeight: isVertical ? 380 : 220,
+                          maxHeight: isVertical
+                              ? (MediaQuery.of(ctx).size.height * 0.56).clamp(320.0, 480.0)
+                              : 220,
+                          maxWidth: isVertical ? 270 : double.infinity,
                         ),
-                        child: VideoPlayerWidget(
-                          videoSource: videoPath,
-                          isAsset: true,
+                        child: AspectRatio(
                           aspectRatio: isVertical ? 9 / 16 : 16 / 9,
-                          autoPlay: true,
-                          looping: true,
+                          child: VideoPlayerWidget(
+                            videoSource: videoPath,
+                            isAsset: true,
+                            fit: BoxFit.contain, // Fit complete video inside container, no cropping
+                            aspectRatio: isVertical ? 9 / 16 : 16 / 9,
+                            autoPlay: true,
+                            looping: true,
+                          ),
                         ),
                       ),
                     ),

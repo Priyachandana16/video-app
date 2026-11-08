@@ -108,6 +108,68 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
         );
   }
 
+  Future<void> _pickDate(BuildContext context) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: now.add(const Duration(days: 30)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365 * 5)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primaryGold,
+              onPrimary: Colors.black,
+              surface: Color(0xFF1E1E28),
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      const months = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      final formatted = '${picked.day} ${months[picked.month - 1]} ${picked.year}';
+      setState(() {
+        _dateController.text = formatted;
+      });
+    }
+  }
+
+  Future<void> _pickTime(BuildContext context) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 10, minute: 30),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primaryGold,
+              onPrimary: Colors.black,
+              surface: Color(0xFF1E1E28),
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      final period = picked.period == DayPeriod.am ? 'AM' : 'PM';
+      final hour = picked.hourOfPeriod == 0 ? 12 : picked.hourOfPeriod;
+      final minute = picked.minute.toString().padLeft(2, '0');
+      final formatted = '$hour:$minute $period';
+      setState(() {
+        _timeController.text = formatted;
+      });
+    }
+  }
+
   void _handleGenerateVideo() {
     if (_isGenerating) return;
 
@@ -1130,6 +1192,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 // Bride Name (Required)
                 CustomTextField(
                   label: "Bride's Name (పెళ్లికూతురు)",
+                  hint: "e.g., Ananya",
                   controller: _brideController,
                   prefixIcon: Icons.woman_rounded,
                   validator: (v) =>
@@ -1140,6 +1203,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 // Groom Name (Required)
                 CustomTextField(
                   label: "Groom's Name (పెళ్లికొడుకు)",
+                  hint: "e.g., Arjun",
                   controller: _groomController,
                   prefixIcon: Icons.man_rounded,
                   validator: (v) =>
@@ -1150,8 +1214,18 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 // Wedding Date (Required)
                 CustomTextField(
                   label: 'Wedding Date (తేదీ)',
+                  hint: 'e.g., 28 November 2026',
                   controller: _dateController,
                   prefixIcon: Icons.calendar_month_rounded,
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.champagne),
+                    onPressed: () => _pickDate(context),
+                  ),
+                  onTap: () {
+                    if (_dateController.text.trim().isEmpty) {
+                      _pickDate(context);
+                    }
+                  },
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Wedding date is required' : null,
                 ),
@@ -1160,8 +1234,18 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 // Wedding Time / Muhurtham (Required)
                 CustomTextField(
                   label: 'Wedding Time / Sumuhurtham (సుముహూర్తం)',
+                  hint: 'e.g., 10:30 AM',
                   controller: _timeController,
                   prefixIcon: Icons.access_time_filled_rounded,
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.schedule_rounded, size: 18, color: AppColors.champagne),
+                    onPressed: () => _pickTime(context),
+                  ),
+                  onTap: () {
+                    if (_timeController.text.trim().isEmpty) {
+                      _pickTime(context);
+                    }
+                  },
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Wedding time is required' : null,
                 ),
@@ -1170,6 +1254,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 // Wedding Venue (Required)
                 CustomTextField(
                   label: 'Wedding Venue / Kalyana Mandapam (కల్యాణ మండపం)',
+                  hint: 'e.g., Sri Convention Hall',
                   controller: _venueController,
                   prefixIcon: Icons.temple_hindu_rounded,
                   validator: (v) =>
@@ -1180,6 +1265,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 // Wedding Location / Address
                 CustomTextField(
                   label: 'Wedding Location / Address (చిరునామా)',
+                  hint: 'e.g., Vijayawada',
                   controller: _addressController,
                   prefixIcon: Icons.location_on_rounded,
                 ),
@@ -1188,6 +1274,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 // Parents' / Family names
                 CustomTextField(
                   label: "Parents' or Family Names (తల్లిదండ్రుల ఆశీస్సులు)",
+                  hint: 'e.g., Smt. Lakshmi & Sri. Rama Rao',
                   controller: _parentsController,
                   prefixIcon: Icons.family_restroom_rounded,
                 ),
@@ -1196,6 +1283,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 // Additional Ceremony Details / RSVP
                 CustomTextField(
                   label: 'Ceremony Title / Greetings (శుభకార్యం)',
+                  hint: 'e.g., Subha Vivaham',
                   controller: _ceremonyController,
                   prefixIcon: Icons.celebration_rounded,
                 ),
@@ -1203,6 +1291,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
 
                 CustomTextField(
                   label: 'RSVP / Cordial Welcome',
+                  hint: 'e.g., With Best Wishes from Friends & Family',
                   controller: _rsvpController,
                   prefixIcon: Icons.mark_email_read_rounded,
                 ),

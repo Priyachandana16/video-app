@@ -439,9 +439,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // 2-Column Grid of 5 Occasions Matching Screenshot 3
+            // 2-Column Grid of 6 Occasions
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
@@ -456,34 +456,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // "View all 10 occasions v"
+            // Section Header: Royal Wedding Invitations
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'View all categories',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: const Color(0xFF94A3B8),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF94A3B8), size: 18),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // Section Header: "The Grand Seemantham & Telugu Vivaham" (Screenshot 3)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+                padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
