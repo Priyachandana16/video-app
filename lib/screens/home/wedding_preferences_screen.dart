@@ -495,8 +495,8 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                   // Ornate Golden Framed Couple Portrait
                   Image.asset(
                     'assets/images/photo_couple_frame.png',
-                    width: 52,
-                    height: 64,
+                    width: 48,
+                    height: 68,
                     fit: BoxFit.contain,
                   ),
                   const SizedBox(width: 10),

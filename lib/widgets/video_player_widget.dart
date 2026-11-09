@@ -277,9 +277,13 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> with WidgetsBindi
               // 1. Video Layer - 100% Exact Containment, Never Cropped, Text & Borders Visible
               if (_isInitialized && c != null)
                 Center(
-                  child: AspectRatio(
-                    aspectRatio: c.value.aspectRatio > 0 ? c.value.aspectRatio : widget.aspectRatio,
-                    child: VideoPlayer(c),
+                  child: FittedBox(
+                    fit: widget.fit,
+                    child: SizedBox(
+                      width: c.value.size.width > 0 ? c.value.size.width : (widget.aspectRatio < 1 ? 1080 : 1920),
+                      height: c.value.size.height > 0 ? c.value.size.height : (widget.aspectRatio < 1 ? 1920 : 1080),
+                      child: VideoPlayer(c),
+                    ),
                   ),
                 )
               else if (_hasError)

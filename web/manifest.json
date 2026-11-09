@@ -1,11 +1,11 @@
 {
-    "name": "my_invitation",
-    "short_name": "my_invitation",
+    "name": "My Invitation",
+    "short_name": "My Invitation",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FEF8E6",
+    "theme_color": "#D4A034",
+    "description": "My Invitation - Dynamic Video Invitation App",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
