@@ -75,3 +75,4 @@ templ1_frame_*.jpg
 sample_result_*.jpg
 rendered_sample_*.jpg
 test_render_frame_*.jpg
+SUPABASE_INTEGRATION_PROMPT.txt
