@@ -391,10 +391,14 @@ class _TemplateDetailsScreenState extends State<TemplateDetailsScreen> {
               ),
               child: ElevatedButton(
                 onPressed: () {
-                  context.read<PersonalizationProvider>().updateTemplate(template);
+                  final pref = context.read<PersonalizationProvider>().userPhotoPreference;
+                  context.read<PersonalizationProvider>().updateTemplate(template, hasPhoto: pref);
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const PersonalizationFormScreen(),
+                      builder: (_) => PersonalizationFormScreen(
+                        template: template,
+                        hasPhotoPreference: pref,
+                      ),
                     ),
                   );
                 },

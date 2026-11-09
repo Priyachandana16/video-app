@@ -45,6 +45,10 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
     if (widget.hasPhotoPreference != null) {
       return widget.hasPhotoPreference! && _getActiveTemplate().hasPhoto;
     }
+    final userPref = context.read<PersonalizationProvider>().userPhotoPreference;
+    if (userPref != null) {
+      return userPref && _getActiveTemplate().hasPhoto;
+    }
     final providerHasPhoto = context.read<PersonalizationProvider>().data.hasPhoto;
     return providerHasPhoto && _getActiveTemplate().hasPhoto;
   }

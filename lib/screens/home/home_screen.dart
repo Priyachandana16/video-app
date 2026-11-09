@@ -66,10 +66,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _navigateToCustomize(TemplateModel template) {
     context.read<TemplateProvider>().selectTemplate(template);
-    context.read<PersonalizationProvider>().updateTemplate(template);
+    final pref = context.read<PersonalizationProvider>().userPhotoPreference;
+    context.read<PersonalizationProvider>().updateTemplate(template, hasPhoto: pref);
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PersonalizationFormScreen(template: template),
+        builder: (_) => PersonalizationFormScreen(
+          template: template,
+          hasPhotoPreference: pref,
+        ),
       ),
     );
   }

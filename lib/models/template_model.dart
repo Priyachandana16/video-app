@@ -179,20 +179,31 @@ class TemplateModel {
         imageElements = imageElements ?? [];
 
   factory TemplateModel.fromJson(Map<String, dynamic> json) {
-    var rawText = json['textElements'] as List?;
+    var rawText = (json['textElements'] ?? json['text_elements']) as List?;
     List<TemplateTextElement> textList = [];
     if (rawText != null) {
       textList = rawText.map((e) => TemplateTextElement.fromJson(e as Map<String, dynamic>)).toList();
     }
 
-    var rawImage = json['imageElements'] as List?;
+    var rawImage = (json['imageElements'] ?? json['image_elements']) as List?;
     List<TemplateImageElement> imageList = [];
     if (rawImage != null) {
       imageList = rawImage.map((e) => TemplateImageElement.fromJson(e as Map<String, dynamic>)).toList();
     }
 
-    final hasPhotoVal = json['hasPhoto'] == true || imageList.isNotEmpty;
-    final slotCount = imageList.isNotEmpty ? imageList.length : (json['photoSlotsCount'] ?? (hasPhotoVal ? 2 : 0));
+    // Explicitly respect boolean hasPhoto / has_photo if defined in JSON
+    final dynamic explicitHasPhoto = json['hasPhoto'] ?? json['has_photo'];
+    final bool hasPhotoVal = explicitHasPhoto != null
+        ? (explicitHasPhoto == true || explicitHasPhoto == 'true')
+        : imageList.isNotEmpty;
+
+    final dynamic rawSlots = json['photoSlotsCount'] ?? json['photo_slots_count'];
+    final int slotCount = rawSlots != null
+        ? (rawSlots is num ? rawSlots.toInt() : int.tryParse(rawSlots.toString()) ?? 0)
+        : (hasPhotoVal ? (imageList.isNotEmpty ? imageList.length : 2) : 0);
+
+    final dynamic rawDuration = json['durationSeconds'] ?? json['duration_seconds'];
+    final int duration = rawDuration is num ? rawDuration.toInt() : (int.tryParse(rawDuration?.toString() ?? '60') ?? 60);
 
     return TemplateModel(
       id: json['id'] ?? '',
@@ -202,14 +213,14 @@ class TemplateModel {
       orientation: json['orientation'] ?? '9:16',
       hasPhoto: hasPhotoVal,
       photoSlotsCount: slotCount,
-      durationSeconds: json['durationSeconds'] ?? 60,
-      badgeText: json['badgeText'] ?? '',
+      durationSeconds: duration,
+      badgeText: json['badgeText'] ?? json['badge_text'] ?? '',
       description: json['description'] ?? '',
-      masterVideoPath: json['masterVideoPath'] ?? 'assets/wedding_template_master.mp4',
-      thumbnailUrl: json['thumbnailUrl'] ?? '',
-      sampleResultPath: json['sampleResultPath'],
-      templateThumbUrl: json['templateThumbUrl'],
-      timelineConfig: json['timelineConfig'] as Map<String, dynamic>?,
+      masterVideoPath: json['masterVideoPath'] ?? json['master_video_url'] ?? 'assets/wedding_template_master.mp4',
+      thumbnailUrl: json['thumbnailUrl'] ?? json['thumbnail_url'] ?? '',
+      sampleResultPath: json['sampleResultPath'] ?? json['sample_result_url'],
+      templateThumbUrl: json['templateThumbUrl'] ?? json['thumbnail_url'],
+      timelineConfig: (json['timelineConfig'] ?? json['timeline_config']) as Map<String, dynamic>?,
       textElements: textList,
       imageElements: imageList,
     );

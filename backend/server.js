@@ -6,6 +6,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const { spawn } = require('child_process');
+require('dotenv').config();
+const supabaseDb = require('./supabase');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -568,11 +570,35 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // ----------------------------------------------------
-// TEMPLATE ROUTES & MANAGEMENT (ADMIN & CLIENT)
+// OCCASION & TEMPLATE ROUTES (SUPABASE + FALLBACK)
 // ----------------------------------------------------
 
+// GET /api/occasions
+app.get('/api/occasions', async (req, res) => {
+  try {
+    const occasions = await supabaseDb.getOccasions();
+    res.json({ count: occasions.length, occasions });
+  } catch (err) {
+    console.error('Fetch occasions error:', err);
+    res.status(500).json({ error: 'Failed to fetch occasions', message: err.message });
+  }
+});
+
 // GET /api/templates
-app.get('/api/templates', (req, res) => {
+app.get('/api/templates', async (req, res) => {
+  try {
+    const results = await supabaseDb.getTemplates(req.query);
+    if (results && results.length > 0) {
+      return res.json({
+        count: results.length,
+        templates: results
+      });
+    }
+  } catch (err) {
+    console.warn('Supabase getTemplates failed, falling back to local JSON:', err.message);
+  }
+
+  // Fallback to local templates
   const { religion, orientation, hasPhoto, category } = req.query;
   const allTemplates = loadTemplates();
   let results = [...allTemplates];
@@ -601,7 +627,16 @@ app.get('/api/templates', (req, res) => {
 });
 
 // GET /api/templates/:id
-app.get('/api/templates/:id', (req, res) => {
+app.get('/api/templates/:id', async (req, res) => {
+  try {
+    const tmpl = await supabaseDb.getTemplateById(req.params.id);
+    if (tmpl) {
+      return res.json(tmpl);
+    }
+  } catch (err) {
+    console.warn(`Supabase getTemplateById failed for ${req.params.id}:`, err.message);
+  }
+
   const allTemplates = loadTemplates();
   const tmpl = allTemplates.find(t => t.id === req.params.id);
   if (!tmpl) {
@@ -611,37 +646,18 @@ app.get('/api/templates/:id', (req, res) => {
 });
 
 // POST /api/templates - Admin creates a new invitation template
-app.post('/api/templates', (req, res) => {
+app.post('/api/templates', async (req, res) => {
   try {
+    const created = await supabaseDb.createTemplate(req.body);
+    // Also keep local fallback synced
     const allTemplates = loadTemplates();
-    const newTemplate = {
-      id: req.body.id || `tmpl_custom_${Date.now()}`,
-      title: req.body.title || 'Untitled Royal Template',
-      category: req.body.category || 'Wedding',
-      religion: req.body.religion || 'Hindu',
-      orientation: req.body.orientation || '16:9',
-      canvasWidth: req.body.canvasWidth || (req.body.orientation === '9:16' ? 1080 : 1920),
-      canvasHeight: req.body.canvasHeight || (req.body.orientation === '9:16' ? 1920 : 1080),
-      hasPhoto: req.body.hasPhoto !== false,
-      photoSlotsCount: req.body.photoSlotsCount || (req.body.imageElements ? req.body.imageElements.length : 2),
-      durationSeconds: req.body.durationSeconds || 60,
-      badgeText: req.body.badgeText || 'DYNAMIC TEMPLATE',
-      description: req.body.description || 'Configured via Admin Timeline Editor',
-      masterVideoPath: req.body.masterVideoPath || 'assets/templates/template_01_green_screen.mp4',
-      videoUrl: req.body.videoUrl || '/assets/templates/template_01_green_screen.mp4',
-      thumbnailUrl: req.body.thumbnailUrl || '/assets/templates/thumb_01_green.jpg',
-      templateThumbUrl: req.body.thumbnailUrl || '/assets/templates/thumb_01_green.jpg',
-      textElements: req.body.textElements || [],
-      imageElements: req.body.imageElements || []
-    };
-
-    allTemplates.unshift(newTemplate);
+    allTemplates.unshift(created);
     saveTemplates(allTemplates);
 
     res.status(201).json({
       success: true,
-      message: 'Template created successfully',
-      template: newTemplate
+      message: 'Template created successfully in Supabase',
+      template: created
     });
   } catch (err) {
     console.error('Create template error:', err);
@@ -650,32 +666,20 @@ app.post('/api/templates', (req, res) => {
 });
 
 // PUT /api/templates/:id - Admin publishes/saves template configuration
-app.put('/api/templates/:id', (req, res) => {
+app.put('/api/templates/:id', async (req, res) => {
   try {
+    const updated = await supabaseDb.updateTemplate(req.params.id, req.body);
+    // Also keep local fallback synced
     const allTemplates = loadTemplates();
     const idx = allTemplates.findIndex(t => t.id === req.params.id);
-    if (idx === -1) {
-      return res.status(404).json({ error: 'Template not found' });
+    if (idx !== -1) {
+      allTemplates[idx] = { ...allTemplates[idx], ...updated };
+      saveTemplates(allTemplates);
     }
-
-    const existing = allTemplates[idx];
-    const updated = {
-      ...existing,
-      ...req.body,
-      id: existing.id, // Immutable ID
-      textElements: req.body.textElements !== undefined ? req.body.textElements : existing.textElements,
-      imageElements: req.body.imageElements !== undefined ? req.body.imageElements : existing.imageElements,
-      photoSlotsCount: req.body.imageElements ? req.body.imageElements.length : (req.body.photoSlotsCount !== undefined ? req.body.photoSlotsCount : existing.photoSlotsCount),
-      hasPhoto: req.body.imageElements ? (req.body.imageElements.length > 0) : (req.body.hasPhoto !== undefined ? req.body.hasPhoto : existing.hasPhoto),
-      updatedAt: new Date().toISOString()
-    };
-
-    allTemplates[idx] = updated;
-    saveTemplates(allTemplates);
 
     res.json({
       success: true,
-      message: 'Template configuration published successfully',
+      message: 'Template configuration published successfully to Supabase template_versions',
       template: updated
     });
   } catch (err) {
@@ -685,16 +689,15 @@ app.put('/api/templates/:id', (req, res) => {
 });
 
 // DELETE /api/templates/:id - Delete template
-app.delete('/api/templates/:id', (req, res) => {
+app.delete('/api/templates/:id', async (req, res) => {
   try {
+    await supabaseDb.deleteTemplate(req.params.id);
+    // Also keep local fallback synced
     let allTemplates = loadTemplates();
-    const exists = allTemplates.some(t => t.id === req.params.id);
-    if (!exists) {
-      return res.status(404).json({ error: 'Template not found' });
-    }
     allTemplates = allTemplates.filter(t => t.id !== req.params.id);
     saveTemplates(allTemplates);
-    res.json({ success: true, message: 'Template removed successfully' });
+
+    res.json({ success: true, message: 'Template removed successfully from Supabase' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete template', message: err.message });
   }
@@ -766,12 +769,36 @@ app.post('/api/admin/upload-asset', upload.single('file'), (req, res) => {
 const RENDER_JOBS = new Map();
 
 // GET /api/render/status/:jobId
-app.get('/api/render/status/:jobId', (req, res) => {
-  const job = RENDER_JOBS.get(req.params.jobId);
-  if (!job) {
-    return res.status(404).json({ error: 'Render job not found' });
+app.get('/api/render/status/:jobId', async (req, res) => {
+  const { jobId } = req.params;
+  const job = RENDER_JOBS.get(jobId);
+  if (job) {
+    return res.json(job);
   }
-  res.json(job);
+
+  // Check Supabase invitation_generations
+  try {
+    const { data: sJob, error } = await supabaseDb.supabase
+      .from('invitation_generations')
+      .select('*')
+      .eq('id', jobId)
+      .maybeSingle();
+
+    if (sJob) {
+      return res.json({
+        jobId: sJob.id,
+        status: sJob.status,
+        progress: parseFloat(sJob.progress) || 0,
+        step: sJob.current_step,
+        videoUrl: sJob.output_video_url,
+        createdAt: sJob.created_at
+      });
+    }
+  } catch (err) {
+    console.error('Error fetching job from Supabase:', err);
+  }
+
+  res.status(404).json({ error: 'Render job not found' });
 });
 
 // GET /api/render/jobs
@@ -779,7 +806,7 @@ app.get('/api/render/jobs', (req, res) => {
   res.json(Array.from(RENDER_JOBS.values()));
 });
 
-// POST /api/render - Multi-image & dynamic text rendering
+// POST /api/render - Multi-image & dynamic text rendering with Supabase Storage & Database integration
 app.post('/api/render', upload.fields([
   { name: 'photo_1', maxCount: 1 },
   { name: 'photo_2', maxCount: 1 },
@@ -803,8 +830,16 @@ app.post('/api/render', upload.fields([
       userId = 'usr_guest'
     } = req.body;
 
-    const allTemplates = loadTemplates();
-    let template = allTemplates.find(t => t.id === templateId) || allTemplates[0];
+    let template = null;
+    try {
+      template = await supabaseDb.getTemplateById(templateId);
+    } catch (e) {
+      console.warn('Failed to load template from Supabase, trying fallback:', e.message);
+    }
+    if (!template) {
+      const allTemplates = loadTemplates();
+      template = allTemplates.find(t => t.id === templateId) || allTemplates[0];
+    }
 
     // Support inline dynamic template configuration (e.g. from Admin preview mode)
     if (req.body.templateConfig) {
@@ -832,6 +867,26 @@ app.post('/api/render', upload.fields([
           photos[pk] = req.files[pk][0].path;
         } else if (req.body[`${pk}Path`] && fs.existsSync(req.body[`${pk}Path`])) {
           photos[pk] = req.body[`${pk}Path`];
+        } else if (req.body[`${pk}Url`]) {
+          // Photo uploaded to Supabase Storage - download for FFmpeg processing
+          const pUrl = req.body[`${pk}Url`];
+          const localDest = path.join(UPLOADS_DIR, `remote_${Date.now()}_${pk}.jpg`);
+          try {
+            const https = require('https');
+            await new Promise((resolve, reject) => {
+              https.get(pUrl, (resp) => {
+                const fStream = fs.createWriteStream(localDest);
+                resp.pipe(fStream);
+                fStream.on('finish', () => { fStream.close(); resolve(); });
+                fStream.on('error', reject);
+              }).on('error', reject);
+            });
+            if (fs.existsSync(localDest)) {
+              photos[pk] = localDest;
+            }
+          } catch (dlErr) {
+            console.warn(`Failed to download remote photo ${pUrl}:`, dlErr);
+          }
         }
       }
 
@@ -848,12 +903,22 @@ app.post('/api/render', upload.fields([
     const outputFilename = `invitation_${timestamp}.mp4`;
     const outputVideoPath = path.join(EXPORTS_DIR, outputFilename);
 
+    // Resolve master video path (local file priority for accelerated FFmpeg execution)
+    let masterVideoPath = template.masterVideoPath || 'assets/templates/template_01_green_screen.mp4';
+    if (masterVideoPath.startsWith('http://') || masterVideoPath.startsWith('https://')) {
+      const baseName = path.basename(masterVideoPath.split('?')[0]);
+      const localCandidate = path.join(PROJECT_ROOT, 'assets/templates', baseName);
+      if (fs.existsSync(localCandidate)) {
+        masterVideoPath = path.relative(PROJECT_ROOT, localCandidate).replace(/\\/g, '/');
+      }
+    }
+
     // Write temp config JSON for data-driven python render engine
     const configPath = path.join(DATA_DIR, `render_config_${timestamp}.json`);
     const renderConfig = {
       template,
       templateId: template.id,
-      masterVideoPath: template.masterVideoPath,
+      masterVideoPath,
       outputVideoPath,
       hasPhoto,
       photos,
@@ -874,7 +939,7 @@ app.post('/api/render', upload.fields([
 
     fs.writeFileSync(configPath, JSON.stringify(renderConfig, null, 2), 'utf8');
 
-    // Register job
+    // Register job in memory
     const jobRecord = {
       jobId,
       status: 'processing',
@@ -885,7 +950,17 @@ app.post('/api/render', upload.fields([
       createdAt: new Date().toISOString()
     };
     RENDER_JOBS.set(jobId, jobRecord);
-    RENDER_JOBS.set(jobId, jobRecord);
+
+    // Register job in Supabase invitation_generations table
+    supabaseDb.createGenerationRecord(jobId, {
+      userId,
+      templateId: template.id,
+      templateVersionId: template.templateVersionId,
+      title: `${groomName} & ${brideName} ${ceremonyTitle}`,
+      coupleNames: `${groomName} & ${brideName}`,
+      userData: renderConfig.userData,
+      inputPhotos: photos
+    }).catch(err => console.error('Supabase createGenerationRecord error:', err.message));
 
     const isAsync = req.query.async === 'true' || req.body.async === 'true' || req.headers['x-async-render'] === 'true';
 
@@ -925,13 +1000,13 @@ app.post('/api/render', upload.fields([
         } else if (cur.progress >= 0.92) {
           cur.step = 'Finalizing video...';
         }
+        supabaseDb.updateGenerationProgress(jobId, cur.progress, cur.step).catch(() => {});
       }
     }, 1200);
 
     py.stdout.on('data', (d) => {
       const text = d.toString();
       pyOut += text;
-      // Parse explicit PROGRESS: 0.XX | <step> lines from Python
       const match = text.match(/PROGRESS:\s*([0-9.]+)\s*\|\s*(.+)/);
       if (match) {
         const p = parseFloat(match[1]);
@@ -940,15 +1015,15 @@ app.post('/api/render', upload.fields([
         if (cur) {
           cur.progress = p;
           cur.step = step;
+          supabaseDb.updateGenerationProgress(jobId, p, step).catch(() => {});
         }
       }
     });
 
     py.stderr.on('data', (d) => { pyErr += d.toString(); });
 
-    py.on('close', (code) => {
+    py.on('close', async (code) => {
       clearInterval(progressTimer);
-      // Clean up config file
       try { fs.unlinkSync(configPath); } catch (_) { }
 
       if (code !== 0) {
@@ -958,6 +1033,9 @@ app.post('/api/render', upload.fields([
         cur.error = pyErr || `Render exited with code ${code}`;
         cur.step = 'Rendering encountered an error';
         RENDER_JOBS.set(jobId, cur);
+
+        supabaseDb.failGenerationRecord(jobId, cur.error).catch(() => {});
+
         if (!isAsync) {
           return res.status(500).json({ success: false, error: cur.error });
         }
@@ -967,15 +1045,29 @@ app.post('/api/render', upload.fields([
       console.log(`[Job ${jobId}] Render complete: ${outputFilename}`);
 
       const relativeUrl = `/exports/${outputFilename}`;
+
+      // Upload rendered video to Supabase Storage bucket 'generated-videos'
+      let supabaseVideoUrl = null;
+      try {
+        supabaseVideoUrl = await supabaseDb.uploadRenderedVideo(jobId, outputVideoPath, userId);
+      } catch (uploadErr) {
+        console.error(`[Job ${jobId}] Failed to upload final video to Supabase Storage:`, uploadErr.message);
+      }
+
+      const finalVideoUrl = supabaseVideoUrl || relativeUrl;
+
+      // Update Supabase invitation_generations record
+      supabaseDb.completeGenerationRecord(jobId, finalVideoUrl, template.thumbnailUrl).catch(() => {});
+
       const creationRecord = {
         id: `cr_${timestamp}`,
         userId,
-        templateId,
+        templateId: template.id,
         title: `${groomName} & ${brideName} ${ceremonyTitle}`,
         coupleNames: `${groomName} & ${brideName}`,
         eventDate,
         venue,
-        videoUrl: relativeUrl,
+        videoUrl: finalVideoUrl,
         downloadPath: outputVideoPath,
         thumbnailUrl: template.thumbnailUrl || '/assets/templates/thumb_01_green.jpg',
         createdAt: new Date().toISOString()
@@ -991,7 +1083,7 @@ app.post('/api/render', upload.fields([
       cur.progress = 1.0;
       cur.step = 'Video ready!';
       cur.creationId = creationRecord.id;
-      cur.videoUrl = relativeUrl;
+      cur.videoUrl = finalVideoUrl;
       cur.downloadPath = outputVideoPath;
       cur.durationSeconds = template.durationSeconds;
       cur.coupleNames = creationRecord.coupleNames;
@@ -1003,7 +1095,7 @@ app.post('/api/render', upload.fields([
           jobId,
           message: 'Video rendered successfully',
           creationId: creationRecord.id,
-          videoUrl: relativeUrl,
+          videoUrl: finalVideoUrl,
           downloadPath: outputVideoPath,
           durationSeconds: template.durationSeconds,
           coupleNames: creationRecord.coupleNames
@@ -1017,12 +1109,34 @@ app.post('/api/render', upload.fields([
   }
 });
 
-// ----------------------------------------------------
-// CREATIONS ROUTES
-// ----------------------------------------------------
-
 // GET /api/creations
-app.get('/api/creations', (req, res) => {
+app.get('/api/creations', async (req, res) => {
+  try {
+    const { data, error } = await supabaseDb.supabase
+      .from('invitation_generations')
+      .select('*')
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      return res.json({
+        count: data.length,
+        creations: data.map(row => ({
+          id: row.id,
+          userId: row.user_id,
+          templateId: row.template_id,
+          title: row.title,
+          coupleNames: row.couple_names,
+          videoUrl: row.output_video_url,
+          thumbnailUrl: row.thumbnail_url,
+          createdAt: row.created_at
+        }))
+      });
+    }
+  } catch (e) {
+    console.error('Error fetching creations from Supabase:', e);
+  }
+
   const db = loadDb();
   res.json({
     count: db.creations.length,

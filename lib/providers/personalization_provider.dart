@@ -34,11 +34,15 @@ class PersonalizationProvider extends ChangeNotifier {
   List<CreationModel> get creations => _creations;
   bool get isLoadingCreations => _isLoadingCreations;
 
+  bool? _userPhotoPreference;
+  bool? get userPhotoPreference => _userPhotoPreference;
+
   PersonalizationProvider() {
     loadCreations();
   }
 
   void setPhotoPreference(bool hasPhoto) {
+    _userPhotoPreference = hasPhoto;
     _data.hasPhoto = hasPhoto;
     if (!hasPhoto) {
       _data.clearPhotos();
@@ -49,7 +53,10 @@ class PersonalizationProvider extends ChangeNotifier {
   void updateTemplate(TemplateModel template, {bool? hasPhoto}) {
     _data.templateId = template.id;
     if (hasPhoto != null) {
-      _data.hasPhoto = hasPhoto;
+      _userPhotoPreference = hasPhoto;
+      _data.hasPhoto = hasPhoto && template.hasPhoto;
+    } else if (_userPhotoPreference != null) {
+      _data.hasPhoto = _userPhotoPreference! && template.hasPhoto;
     } else {
       _data.hasPhoto = template.hasPhoto;
     }
@@ -69,8 +76,12 @@ class PersonalizationProvider extends ChangeNotifier {
   void updateTemplateId(String templateId, {bool? hasPhoto}) {
     _data.templateId = templateId;
     if (hasPhoto != null) {
+      _userPhotoPreference = hasPhoto;
       _data.hasPhoto = hasPhoto;
       if (!hasPhoto) _data.clearPhotos();
+    } else if (_userPhotoPreference != null) {
+      _data.hasPhoto = _userPhotoPreference!;
+      if (!_userPhotoPreference!) _data.clearPhotos();
     }
     notifyListeners();
   }

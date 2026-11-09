@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/template_model.dart';
 import '../models/user_model.dart';
 import '../models/creation_model.dart';
@@ -115,6 +116,39 @@ class ApiService {
     }
   }
 
+  // ---------------- OCCASIONS ----------------
+
+  Future<List<Map<String, dynamic>>> getOccasions() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/occasions'), headers: _headers).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return List<Map<String, dynamic>>.from(data['occasions'] ?? []);
+      }
+    } catch (_) {}
+
+    try {
+      final supa = Supabase.instance.client;
+      final List<dynamic> rows = await supa
+          .from('occasions')
+          .select()
+          .eq('is_active', true)
+          .order('display_order', ascending: true);
+      if (rows.isNotEmpty) {
+        return List<Map<String, dynamic>>.from(rows);
+      }
+    } catch (_) {}
+
+    return [
+      {'id': 'wedding', 'title': 'Wedding', 'subtitle': 'Vedic Vivaham'},
+      {'id': 'half_saree', 'title': 'Half Saree Ceremony', 'subtitle': 'Langa Voni'},
+      {'id': 'birthday', 'title': 'Birthday', 'subtitle': 'Celebration'},
+      {'id': 'housewarming', 'title': 'Housewarming', 'subtitle': 'Gruhapravesam'},
+      {'id': 'engagement', 'title': 'Engagement', 'subtitle': 'Nishchitartham'},
+      {'id': 'ai_invitations', 'title': 'AI-Generated Invitations', 'subtitle': 'Cinematic Magic'},
+    ];
+  }
+
   // ---------------- TEMPLATES ----------------
 
   Future<List<TemplateModel>> getTemplates({
@@ -123,6 +157,7 @@ class ApiService {
     bool? hasPhoto,
     String? category,
   }) async {
+    // 1. Try Local Backend API (which routes to Supabase)
     try {
       final queryParams = <String, String>{};
       if (religion != null && religion != 'All') queryParams['religion'] = religion;
@@ -138,6 +173,20 @@ class ApiService {
         return (data['templates'] as List)
             .map((item) => TemplateModel.fromJson(item))
             .toList();
+      }
+    } catch (_) {}
+
+    // 2. Direct Supabase Query
+    try {
+      final supa = Supabase.instance.client;
+      var query = supa.from('templates').select().eq('is_published', true);
+      if (category != null && category != 'All') query = query.ilike('category', category);
+      if (religion != null && religion != 'All') query = query.ilike('religion', religion);
+      if (orientation != null && orientation != 'All') query = query.eq('orientation', orientation);
+      if (hasPhoto != null) query = query.eq('has_photo', hasPhoto);
+      final List<dynamic> rows = await query;
+      if (rows.isNotEmpty) {
+        return rows.map((r) => TemplateModel.fromJson(r as Map<String, dynamic>)).toList();
       }
     } catch (_) {}
 

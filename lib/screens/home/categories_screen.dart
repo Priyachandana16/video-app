@@ -39,10 +39,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   void _navigateToCustomize(TemplateModel tmpl) {
     context.read<TemplateProvider>().selectTemplate(tmpl);
-    context.read<PersonalizationProvider>().updateTemplate(tmpl);
+    final pref = context.read<PersonalizationProvider>().userPhotoPreference;
+    context.read<PersonalizationProvider>().updateTemplate(tmpl, hasPhoto: pref);
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PersonalizationFormScreen(template: tmpl),
+        builder: (_) => PersonalizationFormScreen(
+          template: tmpl,
+          hasPhotoPreference: pref,
+        ),
       ),
     );
   }
