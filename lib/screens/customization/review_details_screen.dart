@@ -214,29 +214,52 @@ class ReviewDetailsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildPhotoPreview(
-                    label: 'Woman Photo',
-                    sceneTime: 'Scene 2: 00:28 - 00:38',
-                    localPath: data.womanPhotoPath,
-                    bytes: data.womanPhotoBytes,
-                  ),
-                  _buildPhotoPreview(
-                    label: 'Man Photo',
-                    sceneTime: 'Scene 3: 00:41 - 00:51',
-                    localPath: data.manPhotoPath,
-                    bytes: data.manPhotoBytes,
-                  ),
-                ],
-              ),
+              if (template.imageElements.isNotEmpty)
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 14,
+                  children: template.imageElements.map((imgEl) {
+                    final slotKey = imgEl.field;
+                    final slotBytes = data.getSlotPhotoBytes(slotKey);
+                    final slotPath = data.getSlotPhotoPath(slotKey);
+                    final animName = imgEl.animationType == 'ink_reveal'
+                        ? 'Ink Reveal'
+                        : imgEl.animationType == 'brush_stroke'
+                            ? 'Brush Stroke'
+                            : 'Fade';
+
+                    return _buildPhotoPreview(
+                      label: imgEl.label.isNotEmpty ? imgEl.label : slotKey,
+                      sceneTime: '$animName (${imgEl.startTime.toInt()}s - ${imgEl.endTime.toInt()}s)',
+                      localPath: slotPath,
+                      bytes: slotBytes,
+                    );
+                  }).toList(),
+                )
+              else
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildPhotoPreview(
+                      label: 'Woman Photo',
+                      sceneTime: 'Scene 2: 00:28 - 00:38',
+                      localPath: data.womanPhotoPath,
+                      bytes: data.womanPhotoBytes,
+                    ),
+                    _buildPhotoPreview(
+                      label: 'Man Photo',
+                      sceneTime: 'Scene 3: 00:41 - 00:51',
+                      localPath: data.manPhotoPath,
+                      bytes: data.manPhotoBytes,
+                    ),
+                  ],
+                ),
               const SizedBox(height: 24),
             ],
 
             // Ceremony Information Card
             Text(
-              'Wedding Information',
+              'Invitation Details',
               style: GoogleFonts.playfairDisplay(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
@@ -253,16 +276,27 @@ class ReviewDetailsScreen extends StatelessWidget {
                 border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
               ),
               child: Column(
-                children: [
-                  _buildSummaryRow('Groom (పెళ్లికొడుకు)', data.groomName),
-                  _buildSummaryRow('Bride (పెళ్లికూతురు)', data.brideName),
-                  _buildSummaryRow('Ceremony', data.ceremonyTitle, isGold: true),
-                  _buildSummaryRow('Parents Blessings', data.parentsNames),
-                  _buildSummaryRow('Date (తేదీ)', data.eventDate),
-                  _buildSummaryRow('Muhurtham', data.muhurthamTime, isGold: true),
-                  _buildSummaryRow('Mandapam Venue', data.venue),
-                  _buildSummaryRow('RSVP', data.rsvp),
-                ],
+                children: template.textElements.isNotEmpty
+                    ? template.textElements.map((txtEl) {
+                        final val = data.getCustomText(txtEl.field, fallback: txtEl.defaultText);
+                        final isGold = txtEl.field.toLowerCase().contains('title') ||
+                            txtEl.field.toLowerCase().contains('muhurtham');
+                        return _buildSummaryRow(
+                          txtEl.label.isNotEmpty ? txtEl.label : txtEl.field,
+                          val,
+                          isGold: isGold,
+                        );
+                      }).toList()
+                    : [
+                        _buildSummaryRow('Groom (పెళ్లికొడుకు)', data.groomName),
+                        _buildSummaryRow('Bride (పెళ్లికూతురు)', data.brideName),
+                        _buildSummaryRow('Ceremony', data.ceremonyTitle, isGold: true),
+                        _buildSummaryRow('Parents Blessings', data.parentsNames),
+                        _buildSummaryRow('Date (తేదీ)', data.eventDate),
+                        _buildSummaryRow('Muhurtham', data.muhurthamTime, isGold: true),
+                        _buildSummaryRow('Mandapam Venue', data.venue),
+                        _buildSummaryRow('RSVP', data.rsvp),
+                      ],
               ),
             ),
             const SizedBox(height: 24),

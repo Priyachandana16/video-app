@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -21,7 +22,19 @@ Future<bool> downloadVideoFile(String url, String filename) async {
 
     final savePath = '${dir.path}/$filename';
 
-    // If already a local file path
+    // 1. If Flutter asset packaged inside the APK
+    if (url.startsWith('assets/')) {
+      final byteData = await rootBundle.load(url);
+      final buffer = byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
+      final targetFile = File(savePath);
+      await targetFile.writeAsBytes(buffer);
+      if (Platform.isAndroid || Platform.isIOS) {
+        await Share.shareXFiles([XFile(savePath)], text: 'My Invitation Video');
+      }
+      return true;
+    }
+
+    // 2. If already a local file path
     if (!url.startsWith('http')) {
       final localFile = File(url);
       if (localFile.existsSync()) {
@@ -33,7 +46,7 @@ Future<bool> downloadVideoFile(String url, String filename) async {
       }
     }
 
-    // Network URL: fetch bytes
+    // 3. Network URL: fetch bytes
     final fullUrl = url.startsWith('http')
         ? url
         : (Platform.isAndroid ? 'http://10.0.2.2:5000$url' : 'http://localhost:5000$url');

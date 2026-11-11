@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/template_provider.dart';
 import '../../providers/personalization_provider.dart';
 import '../../models/template_model.dart';
 import '../customization/personalization_form_screen.dart';
 import '../auth/sign_in_screen.dart';
+import '../userhub/profile_screen.dart';
 import 'wedding_preferences_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -345,6 +347,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
     final templateProvider = context.watch<TemplateProvider>();
     final templates = templateProvider.templates;
 
@@ -372,44 +375,108 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
 
-                    // Polished Sign In Pill Button
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const SignInScreen()),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E26),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: AppColors.primaryGold.withValues(alpha: 0.35),
-                            width: 1,
+                    // Auth State: Show User Profile Chip when authenticated, otherwise Sign In Pill
+                    if (auth.isAuthenticated)
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E1E26),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppColors.primaryGold.withValues(alpha: 0.5),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 22,
+                                height: 22,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.primaryGold,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    (auth.currentUser?.fullName.isNotEmpty == true
+                                            ? auth.currentUser!.fullName[0]
+                                            : auth.currentUser?.username.isNotEmpty == true
+                                                ? auth.currentUser!.username[0]
+                                                : 'U')
+                                        .toUpperCase(),
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: Colors.black,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 95),
+                                child: Text(
+                                  auth.currentUser?.fullName.isNotEmpty == true
+                                      ? auth.currentUser!.fullName
+                                      : (auth.currentUser?.username ?? 'Account'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.person_outline_rounded,
-                              size: 14,
-                              color: AppColors.primaryGold,
+                      )
+                    else
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const SignInScreen()),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E1E26),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppColors.primaryGold.withValues(alpha: 0.35),
+                              width: 1,
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Sign in',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.person_outline_rounded,
+                                size: 14,
+                                color: AppColors.primaryGold,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 6),
+                              Text(
+                                'Sign in',
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),

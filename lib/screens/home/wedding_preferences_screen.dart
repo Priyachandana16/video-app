@@ -202,6 +202,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
     required String title,
     required String assetPath,
     required IconData icon,
+    double height = 146,
   }) {
     final isSelected = _selectedOrientation == orientation;
 
@@ -215,7 +216,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          height: 146,
+          height: height,
           decoration: BoxDecoration(
             color: const Color(0xFF130B24),
             borderRadius: BorderRadius.circular(16),
@@ -332,8 +333,9 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
   Widget _buildReligionCard({
     required String religionKey,
     required String title,
-    required String subtitle,
     required String assetPath,
+    required Color borderColor,
+    double height = 168,
   }) {
     final isSelected = _selectedReligion == religionKey;
 
@@ -347,28 +349,28 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          height: 148,
+          height: height,
           decoration: BoxDecoration(
             color: const Color(0xFF130B24),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
                   ? const Color(0xFFF3C769)
-                  : const Color(0xFFD4AF37).withValues(alpha: 0.2),
-              width: isSelected ? 1.8 : 1.0,
+                  : borderColor.withValues(alpha: 0.55),
+              width: isSelected ? 2.2 : 1.2,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFF3C769).withValues(alpha: 0.35),
-                      blurRadius: 14,
+                      color: const Color(0xFFF3C769).withValues(alpha: 0.45),
+                      blurRadius: 16,
                       spreadRadius: 1,
                     ),
                   ]
                 : [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      blurRadius: 8,
+                      color: borderColor.withValues(alpha: 0.2),
+                      blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
                   ],
@@ -378,9 +380,9 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Upper Artwork Illustration
+                  // Upper Artwork Illustration - Fills generously like in design
                   Expanded(
-                    flex: 10,
+                    flex: 12,
                     child: ClipRRect(
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
                       child: Image.asset(
@@ -390,9 +392,9 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                     ),
                   ),
 
-                  // Lower Labels
+                  // Lower Title Label (Clean and elegant without subtitle)
                   Expanded(
-                    flex: 5,
+                    flex: 4,
                     child: Container(
                       alignment: Alignment.center,
                       decoration: const BoxDecoration(
@@ -400,31 +402,16 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                         borderRadius: BorderRadius.vertical(bottom: Radius.circular(14)),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
-                              color: const Color(0xFFE2C98F),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: isSelected ? const Color(0xFFFFF4D1) : Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.2,
+                        ),
                       ),
                     ),
                   ),
@@ -448,7 +435,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
   // ---------------------------------------------------------------------------
   // SECTION 3: PHOTO PREFERENCE CARDS
   // ---------------------------------------------------------------------------
-  Widget _buildWithPhotosCard() {
+  Widget _buildWithPhotosCard({double height = 86}) {
     final isSelected = _selectedPhotoPreference == 'with_photo';
 
     return Expanded(
@@ -461,7 +448,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          height: 86,
+          height: height,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: const Color(0xFF130B24),
@@ -545,7 +532,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
     );
   }
 
-  Widget _buildWithoutPhotosCard() {
+  Widget _buildWithoutPhotosCard({double height = 86}) {
     final isSelected = _selectedPhotoPreference == 'without_photo';
 
     return Expanded(
@@ -558,7 +545,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          height: 86,
+          height: height,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: const Color(0xFF130B24),
@@ -743,9 +730,26 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final availableHeight = constraints.maxHeight;
-                // Proportional spacing so everything breathes and fits on one screen
-                final double sectionGap = (availableHeight > 720) ? 14.0 : (availableHeight > 640 ? 10.0 : 6.0);
-                final double headerGap = (availableHeight > 720) ? 10.0 : 6.0;
+
+                // Dynamically scale card heights based on viewport height so cards fill richly like Image 2
+                final double orientationCardHeight = (availableHeight > 780)
+                    ? 162.0
+                    : (availableHeight > 680 ? 150.0 : 136.0);
+                final double religionCardHeight = (availableHeight > 780)
+                    ? 184.0
+                    : (availableHeight > 680 ? 168.0 : 146.0);
+                final double photoCardHeight = (availableHeight > 780)
+                    ? 102.0
+                    : (availableHeight > 680 ? 92.0 : 82.0);
+
+                // Calculate balanced gap between sections so there is NO giant black empty space at the bottom
+                // Total fixed elements height ~ 470px + card heights
+                final double totalCardHeights = orientationCardHeight + religionCardHeight + photoCardHeight + 170.0;
+                final double remainingSpace = availableHeight - totalCardHeights;
+                final double sectionGap = (remainingSpace > 0)
+                    ? (remainingSpace / 4).clamp(12.0, 28.0)
+                    : 10.0;
+                final double headerGap = (availableHeight > 720) ? 8.0 : 5.0;
 
                 return ScrollConfiguration(
                   behavior: ScrollConfiguration.of(context).copyWith(
@@ -763,10 +767,10 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          // 1. TOP HEADER & SCREEN TITLES
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // TOP HEADER
                               Stack(
                                 alignment: Alignment.center,
                                 children: [
@@ -872,9 +876,14 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                                   ),
                                 ],
                               ),
-                              SizedBox(height: sectionGap),
+                            ],
+                          ),
+                          SizedBox(height: sectionGap),
 
-                              // SECTION 1: VIDEO ORIENTATION
+                          // 2. SECTION 1: VIDEO ORIENTATION
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
                               _buildSectionHeader('1', 'Video Orientation'),
                               SizedBox(height: headerGap),
                               Row(
@@ -884,6 +893,7 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                                     title: 'Horizontal',
                                     assetPath: 'assets/images/wedding_horiz_phone.png',
                                     icon: Icons.crop_landscape_rounded,
+                                    height: orientationCardHeight,
                                   ),
                                   const SizedBox(width: 12),
                                   _buildOrientationCard(
@@ -891,12 +901,18 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                                     title: 'Vertical',
                                     assetPath: 'assets/images/wedding_vert_phone.png',
                                     icon: Icons.phone_android_rounded,
+                                    height: orientationCardHeight,
                                   ),
                                 ],
                               ),
-                              SizedBox(height: sectionGap),
+                            ],
+                          ),
+                          SizedBox(height: sectionGap),
 
-                              // SECTION 2: RELIGION & STYLE
+                          // 3. SECTION 2: RELIGION & STYLE
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
                               _buildSectionHeader('2', 'Religion & Style'),
                               SizedBox(height: headerGap),
                               Row(
@@ -904,43 +920,52 @@ class _WeddingPreferencesScreenState extends State<WeddingPreferencesScreen> {
                                   _buildReligionCard(
                                     religionKey: 'Hindu',
                                     title: 'Hindu',
-                                    subtitle: 'Mandapam',
                                     assetPath: 'assets/images/religion_hindu.png',
+                                    borderColor: const Color(0xFFE89A3C),
+                                    height: religionCardHeight,
                                   ),
                                   const SizedBox(width: 8),
                                   _buildReligionCard(
                                     religionKey: 'Muslim',
                                     title: 'Muslim',
-                                    subtitle: 'Arabic',
                                     assetPath: 'assets/images/religion_muslim.png',
+                                    borderColor: const Color(0xFF00B4D8),
+                                    height: religionCardHeight,
                                   ),
                                   const SizedBox(width: 8),
                                   _buildReligionCard(
                                     religionKey: 'Christian',
                                     title: 'Christian',
-                                    subtitle: 'Cathedral',
                                     assetPath: 'assets/images/religion_christian.png',
+                                    borderColor: const Color(0xFF9D4EDD),
+                                    height: religionCardHeight,
                                   ),
-                                ],
-                              ),
-                              SizedBox(height: sectionGap),
-
-                              // SECTION 3: PHOTOS
-                              _buildSectionHeader('3', 'Photos'),
-                              SizedBox(height: headerGap),
-                              Row(
-                                children: [
-                                  _buildWithPhotosCard(),
-                                  const SizedBox(width: 10),
-                                  _buildWithoutPhotosCard(),
                                 ],
                               ),
                             ],
                           ),
+                          SizedBox(height: sectionGap),
 
-                          // BOTTOM CTA BUTTON: "✦ Create Invitation ❯"
+                          // 4. SECTION 3: PHOTOS
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildSectionHeader('3', 'Photos'),
+                              SizedBox(height: headerGap),
+                              Row(
+                                children: [
+                                  _buildWithPhotosCard(height: photoCardHeight),
+                                  const SizedBox(width: 10),
+                                  _buildWithoutPhotosCard(height: photoCardHeight),
+                                ],
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: sectionGap),
+
+                          // 5. BOTTOM CTA BUTTON: "✦ Create Invitation ❯"
                           Padding(
-                            padding: EdgeInsets.only(top: sectionGap + 4, bottom: 4),
+                            padding: const EdgeInsets.only(bottom: 6),
                             child: SizedBox(
                               width: double.infinity,
                               height: 52,

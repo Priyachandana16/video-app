@@ -1,0 +1,8 @@
+node_modules
+exports/*.mp4
+uploads/*
+__pycache__
+*.pyc
+.git
+.env.local
+

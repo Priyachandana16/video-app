@@ -17,8 +17,8 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _identifierController = TextEditingController(text: '9876543210');
-  final _passwordController = TextEditingController(text: 'Password123!');
+  final _identifierController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
@@ -37,8 +37,9 @@ class _SignInScreenState extends State<SignInScreen> {
       );
 
       if (success && mounted) {
-        Navigator.of(context).pushReplacement(
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+          (route) => false,
         );
       } else if (mounted && auth.errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(

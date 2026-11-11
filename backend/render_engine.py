@@ -152,8 +152,10 @@ def render_dynamic_invitation(config_path):
     with open(config_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    templates_file = os.path.join(os.path.dirname(__file__), 'data', 'templates.json')
+    backend_dir = os.path.dirname(__file__)
+    project_root = os.path.abspath(os.path.join(backend_dir, '..'))
+    assets_base = backend_dir if os.path.exists(os.path.join(backend_dir, 'assets')) else project_root
+    templates_file = os.path.join(backend_dir, 'data', 'templates.json')
 
     # Resolve template definition
     template = data.get('template')
@@ -185,20 +187,35 @@ def render_dynamic_invitation(config_path):
     canvas_h = template.get('canvasHeight', 1080)
     duration = float(template.get('durationSeconds', 102))
     master_video_rel = template.get('masterVideoPath', 'assets/templates/template_01_green_screen.mp4')
-    master_video = os.path.abspath(os.path.join(project_root, master_video_rel)) if not os.path.isabs(master_video_rel) else master_video_rel
+    if os.path.isabs(master_video_rel) and os.path.exists(master_video_rel):
+        master_video = master_video_rel
+    else:
+        candidate1 = os.path.abspath(os.path.join(assets_base, master_video_rel))
+        candidate2 = os.path.abspath(os.path.join(project_root, master_video_rel))
+        candidate3 = os.path.abspath(os.path.join(assets_base, 'assets', 'templates', os.path.basename(master_video_rel)))
+        if os.path.exists(candidate1):
+            master_video = candidate1
+        elif os.path.exists(candidate2):
+            master_video = candidate2
+        elif os.path.exists(candidate3):
+            master_video = candidate3
+        else:
+            master_video = candidate1
 
     output_video = data.get('outputVideoPath')
     if not output_video:
-        output_video = os.path.join(project_root, 'backend', 'exports', f"output_{os.getpid()}.mp4")
+        output_video = os.path.join(backend_dir, 'exports', f"output_{os.getpid()}.mp4")
     elif not os.path.isabs(output_video):
-        output_video = os.path.abspath(os.path.join(project_root, output_video))
+        output_video = os.path.abspath(os.path.join(backend_dir, output_video))
 
     os.makedirs(os.path.dirname(output_video), exist_ok=True)
     temp_dir = os.path.join(os.path.dirname(output_video), f"temp_{os.getpid()}_{int(os.path.getmtime(config_path))}")
     os.makedirs(temp_dir, exist_ok=True)
 
     ffmpeg_bin = get_ffmpeg_path()
-    masks_dir = os.path.join(project_root, 'assets', 'masks')
+    masks_dir = os.path.join(assets_base, 'assets', 'masks')
+    if not os.path.exists(masks_dir):
+        masks_dir = os.path.join(project_root, 'assets', 'masks')
     ink_mask_video = os.path.join(masks_dir, 'ink_reveal.mp4')
     brush_mask_video = os.path.join(masks_dir, 'brush_stroke.mp4')
 

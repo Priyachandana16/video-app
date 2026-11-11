@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/template_model.dart';
+import '../../services/api_service.dart';
 import '../../providers/personalization_provider.dart';
 import '../../providers/template_provider.dart';
 import '../../widgets/custom_text_field.dart';
@@ -39,7 +40,11 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
   late TextEditingController _ceremonyController;
   late TextEditingController _rsvpController;
 
+  // Dynamic text element controllers mapped from Admin Panel text layers
+  final Map<String, TextEditingController> _dynamicControllers = {};
+
   bool _isGenerating = false;
+  TemplateModel? _fullTemplate;
 
   bool get _isWithPhotos {
     if (widget.hasPhotoPreference != null) {
@@ -54,6 +59,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
   }
 
   TemplateModel _getActiveTemplate() {
+    if (_fullTemplate != null) return _fullTemplate!;
     if (widget.template != null) return widget.template!;
     final selected = context.read<TemplateProvider>().selectedTemplate;
     if (selected != null) return selected;
@@ -75,9 +81,63 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
     );
   }
 
+  void _initDynamicControllers(TemplateModel tmpl) {
+    final p = context.read<PersonalizationProvider>().data;
+    for (final txtEl in tmpl.textElements) {
+      if (!_dynamicControllers.containsKey(txtEl.field)) {
+        final existingVal = p.getCustomText(txtEl.field);
+        final initialVal = existingVal.isNotEmpty
+            ? existingVal
+            : (txtEl.defaultText.isNotEmpty ? txtEl.defaultText : '');
+        _dynamicControllers[txtEl.field] = TextEditingController(text: initialVal);
+      }
+    }
+  }
+
+  TextEditingController _getControllerForElement(TemplateTextElement txtEl) {
+    if (!_dynamicControllers.containsKey(txtEl.field)) {
+      final p = context.read<PersonalizationProvider>().data;
+      final existingVal = p.getCustomText(txtEl.field);
+      final initialVal = existingVal.isNotEmpty
+          ? existingVal
+          : (txtEl.defaultText.isNotEmpty ? txtEl.defaultText : '');
+      _dynamicControllers[txtEl.field] = TextEditingController(text: initialVal);
+    }
+    return _dynamicControllers[txtEl.field]!;
+  }
+
+  IconData _getIconForField(String field) {
+    final f = field.toLowerCase();
+    if (f.contains('bride') || f.contains('woman')) return Icons.woman_rounded;
+    if (f.contains('groom') || f.contains('man')) return Icons.man_rounded;
+    if (f.contains('ceremony') || f.contains('title') || f.contains('header')) return Icons.celebration_rounded;
+    if (f.contains('date')) return Icons.calendar_month_rounded;
+    if (f.contains('time') || f.contains('muhurtham')) return Icons.access_time_filled_rounded;
+    if (f.contains('venue') || f.contains('mandapam') || f.contains('hall') || f.contains('location') || f.contains('address')) return Icons.temple_hindu_rounded;
+    if (f.contains('rsvp') || f.contains('regards') || f.contains('welcome')) return Icons.mark_email_read_rounded;
+    if (f.contains('parent') || f.contains('family')) return Icons.family_restroom_rounded;
+    return Icons.edit_note_rounded;
+  }
+
+  Future<void> _fetchFullTemplateConfig() async {
+    final active = _getActiveTemplate();
+    if (active.imageElements.isEmpty || active.textElements.isEmpty) {
+      final full = await ApiService.instance.getTemplateById(active.id);
+      if (full != null && mounted) {
+        setState(() {
+          _fullTemplate = full;
+          _initDynamicControllers(full);
+        });
+      }
+    } else {
+      _initDynamicControllers(active);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _fetchFullTemplateConfig();
     final provider = context.read<PersonalizationProvider>();
     if (widget.hasPhotoPreference != null) {
       provider.setPhotoPreference(widget.hasPhotoPreference!);
@@ -93,6 +153,8 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
     _parentsController = TextEditingController(text: p.parentsNames);
     _ceremonyController = TextEditingController(text: p.ceremonyTitle);
     _rsvpController = TextEditingController(text: p.rsvp);
+
+    _initDynamicControllers(_getActiveTemplate());
   }
 
   @override
@@ -106,24 +168,110 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
     _parentsController.dispose();
     _ceremonyController.dispose();
     _rsvpController.dispose();
+
+    for (final ctrl in _dynamicControllers.values) {
+      ctrl.dispose();
+    }
     super.dispose();
   }
 
   void _saveFormState() {
-    final fullVenue = _addressController.text.trim().isNotEmpty
-        ? '${_venueController.text.trim()}, ${_addressController.text.trim()}'
-        : _venueController.text.trim();
+    final tmpl = _getActiveTemplate();
+    final provider = context.read<PersonalizationProvider>();
 
-    context.read<PersonalizationProvider>().updateForm(
-          groomName: _groomController.text.trim(),
-          brideName: _brideController.text.trim(),
-          ceremonyTitle: _ceremonyController.text.trim(),
-          parentsNames: _parentsController.text.trim(),
-          eventDate: _dateController.text.trim(),
-          muhurthamTime: _timeController.text.trim(),
-          venue: fullVenue,
-          rsvp: _rsvpController.text.trim(),
+    if (tmpl.textElements.isNotEmpty) {
+      final Map<String, String> values = {};
+      for (final txtEl in tmpl.textElements) {
+        final ctrl = _getControllerForElement(txtEl);
+        values[txtEl.field] = ctrl.text.trim();
+      }
+      provider.updateCustomTexts(values);
+
+      // Keep legacy fields in sync for backward compatibility
+      if (values.containsKey('brideName')) _brideController.text = values['brideName']!;
+      if (values.containsKey('groomName')) _groomController.text = values['groomName']!;
+      if (values.containsKey('ceremonyTitle')) _ceremonyController.text = values['ceremonyTitle']!;
+      if (values.containsKey('muhurthamTime')) _timeController.text = values['muhurthamTime']!;
+      if (values.containsKey('venue')) _venueController.text = values['venue']!;
+      if (values.containsKey('rsvp')) _rsvpController.text = values['rsvp']!;
+    } else {
+      final fullVenue = _addressController.text.trim().isNotEmpty
+          ? '${_venueController.text.trim()}, ${_addressController.text.trim()}'
+          : _venueController.text.trim();
+
+      provider.updateForm(
+        groomName: _groomController.text.trim(),
+        brideName: _brideController.text.trim(),
+        ceremonyTitle: _ceremonyController.text.trim(),
+        parentsNames: _parentsController.text.trim(),
+        eventDate: _dateController.text.trim(),
+        muhurthamTime: _timeController.text.trim(),
+        venue: fullVenue,
+        rsvp: _rsvpController.text.trim(),
+      );
+    }
+  }
+
+  Future<void> _pickDateForController(TextEditingController controller) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: now.add(const Duration(days: 30)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365 * 5)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primaryGold,
+              onPrimary: Colors.black,
+              surface: Color(0xFF1E1E28),
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
         );
+      },
+    );
+    if (picked != null) {
+      const months = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      final formatted = '${picked.day} ${months[picked.month - 1]} ${picked.year}';
+      setState(() {
+        controller.text = formatted;
+      });
+    }
+  }
+
+  Future<void> _pickTimeForController(TextEditingController controller) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 10, minute: 30),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primaryGold,
+              onPrimary: Colors.black,
+              surface: Color(0xFF1E1E28),
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      final period = picked.period == DayPeriod.am ? 'AM' : 'PM';
+      final hour = picked.hourOfPeriod == 0 ? 12 : picked.hourOfPeriod;
+      final minute = picked.minute.toString().padLeft(2, '0');
+      final formatted = '$hour:$minute $period';
+      setState(() {
+        controller.text = formatted;
+      });
+    }
   }
 
   Future<void> _pickDate(BuildContext context) async {
@@ -458,15 +606,42 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
               children: [
                 if (hasPhoto) ...[
                   Positioned.fill(
-                    child: bytes != null
-                        ? Image.memory(bytes, fit: BoxFit.cover)
-                        : (!kIsWeb && localPath != null
-                            ? Image.file(File(localPath), fit: BoxFit.cover)
-                            : Container(
+                    child: GestureDetector(
+                      onTap: onPick,
+                      behavior: HitTestBehavior.opaque,
+                      child: bytes != null
+                          ? Image.memory(
+                              bytes,
+                              fit: BoxFit.cover,
+                              gaplessPlayback: true,
+                              errorBuilder: (ctx, err, stack) => Container(
                                 color: const Color(0xFF22222E),
-                                child: const Icon(Icons.check,
-                                    color: AppColors.primaryGold, size: 36),
-                              )),
+                                child: const Center(
+                                  child: Icon(Icons.check, color: AppColors.primaryGold, size: 36),
+                                ),
+                              ),
+                            )
+                          : (kIsWeb && localPath != null
+                              ? Image.network(
+                                  localPath,
+                                  fit: BoxFit.cover,
+                                  gaplessPlayback: true,
+                                  errorBuilder: (ctx, err, stack) => Container(
+                                    color: const Color(0xFF22222E),
+                                    child: const Center(
+                                      child: Icon(Icons.check, color: AppColors.primaryGold, size: 36),
+                                    ),
+                                  ),
+                                )
+                              : (!kIsWeb && localPath != null
+                                  ? Image.file(File(localPath), fit: BoxFit.cover)
+                                  : Container(
+                                      color: const Color(0xFF22222E),
+                                      child: const Center(
+                                        child: Icon(Icons.check, color: AppColors.primaryGold, size: 36),
+                                      ),
+                                    ))),
+                    ),
                   ),
                   // Remove button top right
                   Positioned(
@@ -475,13 +650,14 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                     child: GestureDetector(
                       onTap: onRemove,
                       child: Container(
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.75),
+                          color: Colors.black.withValues(alpha: 0.8),
                           shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
                         ),
                         child: const Icon(Icons.close_rounded,
-                            color: Colors.white, size: 16),
+                            color: Colors.white, size: 15),
                       ),
                     ),
                   ),
@@ -494,10 +670,10 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                       onTap: onPick,
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 4),
-                        color: Colors.black.withValues(alpha: 0.7),
+                        color: Colors.black.withValues(alpha: 0.75),
                         child: Center(
                           child: Text(
-                            'Replace',
+                            'Tap to Replace',
                             style: GoogleFonts.plusJakartaSans(
                               color: Colors.white,
                               fontSize: 10,
@@ -509,44 +685,46 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                     ),
                   ),
                 ] else ...[
-                  // Empty slot upload trigger
-                  GestureDetector(
-                    onTap: onPick,
-                    behavior: HitTestBehavior.opaque,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppColors.brandPink.withValues(alpha: 0.12),
-                              shape: BoxShape.circle,
+                  // Empty slot upload trigger - Positioned.fill ensures entire box is clickable
+                  Positioned.fill(
+                    child: GestureDetector(
+                      onTap: onPick,
+                      behavior: HitTestBehavior.opaque,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppColors.brandPink.withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.add_a_photo_outlined,
+                                color: AppColors.brandPink,
+                                size: 24,
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.add_a_photo_outlined,
-                              color: AppColors.brandPink,
-                              size: 24,
+                            const SizedBox(height: 8),
+                            Text(
+                              'Upload Photo',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Upload Photo',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                            const SizedBox(height: 2),
+                            Text(
+                              'PNG / JPG',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: const Color(0xFF94A3B8),
+                                fontSize: 10,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'PNG / JPG',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: const Color(0xFF94A3B8),
-                              fontSize: 10,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -557,14 +735,21 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
           const SizedBox(height: 8),
           Text(
             label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.plusJakartaSans(
               color: Colors.white,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             slotRole,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.plusJakartaSans(
               color: const Color(0xFF94A3B8),
               fontSize: 10,
@@ -639,22 +824,72 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 child: _buildPhotoSlotCardItem(
                   label: imgEl.label.isNotEmpty ? imgEl.label : slotKey,
                   slotRole: '$animName (${imgEl.startTime.toInt()}s-${imgEl.endTime.toInt()}s)',
-                  onPick: () => provider.pickSlotPhoto(slotKey),
-                  onRemove: () => provider.removeSlotPhoto(slotKey),
+                  onPick: () async {
+                    await provider.pickSlotPhoto(slotKey);
+                    if (mounted) setState(() {});
+                  },
+                  onRemove: () {
+                    provider.removeSlotPhoto(slotKey);
+                    if (mounted) setState(() {});
+                  },
                   localPath: slotPath,
                   bytes: slotBytes,
                 ),
               );
             }).toList(),
           ),
-        ] else if (tmpl.photoSlotsCount >= 2) ...[
+        ] else if (tmpl.photoSlotsCount > 2) ...[
+          Wrap(
+            spacing: 12,
+            runSpacing: 14,
+            children: List.generate(tmpl.photoSlotsCount, (index) {
+              final slotKey = 'photo_${index + 1}';
+              final slotBytes = provider.data.getSlotPhotoBytes(slotKey);
+              final slotPath = provider.data.getSlotPhotoPath(slotKey);
+              final defaultLabel = index == 0
+                  ? "Groom's Photo"
+                  : index == 1
+                      ? "Bride's Photo"
+                      : "Photo ${index + 1}";
+              final defaultRole = index == 0
+                  ? "పెళ్లికొడుకు ఫోటో"
+                  : index == 1
+                      ? "పెళ్లికూతురు ఫోటో"
+                      : "ఫోటో ${index + 1}";
+
+              return SizedBox(
+                width: 155,
+                child: _buildPhotoSlotCardItem(
+                  label: defaultLabel,
+                  slotRole: defaultRole,
+                  onPick: () async {
+                    await provider.pickSlotPhoto(slotKey);
+                    if (mounted) setState(() {});
+                  },
+                  onRemove: () {
+                    provider.removeSlotPhoto(slotKey);
+                    if (mounted) setState(() {});
+                  },
+                  localPath: slotPath,
+                  bytes: slotBytes,
+                ),
+              );
+            }),
+          ),
+        ] else if (tmpl.photoSlotsCount == 2) ...[
           Row(
             children: [
               _buildPhotoSlotCard(
                 label: "Groom's Photo",
                 slotRole: 'పెళ్లికొడుకు ఫోటో',
-                onPick: provider.pickManPhoto,
-                onRemove: provider.removeManPhoto,
+                onPick: () async {
+                  await provider.pickManPhoto();
+                  if (mounted) setState(() {});
+                },
+                onRemove: () {
+                  provider.removeManPhoto();
+                  if (mounted) setState(() {});
+                },
                 localPath: provider.data.manPhotoPath,
                 bytes: provider.data.manPhotoBytes,
               ),
@@ -662,8 +897,14 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
               _buildPhotoSlotCard(
                 label: "Bride's Photo",
                 slotRole: 'పెళ్లికూతురు ఫోటో',
-                onPick: provider.pickWomanPhoto,
-                onRemove: provider.removeWomanPhoto,
+                onPick: () async {
+                  await provider.pickWomanPhoto();
+                  if (mounted) setState(() {});
+                },
+                onRemove: () {
+                  provider.removeWomanPhoto();
+                  if (mounted) setState(() {});
+                },
                 localPath: provider.data.womanPhotoPath,
                 bytes: provider.data.womanPhotoBytes,
               ),
@@ -1191,23 +1432,44 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 if (_isWithPhotos)
                   _buildPhotoUploadSection(provider, tmpl),
 
-                // 3. Wedding Information Fields
+                // 3. Dynamic Text Elements from published Template Configuration
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(
-                      Icons.edit_note_rounded,
-                      size: 20,
-                      color: AppColors.primaryGold,
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.edit_note_rounded,
+                          size: 20,
+                          color: AppColors.primaryGold,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Invitation Details',
+                          style: GoogleFonts.playfairDisplay(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Wedding Information',
-                      style: GoogleFonts.playfairDisplay(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    if (tmpl.textElements.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E28),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${tmpl.textElements.length} fields',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: AppColors.champagne,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -1220,6 +1482,50 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                if (tmpl.textElements.isNotEmpty) ...[
+                  ...tmpl.textElements.map((txtEl) {
+                    final ctrl = _getControllerForElement(txtEl);
+                    final isDate = txtEl.field.toLowerCase().contains('date');
+                    final isTime = txtEl.field.toLowerCase().contains('time') ||
+                        txtEl.field.toLowerCase().contains('muhurtham');
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: CustomTextField(
+                        label: txtEl.label.isNotEmpty ? txtEl.label : txtEl.field,
+                        hint: txtEl.defaultText.isNotEmpty
+                            ? txtEl.defaultText
+                            : 'Enter ${txtEl.label}',
+                        controller: ctrl,
+                        prefixIcon: _getIconForField(txtEl.field),
+                        suffixIcon: isDate
+                            ? IconButton(
+                                icon: const Icon(Icons.calendar_today_rounded,
+                                    size: 18, color: AppColors.champagne),
+                                onPressed: () => _pickDateForController(ctrl),
+                              )
+                            : isTime
+                                ? IconButton(
+                                    icon: const Icon(Icons.schedule_rounded,
+                                        size: 18, color: AppColors.champagne),
+                                    onPressed: () => _pickTimeForController(ctrl),
+                                  )
+                                : null,
+                        onTap: () {
+                          if (isDate && ctrl.text.trim().isEmpty) {
+                            _pickDateForController(ctrl);
+                          } else if (isTime && ctrl.text.trim().isEmpty) {
+                            _pickTimeForController(ctrl);
+                          }
+                        },
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? '${txtEl.label.isNotEmpty ? txtEl.label : txtEl.field} is required'
+                            : null,
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 10),
+                ] else ...[
                 // Bride Name (Required)
                 CustomTextField(
                   label: "Bride's Name (పెళ్లికూతురు)",
@@ -1327,6 +1633,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                   prefixIcon: Icons.mark_email_read_rounded,
                 ),
                 const SizedBox(height: 20),
+              ],
               ],
             ),
           ),

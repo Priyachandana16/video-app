@@ -180,12 +180,33 @@ class TemplateModel {
 
   factory TemplateModel.fromJson(Map<String, dynamic> json) {
     var rawText = (json['textElements'] ?? json['text_elements']) as List?;
+    var rawImage = (json['imageElements'] ?? json['image_elements']) as List?;
+
+    // If Supabase returned template_versions join, extract config for textElements and imageElements!
+    if (json['template_versions'] is List && (json['template_versions'] as List).isNotEmpty) {
+      final versions = List<dynamic>.from(json['template_versions']);
+      versions.sort((a, b) {
+        final verA = (a is Map && a['version_number'] != null) ? (a['version_number'] as num) : 0;
+        final verB = (b is Map && b['version_number'] != null) ? (b['version_number'] as num) : 0;
+        return verB.compareTo(verA);
+      });
+      final first = versions.first;
+      if (first is Map && first['config'] is Map) {
+        final config = first['config'] as Map<String, dynamic>;
+        if (rawText == null || rawText.isEmpty) {
+          rawText = (config['textElements'] ?? config['text_elements']) as List?;
+        }
+        if (rawImage == null || rawImage.isEmpty) {
+          rawImage = (config['imageElements'] ?? config['image_elements']) as List?;
+        }
+      }
+    }
+
     List<TemplateTextElement> textList = [];
     if (rawText != null) {
       textList = rawText.map((e) => TemplateTextElement.fromJson(e as Map<String, dynamic>)).toList();
     }
 
-    var rawImage = (json['imageElements'] ?? json['image_elements']) as List?;
     List<TemplateImageElement> imageList = [];
     if (rawImage != null) {
       imageList = rawImage.map((e) => TemplateImageElement.fromJson(e as Map<String, dynamic>)).toList();

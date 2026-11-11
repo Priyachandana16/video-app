@@ -12,7 +12,10 @@ class ApiService {
   static final ApiService instance = ApiService._internal();
   ApiService._internal();
 
-  String _baseUrl = 'http://10.0.2.2:5000/api';
+  String _baseUrl = const String.fromEnvironment(
+    'BACKEND_URL',
+    defaultValue: 'http://192.168.29.2:5000/api',
+  );
   String? _authToken;
 
   void configure({String? baseUrl, String? token}) {
@@ -38,6 +41,41 @@ class ApiService {
   // ---------------- AUTH ----------------
 
   Future<Map<String, dynamic>> login(String identifier, String password) async {
+    // 1. Direct Supabase Auth (works globally on cloud!)
+    try {
+      final supa = Supabase.instance.client;
+      final clean = identifier.trim().toLowerCase();
+      final email = clean.contains('@')
+          ? clean
+          : '${clean.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '')}@myinvitation.app';
+
+      final res = await supa.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (res.user != null) {
+        final u = res.user!;
+        final meta = u.userMetadata ?? {};
+        final userModel = UserModel(
+          id: u.id,
+          username: meta['username']?.toString() ?? identifier,
+          fullName: meta['full_name']?.toString() ?? 'User',
+          phone: meta['phone']?.toString() ?? (identifier.contains('@') ? '' : identifier),
+          email: u.email,
+        );
+        _authToken = res.session?.accessToken;
+        return {
+          'success': true,
+          'token': _authToken ?? 'token_${u.id}',
+          'user': userModel,
+        };
+      }
+    } catch (supaErr) {
+      debugPrint('Supabase login check: $supaErr');
+    }
+
+    // 2. Fallback to API endpoint
     try {
       final response = await http
           .post(
@@ -45,7 +83,7 @@ class ApiService {
             headers: _headers,
             body: jsonEncode({'identifier': identifier, 'password': password}),
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 4));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -79,6 +117,59 @@ class ApiService {
     required String phone,
     required String password,
   }) async {
+    // 1. Direct Supabase Auth (works globally on cloud!)
+    try {
+      final supa = Supabase.instance.client;
+      final clean = username.trim().toLowerCase();
+      final email = clean.contains('@')
+          ? clean
+          : '${clean.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '')}@myinvitation.app';
+
+      final res = await supa.auth.signUp(
+        email: email,
+        password: password,
+        data: {
+          'full_name': fullName,
+          'username': username,
+          'phone': phone,
+        },
+      );
+
+      if (res.user != null) {
+        final u = res.user!;
+        try {
+          await supa.from('profiles').upsert({
+            'id': u.id,
+            'full_name': fullName,
+            'email': email,
+            'phone': phone,
+            'role': 'customer',
+          });
+        } catch (_) {}
+
+        final userModel = UserModel(
+          id: u.id,
+          username: username,
+          fullName: fullName,
+          phone: phone,
+          email: email,
+        );
+        _authToken = res.session?.accessToken;
+        return {
+          'success': true,
+          'token': _authToken ?? 'token_${u.id}',
+          'user': userModel,
+        };
+      }
+    } catch (supaErr) {
+      debugPrint('Supabase register error: $supaErr');
+      final s = supaErr.toString();
+      if (s.contains('already registered') || s.contains('User already registered')) {
+        return {'success': false, 'error': 'Account already exists! Please Sign In.'};
+      }
+    }
+
+    // 2. Fallback to API endpoint
     try {
       final response = await http
           .post(
@@ -91,7 +182,7 @@ class ApiService {
               'password': password,
             }),
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 4));
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -119,14 +210,7 @@ class ApiService {
   // ---------------- OCCASIONS ----------------
 
   Future<List<Map<String, dynamic>>> getOccasions() async {
-    try {
-      final res = await http.get(Uri.parse('$baseUrl/occasions'), headers: _headers).timeout(const Duration(seconds: 4));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        return List<Map<String, dynamic>>.from(data['occasions'] ?? []);
-      }
-    } catch (_) {}
-
+    // 1. Direct Supabase Query (Instant global cloud)
     try {
       final supa = Supabase.instance.client;
       final List<dynamic> rows = await supa
@@ -136,6 +220,15 @@ class ApiService {
           .order('display_order', ascending: true);
       if (rows.isNotEmpty) {
         return List<Map<String, dynamic>>.from(rows);
+      }
+    } catch (_) {}
+
+    // 2. Fallback to Backend API
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/occasions'), headers: _headers).timeout(const Duration(seconds: 2));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return List<Map<String, dynamic>>.from(data['occasions'] ?? []);
       }
     } catch (_) {}
 
@@ -157,7 +250,23 @@ class ApiService {
     bool? hasPhoto,
     String? category,
   }) async {
-    // 1. Try Local Backend API (which routes to Supabase)
+    // 1. Direct Supabase Query (Instant global cloud)
+    try {
+      final supa = Supabase.instance.client;
+      var query = supa.from('templates').select('*, template_versions(version_number, config)').eq('is_published', true);
+      if (category != null && category != 'All') query = query.ilike('category', category);
+      if (religion != null && religion != 'All') query = query.ilike('religion', religion);
+      if (orientation != null && orientation != 'All') query = query.eq('orientation', orientation);
+      if (hasPhoto != null) query = query.eq('has_photo', hasPhoto);
+      final List<dynamic> rows = await query;
+      if (rows.isNotEmpty) {
+        return rows.map((r) => TemplateModel.fromJson(r as Map<String, dynamic>)).toList();
+      }
+    } catch (e) {
+      debugPrint('Supabase getTemplates notice: $e');
+    }
+
+    // 2. Fallback to API endpoint
     try {
       final queryParams = <String, String>{};
       if (religion != null && religion != 'All') queryParams['religion'] = religion;
@@ -166,27 +275,13 @@ class ApiService {
       if (category != null && category != 'All') queryParams['category'] = category;
 
       final uri = Uri.parse('$baseUrl/templates').replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 4));
+      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 2));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return (data['templates'] as List)
             .map((item) => TemplateModel.fromJson(item))
             .toList();
-      }
-    } catch (_) {}
-
-    // 2. Direct Supabase Query
-    try {
-      final supa = Supabase.instance.client;
-      var query = supa.from('templates').select().eq('is_published', true);
-      if (category != null && category != 'All') query = query.ilike('category', category);
-      if (religion != null && religion != 'All') query = query.ilike('religion', religion);
-      if (orientation != null && orientation != 'All') query = query.eq('orientation', orientation);
-      if (hasPhoto != null) query = query.eq('has_photo', hasPhoto);
-      final List<dynamic> rows = await query;
-      if (rows.isNotEmpty) {
-        return rows.map((r) => TemplateModel.fromJson(r as Map<String, dynamic>)).toList();
       }
     } catch (_) {}
 
@@ -660,6 +755,31 @@ class ApiService {
       }
       return true;
     }).toList();
+  }
+
+  Future<TemplateModel?> getTemplateById(String id) async {
+    // 1. Direct Supabase Query (Instant global cloud)
+    try {
+      final supa = Supabase.instance.client;
+      final row = await supa
+          .from('templates')
+          .select('*, template_versions(version_number, config)')
+          .eq('id', id)
+          .single();
+      return TemplateModel.fromJson(row);
+    } catch (_) {}
+
+    // 2. Fallback to API
+    try {
+      final uri = Uri.parse('$baseUrl/templates/$id');
+      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 2));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return TemplateModel.fromJson(data as Map<String, dynamic>);
+      }
+    } catch (_) {}
+
+    return null;
   }
 
   // ---------------- VIDEO RENDERING ----------------

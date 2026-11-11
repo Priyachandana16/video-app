@@ -117,6 +117,18 @@ class PersonalizationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setCustomText(String key, String value) {
+    _data.setCustomText(key, value);
+    notifyListeners();
+  }
+
+  void updateCustomTexts(Map<String, String> values) {
+    values.forEach((k, v) {
+      _data.setCustomText(k, v);
+    });
+    notifyListeners();
+  }
+
   void updatePhotoPlacement({
     required String placement,
     double scale = 1.0,
@@ -134,41 +146,47 @@ class PersonalizationProvider extends ChangeNotifier {
 
   Future<void> pickWomanPhoto() async {
     try {
+      print('[PhotoPicker] Opening gallery picker for womanPhoto');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 90,
       );
       if (image != null) {
         final bytes = await image.readAsBytes();
+        print('[PhotoPicker] Picked womanPhoto: ${bytes.length} bytes (name: ${image.name})');
         _data.womanPhotoPath = image.path;
         _data.womanPhotoBytes = bytes;
         _data.primaryPhotoPath = image.path;
         _data.primaryPhotoBytes = bytes;
+        _data.slotPhotoPaths['photo_1'] = image.path;
+        _data.slotPhotoBytes['photo_1'] = bytes;
         notifyListeners();
+      } else {
+        print('[PhotoPicker] Woman photo pick canceled or null');
       }
-    } catch (e) {
-      debugPrint('Error picking woman photo: $e');
+    } catch (e, stack) {
+      print('[PhotoPicker] Error picking woman photo: $e\n$stack');
     }
   }
 
   Future<void> pickManPhoto() async {
     try {
+      print('[PhotoPicker] Opening gallery picker for manPhoto');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 90,
       );
       if (image != null) {
         final bytes = await image.readAsBytes();
+        print('[PhotoPicker] Picked manPhoto: ${bytes.length} bytes (name: ${image.name})');
         _data.manPhotoPath = image.path;
         _data.manPhotoBytes = bytes;
+        _data.slotPhotoPaths['photo_2'] = image.path;
+        _data.slotPhotoBytes['photo_2'] = bytes;
         notifyListeners();
+      } else {
+        print('[PhotoPicker] Man photo pick canceled or null');
       }
-    } catch (e) {
-      debugPrint('Error picking man photo: $e');
+    } catch (e, stack) {
+      print('[PhotoPicker] Error picking man photo: $e\n$stack');
     }
   }
 
@@ -186,14 +204,13 @@ class PersonalizationProvider extends ChangeNotifier {
 
   Future<void> pickSlotPhoto(String slotKey) async {
     try {
+      print('[PhotoPicker] Opening gallery picker for slot: $slotKey');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 90,
       );
       if (image != null) {
         final bytes = await image.readAsBytes();
+        print('[PhotoPicker] Successfully picked $slotKey: ${bytes.length} bytes (name: ${image.name}, path: ${image.path})');
         _data.slotPhotoPaths[slotKey] = image.path;
         _data.slotPhotoBytes[slotKey] = bytes;
         if (slotKey == 'photo_1' || slotKey == 'womanPhoto') {
@@ -206,9 +223,11 @@ class PersonalizationProvider extends ChangeNotifier {
           _data.manPhotoBytes = bytes;
         }
         notifyListeners();
+      } else {
+        print('[PhotoPicker] Slot $slotKey pick canceled or null');
       }
-    } catch (e) {
-      debugPrint('Error picking photo for $slotKey: $e');
+    } catch (e, stack) {
+      print('[PhotoPicker] Error picking photo for $slotKey: $e\n$stack');
     }
   }
 

@@ -19,6 +19,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static assets and rendered exports
 const PROJECT_ROOT = path.resolve(__dirname, '..');
+const LOCAL_ASSETS = path.join(__dirname, 'assets');
+const ASSETS_PATH = fs.existsSync(LOCAL_ASSETS) ? LOCAL_ASSETS : path.join(PROJECT_ROOT, 'assets');
 const EXPORTS_DIR = path.join(__dirname, 'exports');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const DATA_DIR = path.join(__dirname, 'data');
@@ -27,8 +29,8 @@ if (!fs.existsSync(EXPORTS_DIR)) fs.mkdirSync(EXPORTS_DIR, { recursive: true });
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-app.use('/assets', express.static(path.join(PROJECT_ROOT, 'assets')));
-app.use('/api/assets', express.static(path.join(PROJECT_ROOT, 'assets')));
+app.use('/assets', express.static(ASSETS_PATH));
+app.use('/api/assets', express.static(ASSETS_PATH));
 app.use('/exports', express.static(EXPORTS_DIR));
 app.use('/api/exports', express.static(EXPORTS_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
@@ -485,12 +487,21 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, phone, fullName, password } = req.body;
 
-    if (!username || !phone || !fullName || !password) {
-      return res.status(400).json({ error: 'All fields (username, phone, fullName, password) are required.' });
+    if (!username || !phone || !password) {
+      return res.status(400).json({ error: 'Username, phone number, and password are required.' });
     }
 
+    const cleanUsername = String(username).trim();
+    const cleanPhone = String(phone).trim();
+    const effectiveFullName = (fullName && String(fullName).trim().length > 0)
+      ? String(fullName).trim()
+      : cleanUsername;
+
     const db = loadDb();
-    const existing = db.users.find(u => u.username.toLowerCase() === username.toLowerCase() || u.phone === phone);
+    const existing = db.users.find(u =>
+      u.username.toLowerCase() === cleanUsername.toLowerCase() ||
+      (u.phone && u.phone === cleanPhone)
+    );
     if (existing) {
       return res.status(409).json({ error: 'User with this username or phone number already exists.' });
     }
@@ -501,15 +512,45 @@ app.post('/api/auth/register', async (req, res) => {
 
     const newUser = {
       id: `usr_${Date.now()}`,
-      username: username.trim(),
-      phone: phone.trim(),
-      fullName: fullName.trim(),
+      username: cleanUsername,
+      phone: cleanPhone,
+      fullName: effectiveFullName,
       passwordHash,
       createdAt: new Date().toISOString()
     };
 
     db.users.push(newUser);
     saveDb(db);
+
+    // Sync user to Supabase Auth & profiles table
+    try {
+      if (supabaseDb && supabaseDb.supabase) {
+        const fakeEmail = `${cleanUsername.toLowerCase().replace(/[^a-z0-9]/g, '')}@invitation.app`;
+        const { data: supaUser, error: supaErr } = await supabaseDb.supabase.auth.admin.createUser({
+          email: fakeEmail,
+          password: password,
+          email_confirm: true,
+          user_metadata: {
+            username: cleanUsername,
+            full_name: effectiveFullName,
+            phone: cleanPhone
+          }
+        });
+        if (!supaErr && supaUser?.user?.id) {
+          newUser.supabaseId = supaUser.user.id;
+          await supabaseDb.supabase.from('profiles').upsert({
+            id: supaUser.user.id,
+            username: cleanUsername,
+            full_name: effectiveFullName,
+            phone_number: cleanPhone,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+          saveDb(db);
+        }
+      }
+    } catch (supaErr) {
+      console.warn('[Supabase Sync] Profile sync notice:', supaErr.message);
+    }
 
     const token = jwt.sign({ id: newUser.id, username: newUser.username }, JWT_SECRET, { expiresIn: '30d' });
 
@@ -536,19 +577,22 @@ app.post('/api/auth/login', async (req, res) => {
     const loginKey = (identifier || username || phone || '').trim().toLowerCase();
 
     if (!loginKey || !password) {
-      return res.status(400).json({ error: 'Phone/username and password are required.' });
+      return res.status(400).json({ error: 'Username/phone and password are required.' });
     }
 
     const db = loadDb();
-    const user = db.users.find(u => u.username.toLowerCase() === loginKey || u.phone === loginKey);
+    const user = db.users.find(u =>
+      u.username.toLowerCase() === loginKey ||
+      (u.phone && u.phone.toLowerCase() === loginKey)
+    );
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid phone number / username or password.' });
+      return res.status(401).json({ error: 'Invalid username / phone number or password.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid phone number / username or password.' });
+      return res.status(401).json({ error: 'Invalid username / phone number or password.' });
     }
 
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
@@ -559,7 +603,7 @@ app.post('/api/auth/login', async (req, res) => {
       user: {
         id: user.id,
         username: user.username,
-        fullName: user.fullName,
+        fullName: user.fullName || user.username,
         phone: user.phone
       }
     });
@@ -907,9 +951,14 @@ app.post('/api/render', upload.fields([
     let masterVideoPath = template.masterVideoPath || 'assets/templates/template_01_green_screen.mp4';
     if (masterVideoPath.startsWith('http://') || masterVideoPath.startsWith('https://')) {
       const baseName = path.basename(masterVideoPath.split('?')[0]);
-      const localCandidate = path.join(PROJECT_ROOT, 'assets/templates', baseName);
+      const localCandidate = path.join(ASSETS_PATH, 'templates', baseName);
       if (fs.existsSync(localCandidate)) {
-        masterVideoPath = path.relative(PROJECT_ROOT, localCandidate).replace(/\\/g, '/');
+        masterVideoPath = localCandidate;
+      }
+    } else if (!fs.existsSync(masterVideoPath)) {
+      const candidate = path.join(ASSETS_PATH, masterVideoPath.replace(/^assets\//, ''));
+      if (fs.existsSync(candidate)) {
+        masterVideoPath = candidate;
       }
     }
 

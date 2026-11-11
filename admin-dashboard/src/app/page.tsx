@@ -65,6 +65,33 @@ export default function AdminDashboardPage() {
     );
   };
 
+  const handleEditTemplate = async (tmpl: InvitationTemplate) => {
+    // Immediate safe fallback so editor opens instantly without throwing
+    const safeTmpl: InvitationTemplate = {
+      ...tmpl,
+      textElements: tmpl.textElements || [],
+      imageElements: tmpl.imageElements || [],
+    };
+    setEditingTemplate(safeTmpl);
+
+    // Fetch the full rich config (with all text & photo placeholders from template_versions)
+    try {
+      const res = await fetch(`/api/templates/${tmpl.id}`);
+      if (res.ok) {
+        const fullTmpl = await res.json();
+        if (fullTmpl && fullTmpl.id) {
+          setEditingTemplate({
+            ...fullTmpl,
+            textElements: fullTmpl.textElements || [],
+            imageElements: fullTmpl.imageElements || [],
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch full template configuration:', err);
+    }
+  };
+
   // If in Visual Timeline Editor mode, render editor full-screen
   if (editingTemplate) {
     return (
@@ -199,7 +226,7 @@ export default function AdminDashboardPage() {
                   <TemplateCard
                     key={template.id}
                     template={template}
-                    onSelect={(tmpl) => setEditingTemplate(tmpl)}
+                    onSelect={(tmpl) => handleEditTemplate(tmpl)}
                     onDelete={handleDeleteTemplate}
                   />
                 ))}

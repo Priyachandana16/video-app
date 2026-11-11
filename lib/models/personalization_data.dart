@@ -23,6 +23,9 @@ class PersonalizationData {
   Map<String, String> slotPhotoPaths;
   Map<String, Uint8List> slotPhotoBytes;
 
+  // Dynamic custom text elements mapped directly from published Template textElements
+  Map<String, String> customTextValues;
+
   // Specific legacy photo slots for woman (Bride) and man (Groom)
   String? womanPhotoPath;
   Uint8List? womanPhotoBytes;
@@ -52,6 +55,7 @@ class PersonalizationData {
     this.photoOffsetY = 0.0,
     Map<String, String>? slotPhotoPaths,
     Map<String, Uint8List>? slotPhotoBytes,
+    Map<String, String>? customTextValues,
     this.womanPhotoPath,
     this.womanPhotoBytes,
     this.manPhotoPath,
@@ -61,6 +65,7 @@ class PersonalizationData {
     List<String>? additionalPhotos,
   })  : slotPhotoPaths = slotPhotoPaths ?? {},
         slotPhotoBytes = slotPhotoBytes ?? {},
+        customTextValues = customTextValues ?? {},
         additionalPhotos = additionalPhotos ?? [];
 
   String get coupleTitle {
@@ -70,6 +75,67 @@ class PersonalizationData {
     if (groomName.isNotEmpty) return groomName;
     if (brideName.isNotEmpty) return brideName;
     return '';
+  }
+
+  String getCustomText(String key, {String fallback = ''}) {
+    if (customTextValues.containsKey(key) && customTextValues[key]!.isNotEmpty) {
+      return customTextValues[key]!;
+    }
+    switch (key) {
+      case 'brideName':
+        return brideName.isNotEmpty ? brideName : fallback;
+      case 'groomName':
+        return groomName.isNotEmpty ? groomName : fallback;
+      case 'ceremonyTitle':
+        return ceremonyTitle.isNotEmpty ? ceremonyTitle : fallback;
+      case 'eventDate':
+        return eventDate.isNotEmpty ? eventDate : fallback;
+      case 'muhurthamTime':
+        return muhurthamTime.isNotEmpty ? muhurthamTime : fallback;
+      case 'venue':
+        return venue.isNotEmpty ? venue : fallback;
+      case 'rsvp':
+        return rsvp.isNotEmpty ? rsvp : fallback;
+      case 'parentsNames':
+        return parentsNames.isNotEmpty ? parentsNames : fallback;
+      case 'contactPhone':
+        return contactPhone.isNotEmpty ? contactPhone : fallback;
+      default:
+        return fallback;
+    }
+  }
+
+  void setCustomText(String key, String value) {
+    customTextValues[key] = value;
+    switch (key) {
+      case 'brideName':
+        brideName = value;
+        break;
+      case 'groomName':
+        groomName = value;
+        break;
+      case 'ceremonyTitle':
+        ceremonyTitle = value;
+        break;
+      case 'eventDate':
+        eventDate = value;
+        break;
+      case 'muhurthamTime':
+        muhurthamTime = value;
+        break;
+      case 'venue':
+        venue = value;
+        break;
+      case 'rsvp':
+        rsvp = value;
+        break;
+      case 'parentsNames':
+        parentsNames = value;
+        break;
+      case 'contactPhone':
+        contactPhone = value;
+        break;
+    }
   }
 
   String? getSlotPhotoPath(String slotKey) {
@@ -127,6 +193,11 @@ class PersonalizationData {
       'contactPhone': contactPhone,
     };
 
+    // Forward all dynamic text elements configured from Admin Panel
+    customTextValues.forEach((k, v) {
+      fields[k] = v;
+    });
+
     if (hasPhoto) {
       slotPhotoPaths.forEach((k, v) {
         fields['${k}Path'] = v;
@@ -158,6 +229,7 @@ class PersonalizationData {
     double? photoOffsetY,
     Map<String, String>? slotPhotoPaths,
     Map<String, Uint8List>? slotPhotoBytes,
+    Map<String, String>? customTextValues,
     String? womanPhotoPath,
     Uint8List? womanPhotoBytes,
     String? manPhotoPath,
@@ -184,6 +256,7 @@ class PersonalizationData {
       photoOffsetY: photoOffsetY ?? this.photoOffsetY,
       slotPhotoPaths: slotPhotoPaths ?? Map.from(this.slotPhotoPaths),
       slotPhotoBytes: slotPhotoBytes ?? Map.from(this.slotPhotoBytes),
+      customTextValues: customTextValues ?? Map.from(this.customTextValues),
       womanPhotoPath: womanPhotoPath ?? this.womanPhotoPath,
       womanPhotoBytes: womanPhotoBytes ?? this.womanPhotoBytes,
       manPhotoPath: manPhotoPath ?? this.manPhotoPath,

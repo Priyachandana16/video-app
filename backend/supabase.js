@@ -57,26 +57,58 @@ async function getTemplates({ religion, orientation, hasPhoto, category } = {}) 
     return [];
   }
 
-  return (data || []).map(row => ({
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    badgeText: row.badge_text,
-    category: row.category,
-    religion: row.religion,
-    orientation: row.orientation,
-    canvasWidth: row.canvas_width,
-    canvasHeight: row.canvas_height,
-    durationSeconds: row.duration_seconds,
-    hasPhoto: row.has_photo,
-    photoSlotsCount: row.photo_slots_count,
-    masterVideoPath: row.master_video_url,
-    videoUrl: row.master_video_url,
-    thumbnailUrl: row.thumbnail_url,
-    templateThumbUrl: row.thumbnail_url,
-    sampleResultPath: row.sample_result_url,
-    currentVersion: row.current_version
-  }));
+  const rows = data || [];
+  if (rows.length === 0) return [];
+
+  // Batch fetch latest versions for these templates so textElements & imageElements are populated!
+  const templateIds = rows.map(r => r.id);
+  const versionsMap = {};
+  try {
+    const { data: verRows, error: verErr } = await supabase
+      .from('template_versions')
+      .select('template_id, version_number, config')
+      .in('template_id', templateIds)
+      .order('version_number', { ascending: false });
+
+    if (!verErr && verRows) {
+      for (const v of verRows) {
+        if (!versionsMap[v.template_id]) {
+          versionsMap[v.template_id] = v.config;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Could not batch fetch template_versions:', e.message);
+  }
+
+  return rows.map(row => {
+    const cfg = versionsMap[row.id] || {};
+    const textEls = Array.isArray(cfg.textElements) ? cfg.textElements : [];
+    const imgEls = Array.isArray(cfg.imageElements) ? cfg.imageElements : [];
+
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      badgeText: row.badge_text,
+      category: row.category,
+      religion: row.religion,
+      orientation: row.orientation,
+      canvasWidth: row.canvas_width,
+      canvasHeight: row.canvas_height,
+      durationSeconds: row.duration_seconds,
+      hasPhoto: row.has_photo,
+      photoSlotsCount: imgEls.length > 0 ? imgEls.length : (row.photo_slots_count || 0),
+      masterVideoPath: row.master_video_url,
+      videoUrl: row.master_video_url,
+      thumbnailUrl: row.thumbnail_url,
+      templateThumbUrl: row.thumbnail_url,
+      sampleResultPath: row.sample_result_url,
+      currentVersion: row.current_version,
+      textElements: textEls,
+      imageElements: imgEls
+    };
+  });
 }
 
 /**
@@ -109,7 +141,9 @@ async function getTemplateById(id) {
       id: tmpl.id,
       title: tmpl.title,
       currentVersion: tmpl.current_version,
-      templateVersionId: ver.id
+      templateVersionId: ver.id,
+      textElements: Array.isArray(ver.config.textElements) ? ver.config.textElements : [],
+      imageElements: Array.isArray(ver.config.imageElements) ? ver.config.imageElements : []
     };
   }
 
@@ -218,6 +252,7 @@ async function updateTemplate(id, templateData) {
     duration_seconds: templateData.durationSeconds || current.duration_seconds,
     has_photo: templateData.imageElements ? (templateData.imageElements.length > 0) : (templateData.hasPhoto !== undefined ? templateData.hasPhoto : current.has_photo),
     photo_slots_count: templateData.imageElements ? templateData.imageElements.length : (templateData.photoSlotsCount !== undefined ? templateData.photoSlotsCount : current.photo_slots_count),
+    is_published: templateData.isPublished !== undefined ? templateData.isPublished : true,
     current_version: nextVersion,
     updated_at: new Date().toISOString()
   };

@@ -51,7 +51,11 @@ export default function VisualTimelineEditor({
   onBack,
   onSave,
 }: VisualTimelineEditorProps) {
-  const [template, setTemplate] = useState<InvitationTemplate>(initialTemplate);
+  const [template, setTemplate] = useState<InvitationTemplate>(() => ({
+    ...initialTemplate,
+    textElements: initialTemplate?.textElements || [],
+    imageElements: initialTemplate?.imageElements || [],
+  }));
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
@@ -60,14 +64,37 @@ export default function VisualTimelineEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
-  // Ghosting / Show Inactive Elements toggle (defaults to true in admin studio so all elements are visible and editable)
-  const [showInactiveElements, setShowInactiveElements] = useState(true);
+  // Inactive Elements toggle (defaults to false so only elements active at current second are shown)
+  const [showInactiveElements, setShowInactiveElements] = useState(false);
 
   // Inspector tab: 'inspector' or 'layers'
   const [inspectorTab, setInspectorTab] = useState<'inspector' | 'layers'>('inspector');
 
   // Timeline track filter: 'all' | 'text' | 'image'
   const [trackFilter, setTrackFilter] = useState<'all' | 'text' | 'image'>('all');
+
+  // Fetch full template configuration if missing elements
+  useEffect(() => {
+    let isMounted = true;
+    if (initialTemplate?.id) {
+      fetch(`/api/templates/${initialTemplate.id}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((fullData) => {
+          if (isMounted && fullData && fullData.id) {
+            setTemplate((prev) => ({
+              ...prev,
+              ...fullData,
+              textElements: (fullData.textElements && fullData.textElements.length > 0) ? fullData.textElements : (prev.textElements || []),
+              imageElements: (fullData.imageElements && fullData.imageElements.length > 0) ? fullData.imageElements : (prev.imageElements || []),
+            }));
+          }
+        })
+        .catch((err) => console.warn('Could not fetch full template details in editor:', err));
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [initialTemplate.id]);
 
   // Timeline Track Dragging & Trimming State (mode: 'start' trims startTime, 'end' trims endTime, 'move' shifts block)
   const [timelineDrag, setTimelineDrag] = useState<{
@@ -116,8 +143,8 @@ export default function VisualTimelineEditor({
   const duration = template.durationSeconds || 60;
 
   // Selected element lookup
-  const selectedTextElement = template.textElements.find((t) => t.id === selectedElementId);
-  const selectedImageElement = template.imageElements.find((i) => i.id === selectedElementId);
+  const selectedTextElement = (template.textElements || []).find((t) => t.id === selectedElementId);
+  const selectedImageElement = (template.imageElements || []).find((i) => i.id === selectedElementId);
 
   // Video playback sync with high-precision 60 FPS requestAnimationFrame loop
   const togglePlay = () => {
@@ -180,6 +207,10 @@ export default function VisualTimelineEditor({
     setSelectedElementId(id);
     setSelectedType(type);
     setInspectorTab('inspector');
+    // Automatically seek playhead to element start time if outside its active window
+    if (currentTime < startTime || currentTime > endTime) {
+      seekTo(startTime);
+    }
     setTimelineDrag({
       id,
       type,
@@ -199,11 +230,12 @@ export default function VisualTimelineEditor({
 
   // Add new elements
   const addTextElement = () => {
+    const currentTexts = template.textElements || [];
     const newId = `txt_${Date.now()}`;
     const newEl: TextElementConfig = {
       id: newId,
       field: 'coupleNames',
-      label: `Text ${template.textElements.length + 1}`,
+      label: `Text ${currentTexts.length + 1}`,
       defaultText: 'Sai Krishna & Deepika',
       x: Math.round(canvasWidth / 2),
       y: Math.round(canvasHeight / 2),
@@ -218,7 +250,7 @@ export default function VisualTimelineEditor({
     };
     setTemplate((prev) => ({
       ...prev,
-      textElements: [...prev.textElements, newEl],
+      textElements: [...(prev.textElements || []), newEl],
     }));
     setSelectedElementId(newId);
     setSelectedType('text');
@@ -226,7 +258,8 @@ export default function VisualTimelineEditor({
   };
 
   const addImageElement = () => {
-    const nextSlotNum = template.imageElements.length + 1;
+    const currentImages = template.imageElements || [];
+    const nextSlotNum = currentImages.length + 1;
     const newId = `img_${Date.now()}`;
     const newEl: ImageElementConfig = {
       id: newId,
@@ -244,7 +277,7 @@ export default function VisualTimelineEditor({
       placeholderUrl: `/assets/candidate_logo${(nextSlotNum % 4) + 1}.png`,
     };
     setTemplate((prev) => {
-      const updatedImages = [...prev.imageElements, newEl];
+      const updatedImages = [...(prev.imageElements || []), newEl];
       return {
         ...prev,
         imageElements: updatedImages,
@@ -261,11 +294,11 @@ export default function VisualTimelineEditor({
     if (type === 'text') {
       setTemplate((prev) => ({
         ...prev,
-        textElements: prev.textElements.filter((t) => t.id !== id),
+        textElements: (prev.textElements || []).filter((t) => t.id !== id),
       }));
     } else {
       setTemplate((prev) => {
-        const remainingImages = prev.imageElements.filter((i) => i.id !== id);
+        const remainingImages = (prev.imageElements || []).filter((i) => i.id !== id);
         return {
           ...prev,
           imageElements: remainingImages,
@@ -283,14 +316,14 @@ export default function VisualTimelineEditor({
   const updateTextElement = (id: string, updates: Partial<TextElementConfig>) => {
     setTemplate((prev) => ({
       ...prev,
-      textElements: prev.textElements.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+      textElements: (prev.textElements || []).map((t) => (t.id === id ? { ...t, ...updates } : t)),
     }));
   };
 
   const updateImageElement = (id: string, updates: Partial<ImageElementConfig>) => {
     setTemplate((prev) => ({
       ...prev,
-      imageElements: prev.imageElements.map((i) => (i.id === id ? { ...i, ...updates } : i)),
+      imageElements: (prev.imageElements || []).map((i) => (i.id === id ? { ...i, ...updates } : i)),
     }));
   };
 
@@ -309,8 +342,8 @@ export default function VisualTimelineEditor({
 
     const el =
       type === 'text'
-        ? template.textElements.find((t) => t.id === id)
-        : template.imageElements.find((i) => i.id === id);
+        ? (template.textElements || []).find((t) => t.id === id)
+        : (template.imageElements || []).find((i) => i.id === id);
 
     if (!el) return;
 
@@ -458,8 +491,11 @@ export default function VisualTimelineEditor({
     try {
       const payload: InvitationTemplate = {
         ...template,
-        photoSlotsCount: template.imageElements.length,
-        hasPhoto: template.imageElements.length > 0,
+        isPublished: true,
+        textElements: template.textElements || [],
+        imageElements: template.imageElements || [],
+        photoSlotsCount: (template.imageElements || []).length,
+        hasPhoto: (template.imageElements || []).length > 0,
       };
       const res = await fetch(`/api/templates/${template.id}`, {
         method: 'PUT',
@@ -698,15 +734,13 @@ export default function VisualTimelineEditor({
             {/* Canvas Interactive Overlay Layer */}
             <div className="absolute inset-0 pointer-events-auto overflow-hidden">
               {/* Image Placeholders */}
-              {template.imageElements.map((imgEl, idx) => {
+              {(template.imageElements || []).map((imgEl, idx) => {
                 const isVisible = currentTime >= imgEl.startTime && currentTime <= imgEl.endTime;
                 const isSelected = selectedElementId === imgEl.id;
 
-                // When playing, inactive elements are completely hidden
-                if (isPlaying) {
-                  if (!isVisible) return null;
-                } else {
-                  if (!isVisible && !showInactiveElements && !isSelected) return null;
+                // Strict timeframe visibility: only elements active at this second are shown
+                if (!isVisible && !showInactiveElements) {
+                  return null;
                 }
 
                 const scale = getScale();
@@ -774,10 +808,12 @@ export default function VisualTimelineEditor({
                           (e.target as HTMLImageElement).src = '/assets/candidate_logo1.png';
                         }}
                       />
-                      {/* Photo slot tag */}
-                      <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-purple-200 border border-purple-400/40 pointer-events-none">
-                        {imgEl.field} ({imgEl.animationType}) {!isVisible && '• Inactive'}
-                      </div>
+                      {/* Photo slot tag only when selected */}
+                      {isSelected && (
+                        <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-purple-200 border border-purple-400/40 pointer-events-none">
+                          {imgEl.field} ({imgEl.animationType})
+                        </div>
+                      )}
                     </div>
 
                     {/* Resize Handles (Only when selected) */}
@@ -806,15 +842,13 @@ export default function VisualTimelineEditor({
               })}
 
               {/* Text Elements - Clean Typography Only, NO CSS Black Box or Debug Metadata */}
-              {template.textElements.map((txtEl) => {
+              {(template.textElements || []).map((txtEl) => {
                 const isVisible = currentTime >= txtEl.startTime && currentTime <= txtEl.endTime;
                 const isSelected = selectedElementId === txtEl.id;
 
-                // When playing, inactive elements are strictly hidden
-                if (isPlaying) {
-                  if (!isVisible) return null;
-                } else {
-                  if (!isVisible && !showInactiveElements && !isSelected) return null;
+                // Strict timeframe visibility: only elements active at this second are shown
+                if (!isVisible && !showInactiveElements) {
+                  return null;
                 }
 
                 const scale = getScale();
@@ -860,14 +894,14 @@ export default function VisualTimelineEditor({
                       isSelected
                         ? 'z-50 ring-2 ring-amber-400 ring-offset-2 ring-offset-black/60 bg-black/50 backdrop-blur-xs rounded px-2.5 py-1 shadow-2xl'
                         : isVisible
-                        ? 'z-40 hover:ring-1 hover:ring-amber-300/80 bg-black/20 rounded px-1.5 py-0.5'
+                        ? 'z-40 hover:ring-1 hover:ring-amber-300/80 rounded px-1.5 py-0.5'
                         : 'z-30 ring-1 ring-dashed ring-amber-400/60 bg-amber-950/30 rounded px-1.5 py-0.5'
                     }`}
                   >
-                    {/* Element identifier badge when selected or hovered */}
-                    {(isSelected || !isVisible) && (
+                    {/* Element identifier badge shown only when selected */}
+                    {isSelected && (
                       <div className="absolute -top-6 left-0 px-1.5 py-0.5 rounded bg-black/90 text-[10px] font-mono font-medium text-amber-300 border border-amber-500/50 pointer-events-none whitespace-nowrap z-50 shadow-md">
-                        {txtEl.field || txtEl.label} ({txtEl.startTime}s - {txtEl.endTime}s) {!isVisible && '• Inactive'}
+                        {txtEl.field || txtEl.label} ({txtEl.startTime}s - {txtEl.endTime}s)
                       </div>
                     )}
 
@@ -973,7 +1007,7 @@ export default function VisualTimelineEditor({
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                All Layers ({template.textElements.length + template.imageElements.length})
+                All Layers ({((template.textElements || []).length + (template.imageElements || []).length)})
               </button>
             </div>
 
@@ -1533,7 +1567,7 @@ export default function VisualTimelineEditor({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
                     <Type className="w-3.5 h-3.5" />
-                    <span>Text Layers ({template.textElements.length})</span>
+                    <span>Text Layers ({(template.textElements || []).length})</span>
                   </div>
                   <button
                     onClick={addTextElement}
@@ -1544,7 +1578,7 @@ export default function VisualTimelineEditor({
                 </div>
 
                 <div className="space-y-1.5">
-                  {template.textElements.map((txtEl) => {
+                  {(template.textElements || []).map((txtEl) => {
                     const isVisible = currentTime >= txtEl.startTime && currentTime <= txtEl.endTime;
                     const isSelected = selectedElementId === txtEl.id;
 
@@ -1604,7 +1638,7 @@ export default function VisualTimelineEditor({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-purple-300">
                     <ImageIcon className="w-3.5 h-3.5" />
-                    <span>Photo Slots ({template.imageElements.length})</span>
+                    <span>Photo Slots ({(template.imageElements || []).length})</span>
                   </div>
                   <button
                     onClick={addImageElement}
@@ -1615,7 +1649,7 @@ export default function VisualTimelineEditor({
                 </div>
 
                 <div className="space-y-1.5">
-                  {template.imageElements.map((imgEl) => {
+                  {(template.imageElements || []).map((imgEl) => {
                     const isVisible = currentTime >= imgEl.startTime && currentTime <= imgEl.endTime;
                     const isSelected = selectedElementId === imgEl.id;
 
@@ -1694,7 +1728,7 @@ export default function VisualTimelineEditor({
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                All ({template.textElements.length + template.imageElements.length})
+                All ({((template.textElements || []).length + (template.imageElements || []).length)})
               </button>
               <button
                 onClick={() => setTrackFilter('text')}
@@ -1704,7 +1738,7 @@ export default function VisualTimelineEditor({
                     : 'text-amber-300 hover:text-white'
                 }`}
               >
-                Text Tracks ({template.textElements.length})
+                Text Tracks ({(template.textElements || []).length})
               </button>
               <button
                 onClick={() => setTrackFilter('image')}
@@ -1714,7 +1748,7 @@ export default function VisualTimelineEditor({
                     : 'text-purple-300 hover:text-white'
                 }`}
               >
-                Photo Tracks ({template.imageElements.length})
+                Photo Tracks ({(template.imageElements || []).length})
               </button>
             </div>
           </div>
@@ -1767,7 +1801,7 @@ export default function VisualTimelineEditor({
 
           {/* Text Overlay Tracks */}
           {(trackFilter === 'all' || trackFilter === 'text') &&
-            template.textElements.map((txtEl) => {
+            (template.textElements || []).map((txtEl) => {
               const leftPct = (txtEl.startTime / duration) * 100;
               const widthPct = Math.max(2, ((txtEl.endTime - txtEl.startTime) / duration) * 100);
               const isSelected = selectedElementId === txtEl.id;
@@ -1832,7 +1866,7 @@ export default function VisualTimelineEditor({
 
           {/* Image Overlay Tracks (Photo 1..5) */}
           {(trackFilter === 'all' || trackFilter === 'image') &&
-            template.imageElements.map((imgEl) => {
+            (template.imageElements || []).map((imgEl) => {
               const leftPct = (imgEl.startTime / duration) * 100;
               const widthPct = Math.max(2, ((imgEl.endTime - imgEl.startTime) / duration) * 100);
               const isSelected = selectedElementId === imgEl.id;
