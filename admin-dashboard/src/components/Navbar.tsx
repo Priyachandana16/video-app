@@ -27,9 +27,9 @@ export default function Navbar({ onNewTemplateClick, activeTab = 'templates', on
     <header className="sticky top-0 z-50 bg-[#101018]/90 backdrop-blur-md border-b border-[#232334] px-6 py-3.5 flex items-center justify-between shadow-xl">
       <div className="flex items-center gap-6">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFD700] via-[#D4AF37] to-[#800020] p-0.5 shadow-lg shadow-amber-500/10 group-hover:shadow-amber-500/25 transition-all">
-            <div className="w-full h-full bg-[#14141E] rounded-[10px] flex items-center justify-center">
-              <Film className="w-5 h-5 text-[#FFD700]" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFD700] via-[#D4AF37] to-[#800020] p-0.5 shadow-lg shadow-amber-500/10 group-hover:shadow-amber-500/25 transition-all flex items-center justify-center">
+            <div className="w-full h-full bg-[#14141E] rounded-[10px] flex items-center justify-center p-1">
+              <img src="/logo.png" alt="My Invitation Logo" className="w-7 h-7 object-contain drop-shadow" />
             </div>
           </div>
           <div>

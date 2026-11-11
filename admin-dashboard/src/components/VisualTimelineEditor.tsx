@@ -599,7 +599,14 @@ export default function VisualTimelineEditor({
     <div className="flex flex-col h-screen bg-[#0A0A10] text-slate-100 overflow-hidden select-none">
       {/* Top Header Bar */}
       <header className="h-14 bg-[#12121C] border-b border-[#232332] px-4 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 pr-1 border-r border-[#26263A]">
+            <img src="/logo.png" alt="My Invitation" className="w-8 h-8 object-contain drop-shadow" />
+            <span className="font-playfair text-sm font-bold tracking-wide text-white hidden sm:inline">
+              My Invitation
+            </span>
+          </div>
+
           <button
             onClick={onBack}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1A1A28] hover:bg-[#252538] text-slate-300 hover:text-white text-xs font-semibold transition-all border border-[#2A2A3E]"
