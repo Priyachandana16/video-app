@@ -14,7 +14,7 @@ class ApiService {
 
   String _baseUrl = const String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: 'http://192.168.29.2:5000/api',
+    defaultValue: 'https://myinvitation-abun.onrender.com/api',
   );
   String? _authToken;
 
@@ -24,12 +24,6 @@ class ApiService {
   }
 
   String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:5000/api';
-    }
-    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-      return 'http://localhost:5000/api';
-    }
     return _baseUrl;
   }
 

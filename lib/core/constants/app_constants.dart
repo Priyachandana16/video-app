@@ -4,7 +4,7 @@ class AppConstants {
   static const String appEnglishTagline = 'Connecting Invitations to Hearts';
 
   // API Endpoints
-  static const String defaultApiBaseUrl = 'http://10.0.2.2:5000/api';
+  static const String defaultApiBaseUrl = 'https://myinvitation-abun.onrender.com/api';
   static const String localHostApiBaseUrl = 'http://localhost:5000/api';
 
   // Supabase Configuration

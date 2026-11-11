@@ -49,9 +49,9 @@ Future<bool> downloadVideoFile(String url, String filename) async {
     // 3. Network URL: fetch bytes
     final fullUrl = url.startsWith('http')
         ? url
-        : (Platform.isAndroid ? 'http://10.0.2.2:5000$url' : 'http://localhost:5000$url');
+        : 'https://myinvitation-abun.onrender.com$url';
 
-    final res = await http.get(Uri.parse(fullUrl)).timeout(const Duration(seconds: 30));
+    final res = await http.get(Uri.parse(fullUrl)).timeout(const Duration(seconds: 45));
     if (res.statusCode == 200) {
       final targetFile = File(savePath);
       await targetFile.writeAsBytes(res.bodyBytes);
