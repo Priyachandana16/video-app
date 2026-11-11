@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../core/theme/app_colors.dart';
+import '../providers/auth_provider.dart';
+import 'auth/sign_in_screen.dart';
 import 'home/main_navigation_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -38,10 +41,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _navTimer = Timer(const Duration(milliseconds: 1000), () {
       if (mounted) {
+        final auth = context.read<AuthProvider>();
+        final targetScreen = auth.isAuthenticated
+            ? const MainNavigationScreen()
+            : const SignInScreen();
+
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 400),
-            pageBuilder: (_, _, _) => const MainNavigationScreen(),
+            pageBuilder: (_, _, _) => targetScreen,
             transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
           ),
         );
