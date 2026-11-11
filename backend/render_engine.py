@@ -298,66 +298,16 @@ def render_dynamic_invitation(config_path):
         else:
             Image.new('RGBA', (target_w, target_h), (0, 0, 0, 0)).save(out_img_path, 'PNG')
 
-        # Pre-render photo animation clip (uses <40MB RAM and runs in ~1s per photo)
-        clip_path = os.path.join(temp_dir, f"photo_clip_{idx}.mov")
-        mask_video = ink_mask_video if anim == 'ink_reveal' else brush_mask_video
-        clip_success = False
-
-        if anim in ['ink_reveal', 'brush_stroke'] and os.path.exists(mask_video):
-            pts_factor = anim_dur / 2.0
-            pad_dur = max(0.0, dur - anim_dur)
-            clip_filter = (
-                f"[1:v]scale={target_w}:{target_h},setpts={pts_factor:.3f}*PTS,tpad=stop_mode=clone:stop_duration={pad_dur:.2f},trim=duration={dur:.2f}[m];"
-                f"[0:v]scale={target_w}:{target_h}[p];"
-                f"[p][m]alphamerge,fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1[out]"
-            )
-            cmd_clip = [
-                ffmpeg_bin, '-y',
-                '-loop', '1', '-t', f"{dur:.2f}", '-i', out_img_path,
-                '-t', f"{anim_dur:.2f}", '-i', mask_video,
-                '-filter_complex', clip_filter,
-                '-map', '[out]',
-                '-c:v', 'qtrle',
-                '-threads', '1',
-                clip_path
-            ]
-            try:
-                subprocess.run(cmd_clip, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
-                clip_success = os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000
-            except Exception:
-                clip_success = False
-
-        if not clip_success:
-            clip_filter = (
-                f"[0:v]format=rgba,scale={target_w}:{target_h},"
-                f"fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,"
-                f"fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1[out]"
-            )
-            cmd_clip = [
-                ffmpeg_bin, '-y',
-                '-loop', '1', '-t', f"{dur:.2f}", '-i', out_img_path,
-                '-filter_complex', clip_filter,
-                '-map', '[out]',
-                '-c:v', 'qtrle',
-                '-threads', '1',
-                clip_path
-            ]
-            try:
-                subprocess.run(cmd_clip, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
-                clip_success = os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000
-            except Exception:
-                clip_success = False
-
-        if clip_success:
-            inputs.extend(['-thread_queue_size', '16', '-itsoffset', f"{st:.2f}", '-i', clip_path])
-        else:
-            inputs.extend(['-thread_queue_size', '16', '-itsoffset', f"{st:.2f}", '-i', out_img_path])
-
+        # Add image input with time-offset and smooth fade transitions (memory-safe <180MB)
+        inputs.extend(['-thread_queue_size', '16', '-loop', '1', '-t', f"{dur:.2f}", '-itsoffset', f"{st:.2f}", '-i', out_img_path])
         img_input_id = input_idx
         input_idx += 1
 
+        filter_chains.append(
+            f"[{img_input_id}:v]format=rgba,fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1[img_timed_{idx}]"
+        )
         next_stream = f"v_img_{idx}"
-        filter_chains.append(f"[{current_stream}][{img_input_id}:v]overlay={x}:{y}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]")
+        filter_chains.append(f"[{current_stream}][img_timed_{idx}]overlay={x}:{y}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]")
         current_stream = next_stream
 
     print("PROGRESS: 0.25 | Rendering custom typography & overlays...", flush=True)
