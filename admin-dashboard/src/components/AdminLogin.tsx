@@ -8,8 +8,8 @@ interface AdminLoginProps {
 }
 
 export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -83,7 +83,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
+                placeholder="Enter admin ID (e.g. admin)"
                 className="w-full pl-10 pr-4 py-2.5 bg-[#181826] border border-[#2D2D42] focus:border-amber-500/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 transition-all"
               />
             </div>
@@ -100,7 +100,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Enter password"
                 className="w-full pl-10 pr-4 py-2.5 bg-[#181826] border border-[#2D2D42] focus:border-amber-500/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 transition-all"
               />
             </div>
