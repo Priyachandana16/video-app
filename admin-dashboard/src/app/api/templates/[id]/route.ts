@@ -111,13 +111,18 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       updatedAt: new Date().toISOString(),
     };
 
-    await supabase
+    const { error: verErr } = await supabase
       .from('template_versions')
       .insert({
         template_id: id,
         version_number: nextVersion,
         config,
       });
+
+    if (verErr) {
+      console.error('Failed to insert template version:', verErr);
+      return NextResponse.json({ error: verErr.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
