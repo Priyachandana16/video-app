@@ -149,6 +149,9 @@ class PersonalizationProvider extends ChangeNotifier {
       print('[PhotoPicker] Opening gallery picker for womanPhoto');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 85,
       );
       if (image != null) {
         final bytes = await image.readAsBytes();
@@ -173,6 +176,9 @@ class PersonalizationProvider extends ChangeNotifier {
       print('[PhotoPicker] Opening gallery picker for manPhoto');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 85,
       );
       if (image != null) {
         final bytes = await image.readAsBytes();
@@ -207,6 +213,9 @@ class PersonalizationProvider extends ChangeNotifier {
       print('[PhotoPicker] Opening gallery picker for slot: $slotKey');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 85,
       );
       if (image != null) {
         final bytes = await image.readAsBytes();

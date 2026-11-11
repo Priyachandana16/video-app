@@ -832,8 +832,8 @@ class ApiService {
           }
         }
 
-        // Add woman (Bride) photo
-        if (!request.files.any((f) => f.field == 'womanPhoto')) {
+        // Add woman (Bride) photo only if photo_1 was not already added
+        if (!request.files.any((f) => f.field == 'photo_1' || f.field == 'womanPhoto')) {
           if (!kIsWeb && data.womanPhotoPath != null && File(data.womanPhotoPath!).existsSync()) {
             request.files.add(await http.MultipartFile.fromPath('womanPhoto', data.womanPhotoPath!));
           } else if (data.womanPhotoBytes != null) {
@@ -845,8 +845,8 @@ class ApiService {
           }
         }
 
-        // Add man (Groom) photo
-        if (!request.files.any((f) => f.field == 'manPhoto')) {
+        // Add man (Groom) photo only if photo_2 was not already added
+        if (!request.files.any((f) => f.field == 'photo_2' || f.field == 'manPhoto')) {
           if (!kIsWeb && data.manPhotoPath != null && File(data.manPhotoPath!).existsSync()) {
             request.files.add(await http.MultipartFile.fromPath('manPhoto', data.manPhotoPath!));
           } else if (data.manPhotoBytes != null) {
@@ -939,6 +939,13 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('Video render server request error: $e');
+      final errStr = e.toString();
+      if (errStr.contains('Connection reset by peer') || errStr.contains('Software caused connection abort')) {
+        return {
+          'success': false,
+          'error': 'Network connection interrupted while uploading photos. Please check your internet connection and tap Retry Generation.',
+        };
+      }
       return {
         'success': false,
         'error': 'Video render connection error: $e',
