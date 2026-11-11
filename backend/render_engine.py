@@ -1,5 +1,18 @@
 import sys
 import os
+
+# Ensure UTF-8 output streams for Telugu, Hindi & Unicode characters
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 import json
 import re
 import math
@@ -43,26 +56,50 @@ def hex_to_rgb(hex_str, default=(255, 215, 0)):
         pass
     return default
 
-def get_best_font(font_family, size):
+def get_best_font(font_family, size, text=''):
+    backend_dir = os.path.dirname(__file__)
+    project_root = os.path.abspath(os.path.join(backend_dir, '..'))
+
+    has_unicode = any(ord(c) > 127 for c in (text or ''))
+    bundled_fonts = [
+        os.path.join(backend_dir, 'assets', 'fonts', 'NotoSansTelugu.ttf'),
+        os.path.join(project_root, 'assets', 'fonts', 'NotoSansTelugu.ttf'),
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/usr/share/fonts/truetype/freefont/FreeSerif.ttf',
+        '/usr/share/fonts/truetype/freefont/FreeSans.ttf'
+    ]
+
     candidates = []
+    if has_unicode:
+        for bf in bundled_fonts:
+            if os.path.exists(bf):
+                candidates.append(bf)
+
     fam_lower = (font_family or '').lower()
     if 'cinzel' in fam_lower:
-        candidates = ["georgia.ttf", "times.ttf", "palatino.ttf", "segoeui.ttf"]
+        candidates.extend(["georgia.ttf", "times.ttf", "palatino.ttf", "segoeui.ttf"])
     elif 'playfair' in fam_lower:
-        candidates = ["georgia.ttf", "times.ttf", "arial.ttf"]
+        candidates.extend(["georgia.ttf", "times.ttf", "arial.ttf"])
     else:
-        candidates = ["calibri.ttf", "arial.ttf", "segoeui.ttf", "georgia.ttf"]
+        candidates.extend(["calibri.ttf", "arial.ttf", "segoeui.ttf", "georgia.ttf"])
+
+    for bf in bundled_fonts:
+        if bf not in candidates and os.path.exists(bf):
+            candidates.append(bf)
 
     for fn in candidates:
         try:
             return ImageFont.truetype(fn, size)
         except Exception:
             continue
-    return ImageFont.load_default()
+    try:
+        return ImageFont.load_default()
+    except Exception:
+        return None
 
 def render_text_image(text, font_family, font_size, font_color, align, max_box_w=1600):
     """Render antialiased text onto a tightly-bounded RGBA image, returning (img, w, h)."""
-    font = get_best_font(font_family, font_size)
+    font = get_best_font(font_family, font_size, text=text)
     dummy_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
     dummy_draw = ImageDraw.Draw(dummy_img)
 

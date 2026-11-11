@@ -1064,6 +1064,7 @@ app.post('/api/render', upload.fields([
     if (global.__activeRenderProc) {
       try {
         console.log(`[Job ${jobId}] Terminating previous stale render process to dedicate 100% CPU`);
+        global.__activeRenderProc.__intentionallyKilled = true;
         global.__activeRenderProc.kill('SIGTERM');
       } catch (_) {}
     }
@@ -1077,7 +1078,14 @@ app.post('/api/render', upload.fields([
       }
     }
 
-    const py = spawn(pythonBin, [pythonScript, configPath]);
+    const py = spawn(pythonBin, [pythonScript, configPath], {
+      env: {
+        ...process.env,
+        PYTHONIOENCODING: 'utf-8',
+        LANG: 'C.UTF-8',
+        LC_ALL: 'C.UTF-8'
+      }
+    });
     global.__activeRenderProc = py;
 
     let pyOut = '';
@@ -1140,6 +1148,10 @@ app.post('/api/render', upload.fields([
       try { fs.unlinkSync(configPath); } catch (_) { }
 
       if (code !== 0) {
+        if (py.__intentionallyKilled) {
+          console.log(`[Job ${jobId}] Job was cancelled in favor of a newer render`);
+          return;
+        }
         console.error(`[Job ${jobId}] Python render returned non-zero (${code}):`, pyErr);
         const cur = RENDER_JOBS.get(jobId) || {};
         cur.status = 'failed';

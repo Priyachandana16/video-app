@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     fonts-dejavu-core \
     fonts-freefont-ttf \
+    fonts-noto-core \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -25,6 +26,9 @@ COPY . .
 # Set environment variables
 ENV PORT=5000
 ENV NODE_ENV=production
+ENV PYTHONIOENCODING=utf-8
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
 EXPOSE 5000
 
