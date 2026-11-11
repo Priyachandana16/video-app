@@ -56,6 +56,18 @@ export interface InvitationTemplate {
   sampleResultPath?: string;
   textElements: TextElementConfig[];
   imageElements: ImageElementConfig[];
+  isPublished?: boolean;
+  is_published?: boolean;
+  status?: string;
+  currentVersion?: number;
+  tags?: string[];
+  isPopular?: boolean;
+  isNew?: boolean;
+  is_popular?: boolean;
+  is_new?: boolean;
+  audioPath?: string;
+  audioUrl?: string;
+  createdAt?: string;
   updatedAt?: string;
 }
 
