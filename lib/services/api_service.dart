@@ -24,6 +24,14 @@ class ApiService {
   }
 
   String get baseUrl {
+    if (kIsWeb) {
+      try {
+        final host = Uri.base.host;
+        if (host == 'localhost' || host == '127.0.0.1') {
+          return 'http://localhost:5000/api';
+        }
+      } catch (_) {}
+    }
     return _baseUrl;
   }
 
@@ -854,7 +862,7 @@ class ApiService {
       }
 
       onProgress?.call(0.08, 'Preparing uploaded photos...');
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 15));
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 180));
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 202) {
@@ -865,12 +873,12 @@ class ApiService {
           // Poll job status with real updates
           final serverHost = baseUrl.replaceAll('/api', '');
           int attempts = 0;
-          while (attempts < 120) {
+          while (attempts < 180) {
             await Future.delayed(const Duration(milliseconds: 1000));
             attempts++;
             try {
               final statusRes = await http.get(Uri.parse('$baseUrl/render/status/$jobId'), headers: _headers)
-                  .timeout(const Duration(seconds: 4));
+                  .timeout(const Duration(seconds: 5));
               if (statusRes.statusCode == 200) {
                 final job = jsonDecode(statusRes.body);
                 final double p = (job['progress'] as num?)?.toDouble() ?? 0.5;
@@ -896,6 +904,10 @@ class ApiService {
               }
             } catch (_) {}
           }
+          return {
+            'success': false,
+            'error': 'Video render polling timed out. Please try again.',
+          };
         } else if (resData['success'] == true) {
           final String rawUrl = resData['videoUrl'] ?? '';
           final String serverHost = baseUrl.replaceAll('/api', '');
@@ -908,33 +920,23 @@ class ApiService {
             'creationId': resData['creationId'],
           };
         }
+      } else {
+        return {
+          'success': false,
+          'error': 'Server returned error status ${response.statusCode}: ${response.body}',
+        };
       }
     } catch (e) {
-      debugPrint('Video render server request: $e');
-    }
-
-    // Smooth milestone progress for fallback
-    onProgress?.call(0.35, 'Creating invitation scenes...');
-    await Future.delayed(const Duration(milliseconds: 600));
-    onProgress?.call(0.70, 'Rendering your invitation video...');
-    await Future.delayed(const Duration(milliseconds: 600));
-    onProgress?.call(0.95, 'Finalizing video...');
-    await Future.delayed(const Duration(milliseconds: 600));
-    onProgress?.call(1.0, 'Video ready!');
-
-    // High fidelity fallback using the real template sample result
-    String fallbackAsset = 'assets/templates/template_01_sample_result.mp4';
-    if (data.templateId.contains('gold') || data.templateId.contains('02') || data.templateId.contains('04')) {
-      fallbackAsset = 'assets/templates/template_02_sample_result.mp4';
-    } else if (data.templateId.contains('divine') || data.templateId.contains('god') || data.templateId.contains('03') || data.templateId.contains('05')) {
-      fallbackAsset = 'assets/templates/template_03_sample_result.mp4';
+      debugPrint('Video render server request error: $e');
+      return {
+        'success': false,
+        'error': 'Video render connection error: $e',
+      };
     }
 
     return {
-      'success': true,
-      'videoUrl': fallbackAsset,
-      'isAsset': true,
-      'creationId': 'cr_${DateTime.now().millisecondsSinceEpoch}',
+      'success': false,
+      'error': 'Video rendering failed to initiate.',
     };
   }
 
