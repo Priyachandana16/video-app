@@ -69,7 +69,7 @@ class CustomTextField extends StatelessWidget {
             hintStyle: GoogleFonts.plusJakartaSans(
               fontSize: 14,
               fontWeight: FontWeight.w400,
-              color: const Color(0xFF94A3B8), // Subtle light-grey example text with clear contrast
+              color: Colors.white.withOpacity(0.35), // Subtle lower opacity placeholder that clears on typing
             ),
             filled: true,
             fillColor: AppColors.inputBackground,

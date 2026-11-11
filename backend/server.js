@@ -79,22 +79,6 @@ function loadDb() {
         phone: '9876543210',
         passwordHash: bcrypt.hashSync('Password123!', 10),
         createdAt: new Date().toISOString()
-      },
-      {
-        id: 'usr_yash_01',
-        username: 'yash',
-        fullName: 'Yash',
-        phone: '9876543210',
-        passwordHash: bcrypt.hashSync('123456', 10),
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'usr_admin_01',
-        username: 'admin',
-        fullName: 'Admin',
-        phone: '9999999999',
-        passwordHash: bcrypt.hashSync('admin123', 10),
-        createdAt: new Date().toISOString()
       }
     ],
     creations: [

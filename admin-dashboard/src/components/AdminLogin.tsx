@@ -135,3 +135,4 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
     </div>
   );
 }
+

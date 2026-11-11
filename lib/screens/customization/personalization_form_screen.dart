@@ -86,9 +86,8 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
     for (final txtEl in tmpl.textElements) {
       if (!_dynamicControllers.containsKey(txtEl.field)) {
         final existingVal = p.getCustomText(txtEl.field);
-        final initialVal = existingVal.isNotEmpty
-            ? existingVal
-            : (txtEl.defaultText.isNotEmpty ? txtEl.defaultText : '');
+        // Start empty so the template default text shows as low-opacity placeholder hint
+        final initialVal = existingVal.isNotEmpty ? existingVal : '';
         _dynamicControllers[txtEl.field] = TextEditingController(text: initialVal);
       }
     }
@@ -98,9 +97,8 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
     if (!_dynamicControllers.containsKey(txtEl.field)) {
       final p = context.read<PersonalizationProvider>().data;
       final existingVal = p.getCustomText(txtEl.field);
-      final initialVal = existingVal.isNotEmpty
-          ? existingVal
-          : (txtEl.defaultText.isNotEmpty ? txtEl.defaultText : '');
+      // Start empty so the template default text shows as low-opacity placeholder hint
+      final initialVal = existingVal.isNotEmpty ? existingVal : '';
       _dynamicControllers[txtEl.field] = TextEditingController(text: initialVal);
     }
     return _dynamicControllers[txtEl.field]!;
@@ -183,17 +181,20 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
       final Map<String, String> values = {};
       for (final txtEl in tmpl.textElements) {
         final ctrl = _getControllerForElement(txtEl);
-        values[txtEl.field] = ctrl.text.trim();
+        final entered = ctrl.text.trim();
+        // If left empty, smoothly use the template default text from admin
+        values[txtEl.field] = entered.isNotEmpty ? entered : txtEl.defaultText;
       }
       provider.updateCustomTexts(values);
 
       // Keep legacy fields in sync for backward compatibility
-      if (values.containsKey('brideName')) _brideController.text = values['brideName']!;
-      if (values.containsKey('groomName')) _groomController.text = values['groomName']!;
-      if (values.containsKey('ceremonyTitle')) _ceremonyController.text = values['ceremonyTitle']!;
-      if (values.containsKey('muhurthamTime')) _timeController.text = values['muhurthamTime']!;
-      if (values.containsKey('venue')) _venueController.text = values['venue']!;
-      if (values.containsKey('rsvp')) _rsvpController.text = values['rsvp']!;
+      if (values.containsKey('brideName')) provider.data.brideName = values['brideName']!;
+      if (values.containsKey('groomName')) provider.data.groomName = values['groomName']!;
+      if (values.containsKey('ceremonyTitle')) provider.data.ceremonyTitle = values['ceremonyTitle']!;
+      if (values.containsKey('eventDate')) provider.data.eventDate = values['eventDate']!;
+      if (values.containsKey('muhurthamTime')) provider.data.muhurthamTime = values['muhurthamTime']!;
+      if (values.containsKey('venue')) provider.data.venue = values['venue']!;
+      if (values.containsKey('rsvp')) provider.data.rsvp = values['rsvp']!;
     } else {
       final fullVenue = _addressController.text.trim().isNotEmpty
           ? '${_venueController.text.trim()}, ${_addressController.text.trim()}'
@@ -1518,9 +1519,14 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                             _pickTimeForController(ctrl);
                           }
                         },
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? '${txtEl.label.isNotEmpty ? txtEl.label : txtEl.field} is required'
-                            : null,
+                        validator: (v) {
+                          if (txtEl.defaultText.isNotEmpty) {
+                            return null; // Allows leaving empty to use the admin default placeholder
+                          }
+                          return (v == null || v.trim().isEmpty)
+                              ? '${txtEl.label.isNotEmpty ? txtEl.label : txtEl.field} is required'
+                              : null;
+                        },
                       ),
                     );
                   }),

@@ -108,7 +108,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   // Form Inputs
                   CustomTextField(
                     label: 'Phone Number or Username',
-                    hint: 'e.g., 9876543210 or rajesh',
+                    hint: 'e.g., yash or 9876543210',
                     controller: _identifierController,
                     prefixIcon: Icons.person_outline,
                     keyboardType: TextInputType.text,
@@ -123,7 +123,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
                   CustomTextField(
                     label: 'Password',
-                    hint: 'Enter your password',
+                    hint: 'Enter password (e.g. 123456)',
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     prefixIcon: Icons.lock_outline,
