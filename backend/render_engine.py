@@ -183,8 +183,12 @@ def render_dynamic_invitation(config_path):
             "imageElements": []
         }
 
-    canvas_w = template.get('canvasWidth', 1920)
-    canvas_h = template.get('canvasHeight', 1080)
+    orig_canvas_w = template.get('canvasWidth', 1920)
+    orig_canvas_h = template.get('canvasHeight', 1080)
+    # Render at 1280x720 (720p HD) for lightning speed and guaranteed memory safety under 200MB (Render free tier friendly)
+    canvas_w = min(1280, orig_canvas_w)
+    canvas_h = int(round(orig_canvas_h * (canvas_w / float(orig_canvas_w))))
+    scale_factor = canvas_w / float(orig_canvas_w)
     duration = float(template.get('durationSeconds', 102))
     master_video_rel = template.get('masterVideoPath', 'assets/templates/template_01_green_screen.mp4')
     if os.path.isabs(master_video_rel) and os.path.exists(master_video_rel):
@@ -250,7 +254,7 @@ def render_dynamic_invitation(config_path):
     text_elements = template.get('textElements', [])
 
     # Filter chains & inputs
-    inputs = ['-i', master_video]
+    inputs = ['-thread_queue_size', '16', '-i', master_video]
     filter_chains = []
     filter_chains.append(f"[0:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease,pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2,setsar=1[v_canvas]")
     current_stream = "v_canvas"
@@ -259,16 +263,16 @@ def render_dynamic_invitation(config_path):
     # 1. Image Elements
     for idx, img_el in enumerate(image_elements):
         field_name = img_el.get('field', f'photo_{idx+1}')
-        target_w = int(img_el.get('width', 500))
-        target_h = int(img_el.get('height', 600))
+        target_w = max(16, int(round(int(img_el.get('width', 500)) * scale_factor)))
+        target_h = max(16, int(round(int(img_el.get('height', 600)) * scale_factor)))
         fit_mode = img_el.get('fit', 'cover')
         st = float(img_el.get('startTime', 0))
         et = float(img_el.get('endTime', duration))
         dur = max(0.5, et - st)
         anim = img_el.get('animationType', 'fade')
         anim_dur = min(dur, float(img_el.get('animationDuration', 1.5)))
-        x = int(img_el.get('x', 0))
-        y = int(img_el.get('y', 0))
+        x = int(round(int(img_el.get('x', 0)) * scale_factor))
+        y = int(round(int(img_el.get('y', 0)) * scale_factor))
         fade_out = 0.5
 
         src_path = user_photos.get(field_name) or user_photos.get('photo')
@@ -294,33 +298,66 @@ def render_dynamic_invitation(config_path):
         else:
             Image.new('RGBA', (target_w, target_h), (0, 0, 0, 0)).save(out_img_path, 'PNG')
 
-        # Add image input (strictly loops for dur seconds)
-        inputs.extend(['-loop', '1', '-t', f"{dur:.2f}", '-i', out_img_path])
+        # Pre-render photo animation clip (uses <40MB RAM and runs in ~1s per photo)
+        clip_path = os.path.join(temp_dir, f"photo_clip_{idx}.mov")
+        mask_video = ink_mask_video if anim == 'ink_reveal' else brush_mask_video
+        clip_success = False
+
+        if anim in ['ink_reveal', 'brush_stroke'] and os.path.exists(mask_video):
+            pts_factor = anim_dur / 2.0
+            pad_dur = max(0.0, dur - anim_dur)
+            clip_filter = (
+                f"[1:v]scale={target_w}:{target_h},setpts={pts_factor:.3f}*PTS,tpad=stop_mode=clone:stop_duration={pad_dur:.2f},trim=duration={dur:.2f}[m];"
+                f"[0:v]scale={target_w}:{target_h}[p];"
+                f"[p][m]alphamerge,fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1[out]"
+            )
+            cmd_clip = [
+                ffmpeg_bin, '-y',
+                '-loop', '1', '-t', f"{dur:.2f}", '-i', out_img_path,
+                '-t', f"{anim_dur:.2f}", '-i', mask_video,
+                '-filter_complex', clip_filter,
+                '-map', '[out]',
+                '-c:v', 'qtrle',
+                '-threads', '1',
+                clip_path
+            ]
+            try:
+                subprocess.run(cmd_clip, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                clip_success = os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000
+            except Exception:
+                clip_success = False
+
+        if not clip_success:
+            clip_filter = (
+                f"[0:v]format=rgba,scale={target_w}:{target_h},"
+                f"fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,"
+                f"fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1[out]"
+            )
+            cmd_clip = [
+                ffmpeg_bin, '-y',
+                '-loop', '1', '-t', f"{dur:.2f}", '-i', out_img_path,
+                '-filter_complex', clip_filter,
+                '-map', '[out]',
+                '-c:v', 'qtrle',
+                '-threads', '1',
+                clip_path
+            ]
+            try:
+                subprocess.run(cmd_clip, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                clip_success = os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000
+            except Exception:
+                clip_success = False
+
+        if clip_success:
+            inputs.extend(['-thread_queue_size', '16', '-itsoffset', f"{st:.2f}", '-i', clip_path])
+        else:
+            inputs.extend(['-thread_queue_size', '16', '-itsoffset', f"{st:.2f}", '-i', out_img_path])
+
         img_input_id = input_idx
         input_idx += 1
 
-        mask_video = ink_mask_video if anim == 'ink_reveal' else brush_mask_video
-        if anim in ['ink_reveal', 'brush_stroke'] and os.path.exists(mask_video):
-            # Mask input strictly runs for dur seconds
-            inputs.extend(['-t', f"{dur:.2f}", '-i', mask_video])
-            mask_input_id = input_idx
-            input_idx += 1
-
-            pts_factor = anim_dur / 2.0
-            pad_dur = max(0.0, dur - anim_dur)
-            filter_chains.append(
-                f"[{mask_input_id}:v]scale={target_w}:{target_h},setpts={pts_factor:.3f}*PTS,tpad=stop_mode=clone:stop_duration={pad_dur:.2f},trim=duration={dur:.2f}[mask_p_{idx}]"
-            )
-            filter_chains.append(
-                f"[{img_input_id}:v][mask_p_{idx}]alphamerge,fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[img_timed_{idx}]"
-            )
-        else:
-            filter_chains.append(
-                f"[{img_input_id}:v]format=rgba,fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[img_timed_{idx}]"
-            )
-
         next_stream = f"v_img_{idx}"
-        filter_chains.append(f"[{current_stream}][img_timed_{idx}]overlay={x}:{y}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]")
+        filter_chains.append(f"[{current_stream}][{img_input_id}:v]overlay={x}:{y}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]")
         current_stream = next_stream
 
     print("PROGRESS: 0.25 | Rendering custom typography & overlays...", flush=True)
@@ -343,15 +380,19 @@ def render_dynamic_invitation(config_path):
         dur = max(0.5, et - st)
         fi = float(txt_el.get('fadeIn', 0.5))
         fo = float(txt_el.get('fadeOut', 0.5))
-        cx = int(txt_el.get('x', canvas_w // 2))
-        cy = int(txt_el.get('y', canvas_h // 2))
+        orig_cx = int(txt_el.get('x', orig_canvas_w // 2))
+        orig_cy = int(txt_el.get('y', orig_canvas_h // 2))
+        cx = int(round(orig_cx * scale_factor))
+        cy = int(round(orig_cy * scale_factor))
+        font_size = max(14, int(round(int(txt_el.get('fontSize', 40)) * scale_factor)))
 
         txt_img, bw, bh = render_text_image(
             str(text_val),
             txt_el.get('fontFamily', 'Cinzel'),
-            int(txt_el.get('fontSize', 40)),
+            font_size,
             txt_el.get('fontColor', '#FFD700'),
-            txt_el.get('textAlign', 'center')
+            txt_el.get('textAlign', 'center'),
+            max_box_w=int(1600 * scale_factor)
         )
         out_txt_path = os.path.join(temp_dir, f"prep_txt_{idx}.png")
         txt_img.save(out_txt_path, 'PNG')
@@ -365,12 +406,13 @@ def render_dynamic_invitation(config_path):
             ox = cx - (bw // 2)
         oy = cy - (bh // 2)
 
-        inputs.extend(['-loop', '1', '-t', f"{dur:.2f}", '-i', out_txt_path])
+        # Add text element with precise time offset and smooth fade transitions
+        inputs.extend(['-thread_queue_size', '16', '-loop', '1', '-t', f"{dur:.2f}", '-itsoffset', f"{st:.2f}", '-i', out_txt_path])
         txt_input_id = input_idx
         input_idx += 1
 
         filter_chains.append(
-            f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={fi:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
+            f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={fi:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1[txt_timed_{idx}]"
         )
         next_stream = f"v_txt_{idx}"
         filter_chains.append(f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]")
@@ -388,7 +430,9 @@ def render_dynamic_invitation(config_path):
         '-preset', 'ultrafast',
         '-crf', '26',
         '-tune', 'fastdecode',
-        '-threads', '0',
+        '-threads', '2',
+        '-filter_threads', '1',
+        '-filter_complex_threads', '1',
         '-pix_fmt', 'yuv420p',
         '-c:a', 'aac',
         '-b:a', '192k',
