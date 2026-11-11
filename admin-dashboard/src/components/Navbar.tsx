@@ -2,15 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Film, Plus, Server, Layers, Video } from 'lucide-react';
+import { Film, Plus, Server, Layers, Video, LogOut, ShieldCheck } from 'lucide-react';
 
 interface NavbarProps {
   onNewTemplateClick?: () => void;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  adminUser?: string;
+  onLogout?: () => void;
 }
 
-export default function Navbar({ onNewTemplateClick, activeTab = 'templates', onTabChange }: NavbarProps) {
+export default function Navbar({ onNewTemplateClick, activeTab = 'templates', onTabChange, adminUser = 'admin', onLogout }: NavbarProps) {
   const [serverOnline, setServerOnline] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -103,6 +105,24 @@ export default function Navbar({ onNewTemplateClick, activeTab = 'templates', on
             <Plus className="w-4 h-4" />
             Create Template
           </button>
+        )}
+
+        {/* Admin user & Logout */}
+        {onLogout && (
+          <div className="flex items-center gap-2 pl-2 border-l border-[#262638]">
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#181826] border border-[#2D2D42] text-xs text-amber-300 font-medium">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+              <span>{adminUser}</span>
+            </div>
+            <button
+              onClick={onLogout}
+              title="Sign out of Admin Studio"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#181824] hover:bg-rose-500/15 border border-[#2D2D42] hover:border-rose-500/40 text-slate-300 hover:text-rose-300 text-xs font-semibold transition-all active:scale-95"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+          </div>
         )}
       </div>
     </header>

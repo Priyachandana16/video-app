@@ -6,13 +6,38 @@ import TemplateCard from '../components/TemplateCard';
 import CreateTemplateModal from '../components/CreateTemplateModal';
 import VisualTimelineEditor from '../components/VisualTimelineEditor';
 import MediaAssetsList from '../components/MediaAssetsList';
+import AdminLogin from '../components/AdminLogin';
 import { InvitationTemplate } from '../types/template';
 import { Film, Sparkles, Filter, RefreshCw, AlertCircle, Layers, CheckCircle } from 'lucide-react';
 
 export default function AdminDashboardPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [adminUser, setAdminUser] = useState<string>('admin');
+  const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
+
   const [templates, setTemplates] = useState<InvitationTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Check Admin session on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('my_invitation_admin_session');
+      if (stored) {
+        const session = JSON.parse(stored);
+        if (session && session.user) {
+          setAdminUser(session.user);
+          setIsAuthenticated(true);
+        }
+      }
+    } catch (_) {}
+    setIsCheckingAuth(false);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('my_invitation_admin_session');
+    setIsAuthenticated(false);
+  };
 
   // Filters
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -92,6 +117,27 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Render loading state while reading localStorage session
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-[#0A0A10] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  // Require Admin Login if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <AdminLogin
+        onLoginSuccess={(user) => {
+          setAdminUser(user);
+          setIsAuthenticated(true);
+        }}
+      />
+    );
+  }
+
   // If in Visual Timeline Editor mode, render editor full-screen
   if (editingTemplate) {
     return (
@@ -120,6 +166,8 @@ export default function AdminDashboardPage() {
         onNewTemplateClick={() => setIsCreateModalOpen(true)}
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab)}
+        adminUser={adminUser}
+        onLogout={handleLogout}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
