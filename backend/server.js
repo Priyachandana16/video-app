@@ -9,13 +9,21 @@ const { spawn } = require('child_process');
 require('dotenv').config();
 const supabaseDb = require('./supabase');
 
+// Process-level crash prevention guards
+process.on('uncaughtException', (err) => {
+  console.error('[SERVER] Caught Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[SERVER] Caught Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'my_invitation_super_secret_jwt_key_2026';
 
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Serve static assets and rendered exports
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -36,12 +44,18 @@ app.use('/api/exports', express.static(EXPORTS_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
 app.use('/api/uploads', express.static(UPLOADS_DIR));
 
-// Configure multer for photo uploads
+// Configure multer for photo uploads with expanded limits
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOADS_DIR),
   filename: (req, file, cb) => cb(null, `upload_${Date.now()}_${file.originalname.replace(/\s+/g, '_')}`)
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 60 * 1024 * 1024,
+    fieldSize: 60 * 1024 * 1024
+  }
+});
 
 // Local persistent file store
 const DB_FILE = path.join(DATA_DIR, 'db.json');
@@ -1047,10 +1061,32 @@ app.post('/api/render', upload.fields([
     const pythonScript = path.join(__dirname, 'render_engine.py');
     console.log(`[Job ${jobId}] Starting video render for ${groomName} & ${brideName}...`);
 
-    const py = spawn('python', [pythonScript, configPath]);
+    let pythonBin = process.platform === 'win32' ? 'python' : 'python3';
+    if (process.platform !== 'win32') {
+      if (fs.existsSync('/usr/bin/python3')) {
+        pythonBin = '/usr/bin/python3';
+      } else if (fs.existsSync('/usr/bin/python')) {
+        pythonBin = '/usr/bin/python';
+      }
+    }
+
+    const py = spawn(pythonBin, [pythonScript, configPath]);
 
     let pyOut = '';
     let pyErr = '';
+
+    py.on('error', (err) => {
+      clearInterval(progressTimer);
+      console.error(`[Job ${jobId}] Failed to start Python process (${pythonBin}):`, err);
+      const cur = RENDER_JOBS.get(jobId) || {};
+      cur.status = 'failed';
+      cur.error = `Failed to launch video render process: ${err.message}`;
+      RENDER_JOBS.set(jobId, cur);
+      supabaseDb.updateGenerationStatus(jobId, 'failed', null, cur.error).catch(() => {});
+      if (!isAsync && !res.headersSent) {
+        res.status(500).json({ success: false, error: cur.error });
+      }
+    });
 
     // Interval to advance estimated progress if python doesn't emit explicit tags
     const progressTimer = setInterval(() => {
@@ -1217,6 +1253,9 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', app: 'My Invitation API', timestamp: new Date().toISOString() });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`My Invitation backend running on http://localhost:${PORT}`);
 });
+server.keepAliveTimeout = 120000;
+server.headersTimeout = 125000;
+server.timeout = 300000;
