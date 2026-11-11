@@ -1,9 +1,8 @@
-FROM node:20-bullseye-slim
+FROM node:20-bookworm-slim
 
-# Install system dependencies: Python3, pip, PIL, FFmpeg, fonts
+# Install system dependencies: Python3, PIL, FFmpeg, fonts
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
-    python3-pip \
     python3-pil \
     ffmpeg \
     fonts-dejavu-core \
@@ -30,4 +29,3 @@ EXPOSE 5000
 
 # Start backend server
 CMD ["node", "server.js"]
-
