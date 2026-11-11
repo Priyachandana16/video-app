@@ -884,7 +884,7 @@ class ApiService {
           // Poll job status with real updates
           final serverHost = baseUrl.replaceAll('/api', '');
           int attempts = 0;
-          while (attempts < 180) {
+          while (attempts < 360) {
             await Future.delayed(const Duration(milliseconds: 1000));
             attempts++;
             try {

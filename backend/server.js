@@ -1061,6 +1061,13 @@ app.post('/api/render', upload.fields([
     const pythonScript = path.join(__dirname, 'render_engine.py');
     console.log(`[Job ${jobId}] Starting video render for ${groomName} & ${brideName}...`);
 
+    if (global.__activeRenderProc) {
+      try {
+        console.log(`[Job ${jobId}] Terminating previous stale render process to dedicate 100% CPU`);
+        global.__activeRenderProc.kill('SIGTERM');
+      } catch (_) {}
+    }
+
     let pythonBin = process.platform === 'win32' ? 'python' : 'python3';
     if (process.platform !== 'win32') {
       if (fs.existsSync('/usr/bin/python3')) {
@@ -1071,6 +1078,7 @@ app.post('/api/render', upload.fields([
     }
 
     const py = spawn(pythonBin, [pythonScript, configPath]);
+    global.__activeRenderProc = py;
 
     let pyOut = '';
     let pyErr = '';
@@ -1128,6 +1136,7 @@ app.post('/api/render', upload.fields([
 
     py.on('close', async (code) => {
       clearInterval(progressTimer);
+      if (global.__activeRenderProc === py) global.__activeRenderProc = null;
       try { fs.unlinkSync(configPath); } catch (_) { }
 
       if (code !== 0) {

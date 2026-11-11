@@ -116,7 +116,7 @@ def run_ffmpeg_with_progress(cmd, total_duration_sec=60.0):
 
     proc = subprocess.Popen(
         cmd,
-        stdout=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         universal_newlines=True,
         bufsize=1
@@ -386,6 +386,8 @@ def render_dynamic_invitation(config_path):
         '-map', '0:a?',
         '-c:v', 'libx264',
         '-preset', 'ultrafast',
+        '-crf', '26',
+        '-tune', 'fastdecode',
         '-threads', '0',
         '-pix_fmt', 'yuv420p',
         '-c:a', 'aac',
