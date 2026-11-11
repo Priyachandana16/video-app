@@ -336,12 +336,12 @@ def render_dynamic_invitation(config_path):
             Image.new('RGBA', (target_w, target_h), (0, 0, 0, 0)).save(out_img_path, 'PNG')
 
         # Add image input with time-offset and smooth fade transitions (memory-safe <180MB)
-        inputs.extend(['-thread_queue_size', '16', '-loop', '1', '-t', f"{dur:.2f}", '-itsoffset', f"{st:.2f}", '-i', out_img_path])
+        inputs.extend(['-thread_queue_size', '16', '-loop', '1', '-t', f"{dur:.2f}", '-i', out_img_path])
         img_input_id = input_idx
         input_idx += 1
 
         filter_chains.append(
-            f"[{img_input_id}:v]format=rgba,fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1[img_timed_{idx}]"
+            f"[{img_input_id}:v]format=rgba,fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[img_timed_{idx}]"
         )
         next_stream = f"v_img_{idx}"
         filter_chains.append(f"[{current_stream}][img_timed_{idx}]overlay={x}:{y}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]")
@@ -394,12 +394,12 @@ def render_dynamic_invitation(config_path):
         oy = cy - (bh // 2)
 
         # Add text element with precise time offset and smooth fade transitions
-        inputs.extend(['-thread_queue_size', '16', '-loop', '1', '-t', f"{dur:.2f}", '-itsoffset', f"{st:.2f}", '-i', out_txt_path])
+        inputs.extend(['-thread_queue_size', '16', '-loop', '1', '-t', f"{dur:.2f}", '-i', out_txt_path])
         txt_input_id = input_idx
         input_idx += 1
 
         filter_chains.append(
-            f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={fi:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1[txt_timed_{idx}]"
+            f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={fi:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
         )
         next_stream = f"v_txt_{idx}"
         filter_chains.append(f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]")
