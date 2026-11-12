@@ -787,6 +787,7 @@ export default function VisualTimelineEditor({
                       top: `${top}px`,
                       width: `${width}px`,
                       height: `${height}px`,
+                      transform: `rotate(${imgEl.rotation || 0}deg)`,
                       opacity: !isVisible ? 0.35 : 1,
                     }}
                     className={`absolute cursor-move transition-shadow z-10 ${
@@ -891,10 +892,10 @@ export default function VisualTimelineEditor({
                       top: `${top}px`,
                       transform:
                         txtEl.textAlign === 'center'
-                          ? 'translate(-50%, -50%)'
+                          ? `translate(-50%, -50%) rotate(${txtEl.rotation || 0}deg)`
                           : txtEl.textAlign === 'right'
-                          ? 'translate(-100%, -50%)'
-                          : 'translate(0, -50%)',
+                          ? `translate(-100%, -50%) rotate(${txtEl.rotation || 0}deg)`
+                          : `translate(0, -50%) rotate(${txtEl.rotation || 0}deg)`,
                       opacity: textOpacity,
                     }}
                     className={`absolute cursor-move select-none transition-all ${
@@ -1206,11 +1207,23 @@ export default function VisualTimelineEditor({
                     onChange={(e) => updateTextElement(selectedTextElement.id, { fontFamily: e.target.value })}
                     className="w-full px-2.5 py-1.5 rounded-lg bg-[#171724] border border-[#2A2A3E] text-xs text-white"
                   >
-                    <option value="Cinzel">Cinzel (Royal)</option>
-                    <option value="Playfair Display">Playfair (Classic)</option>
-                    <option value="Georgia">Georgia</option>
-                    <option value="Montserrat">Montserrat</option>
-                    <option value="Roboto">Roboto</option>
+                    <optgroup label="Telugu Fonts (తెలుగు ఫాంట్లు)">
+                      <option value="Noto Sans Telugu">Noto Sans Telugu (స్పష్టమైన శైలి)</option>
+                      <option value="Ramabhadra">Ramabhadra (రామభద్ర - హెడ్డింగ్)</option>
+                      <option value="Suranna">Suranna (సూరన్న - సాంప్రదాయక)</option>
+                      <option value="Gidugu">Gidugu (గిడుగు - ఆధునిక శైలి)</option>
+                      <option value="Peddana">Peddana (పెద్దన - రాయల్ స్టైల్)</option>
+                      <option value="Ponnala">Ponnala (పొన్నాల - వేద మంత్రాలు)</option>
+                      <option value="Dhurjati">Dhurjati (ధూర్జటి - శుభకార్యం)</option>
+                    </optgroup>
+                    <optgroup label="English & Royal Fonts">
+                      <option value="Cinzel">Cinzel (Royal Header)</option>
+                      <option value="Playfair Display">Playfair (Classic Luxury)</option>
+                      <option value="Great Vibes">Great Vibes (Cursive Calligraphy)</option>
+                      <option value="Montserrat">Montserrat (Clean Modern)</option>
+                      <option value="Georgia">Georgia (Editorial Serif)</option>
+                      <option value="Roboto">Roboto (Simple Sans)</option>
+                    </optgroup>
                   </select>
                 </div>
                 <div>
@@ -1340,6 +1353,33 @@ export default function VisualTimelineEditor({
                       onChange={(e) => updateTextElement(selectedTextElement.id, { fadeOut: Number(e.target.value) })}
                       className="w-full accent-amber-500"
                     />
+                  </div>
+                </div>
+
+                {/* Text Rotation Control */}
+                <div className="pt-2 border-t border-[#222234]">
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                    <span>Rotation Angle</span>
+                    <span className="font-mono text-amber-300">{selectedTextElement.rotation || 0}°</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="-180"
+                      max="180"
+                      step="1"
+                      value={selectedTextElement.rotation || 0}
+                      onChange={(e) => updateTextElement(selectedTextElement.id, { rotation: Number(e.target.value) })}
+                      className="w-full accent-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => updateTextElement(selectedTextElement.id, { rotation: 0 })}
+                      className="text-[10px] px-2 py-0.5 rounded bg-[#202030] text-slate-400 hover:text-white"
+                      title="Reset rotation to 0°"
+                    >
+                      Reset
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1482,15 +1522,74 @@ export default function VisualTimelineEditor({
                   <select
                     value={selectedImageElement.animationType}
                     onChange={(e) =>
-                      updateImageElement(selectedImageElement.id, { animationType: e.target.value as any })
+                      updateImageElement(selectedImageElement.id, {
+                        animationType: e.target.value as any,
+                        chromaKey: e.target.value === 'chroma_key' || selectedImageElement.chromaKey,
+                      })
                     }
                     className="w-full px-2.5 py-1.5 rounded bg-[#101018] border border-[#2A2A3C] text-xs text-white"
                   >
                     <option value="ink_reveal">1. Ink Reveal (Organic Bleed)</option>
                     <option value="brush_stroke">2. Brush Stroke Reveal</option>
                     <option value="fade">3. Simple Fade In</option>
-                    <option value="none">4. No Animation (Cut)</option>
+                    <option value="chroma_key">4. Chroma Key Pro (Green Screen)</option>
+                    <option value="none">5. No Animation (Cut)</option>
                   </select>
+                </div>
+
+                {/* Chroma Key Controls */}
+                <div className="pt-2 border-t border-[#222234] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-slate-300 font-semibold flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                      Chroma Key (Green Screen)
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={!!selectedImageElement.chromaKey || selectedImageElement.animationType === 'chroma_key'}
+                      onChange={(e) =>
+                        updateImageElement(selectedImageElement.id, {
+                          chromaKey: e.target.checked,
+                          chromaKeyColor: selectedImageElement.chromaKeyColor || '#00FF00',
+                          animationType: e.target.checked ? 'chroma_key' : 'fade',
+                        })
+                      }
+                      className="accent-emerald-500 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  {(selectedImageElement.chromaKey || selectedImageElement.animationType === 'chroma_key') && (
+                    <div className="space-y-2 p-2 rounded-lg bg-emerald-950/20 border border-emerald-500/30 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Key Color</span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={selectedImageElement.chromaKeyColor || '#00FF00'}
+                            onChange={(e) => updateImageElement(selectedImageElement.id, { chromaKeyColor: e.target.value })}
+                            className="w-6 h-6 rounded border border-white/20 bg-transparent cursor-pointer"
+                          />
+                          <span className="font-mono text-emerald-300">{selectedImageElement.chromaKeyColor || '#00FF00'}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between text-slate-400 mb-1">
+                          <span>Similarity Tolerance</span>
+                          <span className="font-mono text-emerald-300">{selectedImageElement.chromaKeySimilarity || 0.25}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.05"
+                          max="0.50"
+                          step="0.01"
+                          value={selectedImageElement.chromaKeySimilarity || 0.25}
+                          onChange={(e) => updateImageElement(selectedImageElement.id, { chromaKeySimilarity: Number(e.target.value) })}
+                          className="w-full accent-emerald-500"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1560,6 +1659,33 @@ export default function VisualTimelineEditor({
                       }
                       className="w-full px-2.5 py-1.5 rounded bg-[#101018] border border-[#2A2A3C] text-xs text-white font-mono"
                     />
+                  </div>
+                </div>
+
+                {/* Image Rotation Control */}
+                <div className="pt-2 border-t border-[#222234]">
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                    <span>Rotation Angle</span>
+                    <span className="font-mono text-purple-300">{selectedImageElement.rotation || 0}°</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="-180"
+                      max="180"
+                      step="1"
+                      value={selectedImageElement.rotation || 0}
+                      onChange={(e) => updateImageElement(selectedImageElement.id, { rotation: Number(e.target.value) })}
+                      className="w-full accent-purple-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => updateImageElement(selectedImageElement.id, { rotation: 0 })}
+                      className="text-[10px] px-2 py-0.5 rounded bg-[#202030] text-slate-400 hover:text-white"
+                      title="Reset rotation to 0°"
+                    >
+                      Reset
+                    </button>
                   </div>
                 </div>
               </div>

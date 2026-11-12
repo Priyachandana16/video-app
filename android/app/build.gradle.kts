@@ -48,6 +48,13 @@ android {
         checkReleaseBuilds = false
         abortOnError = false
     }
+
+    packaging {
+        resources {
+            pickFirsts.add("**/libc++_shared.so")
+            pickFirsts.add("**/libjsc.so")
+        }
+    }
 }
 
 kotlin {

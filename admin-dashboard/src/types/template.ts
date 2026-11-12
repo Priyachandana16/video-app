@@ -1,4 +1,4 @@
-export type AnimationType = 'none' | 'fade' | 'ink_reveal' | 'brush_stroke';
+export type AnimationType = 'none' | 'fade' | 'ink_reveal' | 'brush_stroke' | 'chroma_key';
 export type TextAlign = 'left' | 'center' | 'right';
 export type ImageFit = 'cover' | 'contain';
 export type Orientation = '16:9' | '9:16';
@@ -18,6 +18,7 @@ export interface TextElementConfig {
   endTime: number;
   fadeIn: number;
   fadeOut: number;
+  rotation?: number;
 }
 
 export interface ImageElementConfig {
@@ -34,6 +35,11 @@ export interface ImageElementConfig {
   animationType: AnimationType;
   animationDuration: number;
   placeholderUrl?: string;
+  rotation?: number;
+  chromaKey?: boolean;
+  chromaKeyColor?: string;
+  chromaKeySimilarity?: number;
+  chromaKeyBlend?: number;
 }
 
 export interface InvitationTemplate {

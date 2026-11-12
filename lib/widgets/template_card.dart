@@ -70,7 +70,7 @@ class TemplateCard extends StatelessWidget {
                       image: DecorationImage(
                         image: _resolveImage(template.thumbnailUrl),
                         fit: BoxFit.cover,
-                        onError: (_, __) {},
+                        onError: (e, s) {},
                       ),
                     ),
                     child: Container(

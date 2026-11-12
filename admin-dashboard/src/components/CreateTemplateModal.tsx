@@ -6,13 +6,17 @@ import { X, Film, Check, Video, AlertCircle } from 'lucide-react';
 
 interface CreateTemplateModalProps {
   isOpen: boolean;
+  categories?: string[];
   onClose: () => void;
   onCreated: (newTemplate: InvitationTemplate) => void;
 }
 
-export default function CreateTemplateModal({ isOpen, onClose, onCreated }: CreateTemplateModalProps) {
+export default function CreateTemplateModal({ isOpen, categories, onClose, onCreated }: CreateTemplateModalProps) {
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('Wedding');
+  const availableCategories = categories && categories.length > 0 ? categories : ['Wedding', 'Reception', 'Half Saree', 'Engagement', 'First Birthday', 'Birthday', 'Anniversary', 'Festivals', 'House Warming'];
+  const [category, setCategory] = useState(availableCategories[0]);
+  const [customCategoryInput, setCustomCategoryInput] = useState('');
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [religion, setReligion] = useState('Hindu');
   const [orientation, setOrientation] = useState<'16:9' | '9:16'>('16:9');
   const [selectedVideo, setSelectedVideo] = useState('');
@@ -217,17 +221,51 @@ export default function CreateTemplateModal({ isOpen, onClose, onCreated }: Crea
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1A26] border border-[#2C2C40] focus:border-amber-500 text-white text-sm outline-none"
-              >
-                <option value="Wedding">Wedding</option>
-                <option value="First Birthday">First Birthday</option>
-                <option value="Birthday">Birthday</option>
-                <option value="Anniversary">Anniversary</option>
-                <option value="Festivals">Festivals</option>
-              </select>
+              {isCustomCategory ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={customCategoryInput}
+                    onChange={(e) => {
+                      setCustomCategoryInput(e.target.value);
+                      setCategory(e.target.value);
+                    }}
+                    placeholder="Enter custom category..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1A26] border border-amber-500/40 text-white text-sm outline-none"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomCategory(false);
+                      setCategory(availableCategories[0]);
+                    }}
+                    className="px-2.5 py-2.5 rounded-xl bg-[#222234] text-xs text-slate-400 hover:text-white"
+                  >
+                    List
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={category}
+                  onChange={(e) => {
+                    if (e.target.value === '__NEW__') {
+                      setIsCustomCategory(true);
+                      setCustomCategoryInput('');
+                    } else {
+                      setCategory(e.target.value);
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1A26] border border-[#2C2C40] focus:border-amber-500 text-white text-sm outline-none"
+                >
+                  {availableCategories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                  <option value="__NEW__">+ Custom Category...</option>
+                </select>
+              )}
             </div>
 
             <div>

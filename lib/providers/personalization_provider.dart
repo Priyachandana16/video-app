@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/personalization_data.dart';
 import '../models/template_model.dart';
@@ -7,6 +7,7 @@ import '../models/creation_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../services/download_service.dart';
+import '../services/on_device_render_service.dart';
 
 class PersonalizationProvider extends ChangeNotifier {
   PersonalizationData _data = PersonalizationData();
@@ -37,6 +38,9 @@ class PersonalizationProvider extends ChangeNotifier {
   bool? _userPhotoPreference;
   bool? get userPhotoPreference => _userPhotoPreference;
 
+  TemplateModel? _selectedTemplate;
+  TemplateModel? get selectedTemplate => _selectedTemplate;
+
   PersonalizationProvider() {
     loadCreations();
   }
@@ -51,6 +55,7 @@ class PersonalizationProvider extends ChangeNotifier {
   }
 
   void updateTemplate(TemplateModel template, {bool? hasPhoto}) {
+    _selectedTemplate = template;
     _data.templateId = template.id;
     if (hasPhoto != null) {
       _userPhotoPreference = hasPhoto;
@@ -263,7 +268,10 @@ class PersonalizationProvider extends ChangeNotifier {
     await pickManPhoto();
   }
 
-  Future<bool> startRendering() async {
+  Future<bool> startRendering({TemplateModel? template}) async {
+    if (template != null) {
+      _selectedTemplate = template;
+    }
     if (_isRendering) return false;
     _isRendering = true;
     _renderProgress = 0.01;
@@ -272,18 +280,52 @@ class PersonalizationProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await ApiService.instance.renderVideo(
-        _data,
-        onProgress: (progress, step) {
-          if (progress > _renderProgress) {
-            _renderProgress = progress.clamp(0.01, 1.0);
-          }
-          if (step.isNotEmpty) {
-            _renderStep = step;
-          }
-          notifyListeners();
-        },
-      );
+      Map<String, dynamic> result;
+      if (!kIsWeb) {
+        debugPrint('[PersonalizationProvider] Launching Native On-Device FFmpeg Engine...');
+        result = await OnDeviceRenderService.instance.renderOnDevice(
+          _data,
+          template: _selectedTemplate,
+          onProgress: (progress, step) {
+            if (progress > _renderProgress) {
+              _renderProgress = progress.clamp(0.01, 1.0);
+            }
+            if (step.isNotEmpty) {
+              _renderStep = step;
+            }
+            notifyListeners();
+          },
+        );
+
+        if (result['success'] != true) {
+          debugPrint('[PersonalizationProvider] Native render failed, trying cloud fallback: ${result['error']}');
+          result = await ApiService.instance.renderVideo(
+            _data,
+            onProgress: (progress, step) {
+              if (progress > _renderProgress) {
+                _renderProgress = progress.clamp(0.01, 1.0);
+              }
+              if (step.isNotEmpty) {
+                _renderStep = step;
+              }
+              notifyListeners();
+            },
+          );
+        }
+      } else {
+        result = await ApiService.instance.renderVideo(
+          _data,
+          onProgress: (progress, step) {
+            if (progress > _renderProgress) {
+              _renderProgress = progress.clamp(0.01, 1.0);
+            }
+            if (step.isNotEmpty) {
+              _renderStep = step;
+            }
+            notifyListeners();
+          },
+        );
+      }
 
       if (result['success'] == true) {
         _renderProgress = 1.0;

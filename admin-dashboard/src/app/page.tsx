@@ -48,7 +48,52 @@ export default function AdminDashboardPage() {
   const [editingTemplate, setEditingTemplate] = useState<InvitationTemplate | null>(null);
   const [activeTab, setActiveTab] = useState('templates');
 
-  const categories = ['All', 'Wedding', 'First Birthday', 'Birthday', 'Anniversary', 'Festivals'];
+  // Categories state with local persistence
+  const DEFAULT_CATEGORIES = ['All', 'Wedding', 'Reception', 'Half Saree', 'Engagement', 'First Birthday', 'Birthday', 'Anniversary', 'Festivals', 'House Warming'];
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('my_invitation_admin_categories');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCategories(parsed.includes('All') ? parsed : ['All', ...parsed]);
+        }
+      }
+    } catch (_) {}
+  }, []);
+
+  const handleAddCategory = () => {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    if (categories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+      alert('Category already exists');
+      return;
+    }
+    const updated = [...categories, trimmed];
+    setCategories(updated);
+    localStorage.setItem('my_invitation_admin_categories', JSON.stringify(updated));
+    setNewCategoryName('');
+    setIsAddingCategory(false);
+  };
+
+  const handleRemoveCategory = (catToRemove: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (catToRemove === 'All' || catToRemove === 'Wedding') {
+      alert('Cannot delete standard system category');
+      return;
+    }
+    if (confirm(`Delete category "${catToRemove}"?`)) {
+      const updated = categories.filter(c => c !== catToRemove);
+      setCategories(updated);
+      localStorage.setItem('my_invitation_admin_categories', JSON.stringify(updated));
+      if (selectedCategory === catToRemove) setSelectedCategory('All');
+    }
+  };
+
   const orientations = ['All', '16:9', '9:16'];
 
   const fetchTemplates = async () => {
@@ -195,21 +240,67 @@ export default function AdminDashboardPage() {
           <div className="space-y-6">
             {/* Filter Bar */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#13131D] border border-[#232334]">
-              {/* Category pills */}
+              {/* Category pills with Add & Delete capability */}
               <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1 sm:pb-0">
                 {categories.map((cat) => (
-                  <button
+                  <div
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                    className={`group relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
                       selectedCategory === cat
                         ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-md shadow-amber-500/20'
                         : 'bg-[#181824] hover:bg-white/5 text-slate-400 hover:text-white border border-[#26263A]'
                     }`}
                   >
-                    {cat}
-                  </button>
+                    <span>{cat}</span>
+                    {cat !== 'All' && cat !== 'Wedding' && (
+                      <span
+                        onClick={(e) => handleRemoveCategory(cat, e)}
+                        className="opacity-0 group-hover:opacity-100 hover:text-rose-400 text-[10px] ml-0.5 p-0.5 rounded-full transition-opacity"
+                        title={`Delete ${cat} category`}
+                      >
+                        ✕
+                      </span>
+                    )}
+                  </div>
                 ))}
+
+                {isAddingCategory ? (
+                  <div className="flex items-center gap-1.5 bg-[#181824] px-2.5 py-1 rounded-xl border border-amber-500/40">
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="Category name..."
+                      className="bg-transparent text-xs text-white outline-none w-28 placeholder:text-slate-500"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAddCategory();
+                        if (e.key === 'Escape') setIsAddingCategory(false);
+                      }}
+                    />
+                    <button
+                      onClick={handleAddCategory}
+                      className="text-xs text-amber-400 font-bold hover:text-amber-300"
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={() => setIsAddingCategory(false)}
+                      className="text-xs text-slate-400 hover:text-white"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsAddingCategory(true)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#181824] hover:bg-amber-500/10 text-amber-400 border border-amber-500/30 transition-all"
+                    title="Add new category"
+                  >
+                    <span>+ Add</span>
+                  </button>
+                )}
               </div>
 
               {/* Orientation & Actions */}
@@ -287,6 +378,7 @@ export default function AdminDashboardPage() {
       {/* Create Template Modal */}
       <CreateTemplateModal
         isOpen={isCreateModalOpen}
+        categories={categories.filter(c => c !== 'All')}
         onClose={() => setIsCreateModalOpen(false)}
         onCreated={(newTemplate) => {
           setTemplates((prev) => [newTemplate, ...prev]);

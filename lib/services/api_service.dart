@@ -104,7 +104,7 @@ class ApiService {
             fullName: identifier.toLowerCase() == 'yash' ? 'Yash' : (identifier.toLowerCase() == 'admin' ? 'Admin' : identifier),
             phone: identifier.contains('@') ? '9876543210' : identifier,
           );
-          _authToken = 'jwt_session_token_${identifier}';
+          _authToken = 'jwt_session_token_$identifier';
           return {'success': true, 'token': _authToken!, 'user': testUser};
         }
         final err = jsonDecode(response.body);

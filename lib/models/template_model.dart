@@ -13,6 +13,7 @@ class TemplateTextElement {
   final double endTime;
   final double fadeIn;
   final double fadeOut;
+  final double rotation;
 
   TemplateTextElement({
     required this.id,
@@ -29,6 +30,7 @@ class TemplateTextElement {
     required this.endTime,
     required this.fadeIn,
     required this.fadeOut,
+    this.rotation = 0.0,
   });
 
   factory TemplateTextElement.fromJson(Map<String, dynamic> json) {
@@ -47,6 +49,7 @@ class TemplateTextElement {
       endTime: (json['endTime'] as num?)?.toDouble() ?? 10.0,
       fadeIn: (json['fadeIn'] as num?)?.toDouble() ?? 0.5,
       fadeOut: (json['fadeOut'] as num?)?.toDouble() ?? 0.5,
+      rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -66,6 +69,7 @@ class TemplateTextElement {
       'endTime': endTime,
       'fadeIn': fadeIn,
       'fadeOut': fadeOut,
+      'rotation': rotation,
     };
   }
 }
@@ -84,6 +88,9 @@ class TemplateImageElement {
   final String animationType;
   final double animationDuration;
   final String? placeholderUrl;
+  final double rotation;
+  final bool chromaKey;
+  final String chromaKeyColor;
 
   TemplateImageElement({
     required this.id,
@@ -99,6 +106,9 @@ class TemplateImageElement {
     required this.animationType,
     required this.animationDuration,
     this.placeholderUrl,
+    this.rotation = 0.0,
+    this.chromaKey = false,
+    this.chromaKeyColor = '#00FF00',
   });
 
   factory TemplateImageElement.fromJson(Map<String, dynamic> json) {
@@ -116,6 +126,9 @@ class TemplateImageElement {
       animationType: json['animationType'] ?? 'fade',
       animationDuration: (json['animationDuration'] as num?)?.toDouble() ?? 1.2,
       placeholderUrl: json['placeholderUrl'],
+      rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
+      chromaKey: json['chromaKey'] == true || json['animationType'] == 'chroma_key',
+      chromaKeyColor: json['chromaKeyColor'] ?? '#00FF00',
     );
   }
 
@@ -134,6 +147,9 @@ class TemplateImageElement {
       'animationType': animationType,
       'animationDuration': animationDuration,
       'placeholderUrl': placeholderUrl,
+      'rotation': rotation,
+      'chromaKey': chromaKey,
+      'chromaKeyColor': chromaKeyColor,
     };
   }
 }
@@ -150,9 +166,12 @@ class TemplateModel {
   final String badgeText;
   final String description;
   final String masterVideoPath;
+  final String? videoUrl;
   final String thumbnailUrl;
   final String? sampleResultPath;
   final String? templateThumbUrl;
+  final int canvasWidth;
+  final int canvasHeight;
   final Map<String, dynamic>? timelineConfig;
   final List<TemplateTextElement> textElements;
   final List<TemplateImageElement> imageElements;
@@ -170,8 +189,11 @@ class TemplateModel {
     required this.description,
     required this.masterVideoPath,
     required this.thumbnailUrl,
+    this.videoUrl,
     this.sampleResultPath,
     this.templateThumbUrl,
+    this.canvasWidth = 1920,
+    this.canvasHeight = 1080,
     this.timelineConfig,
     List<TemplateTextElement>? textElements,
     List<TemplateImageElement>? imageElements,
@@ -237,10 +259,13 @@ class TemplateModel {
       durationSeconds: duration,
       badgeText: json['badgeText'] ?? json['badge_text'] ?? '',
       description: json['description'] ?? '',
-      masterVideoPath: json['masterVideoPath'] ?? json['master_video_url'] ?? 'assets/wedding_template_master.mp4',
+      masterVideoPath: json['masterVideoPath'] ?? json['master_video_url'] ?? json['videoUrl'] ?? 'assets/wedding_template_master.mp4',
+      videoUrl: json['videoUrl'] ?? json['video_url'] ?? json['masterVideoPath'] ?? json['master_video_url'],
       thumbnailUrl: json['thumbnailUrl'] ?? json['thumbnail_url'] ?? '',
       sampleResultPath: json['sampleResultPath'] ?? json['sample_result_url'],
       templateThumbUrl: json['templateThumbUrl'] ?? json['thumbnail_url'],
+      canvasWidth: (json['canvasWidth'] ?? json['canvas_width'] as num?)?.toInt() ?? 1920,
+      canvasHeight: (json['canvasHeight'] ?? json['canvas_height'] as num?)?.toInt() ?? 1080,
       timelineConfig: (json['timelineConfig'] ?? json['timeline_config']) as Map<String, dynamic>?,
       textElements: textList,
       imageElements: imageList,

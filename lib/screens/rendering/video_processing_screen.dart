@@ -40,7 +40,7 @@ class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
     });
 
     final provider = context.read<PersonalizationProvider>();
-    final success = await provider.startRendering();
+    final success = await provider.startRendering(template: widget.template);
 
     if (mounted) {
       if (success) {
