@@ -236,6 +236,27 @@ class ReviewDetailsScreen extends StatelessWidget {
                     );
                   }).toList(),
                 )
+              else if (template.photoSlotsCount > 2)
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 14,
+                  children: List.generate(template.photoSlotsCount, (index) {
+                    final slotKey = 'photo_${index + 1}';
+                    final slotBytes = data.getSlotPhotoBytes(slotKey);
+                    final slotPath = data.getSlotPhotoPath(slotKey);
+                    final defaultLabel = index == 0
+                        ? "Groom's Photo"
+                        : index == 1
+                            ? "Bride's Photo"
+                            : "Photo ${index + 1}";
+                    return _buildPhotoPreview(
+                      label: defaultLabel,
+                      sceneTime: 'Slot ${index + 1}',
+                      localPath: slotPath,
+                      bytes: slotBytes,
+                    );
+                  }),
+                )
               else
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,

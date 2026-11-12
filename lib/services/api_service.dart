@@ -307,7 +307,7 @@ class ApiService {
         religion: 'Hindu',
         orientation: '16:9',
         hasPhoto: true,
-        photoSlotsCount: 2,
+        photoSlotsCount: 5,
         durationSeconds: 102,
         badgeText: 'CHROMA KEY PRO',
         description: 'Traditional Telugu Vivaham with Lord Ganesha invocation, Vedic shlokas, and automatic green screen photo replacement for bride, groom & couple.',
