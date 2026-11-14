@@ -38,6 +38,7 @@ import {
   Move,
   ChevronRight,
   Filter,
+  Upload,
 } from 'lucide-react';
 
 interface VisualTimelineEditorProps {
@@ -106,7 +107,7 @@ export default function VisualTimelineEditor({
     initialEnd: number;
   } | null>(null);
 
-  // Test data injection for live preview
+  // Test data injection for live preview (text + photos)
   const [previewUserData, setPreviewUserData] = useState({
     groomName: 'Sai Krishna',
     brideName: 'Deepika',
@@ -118,6 +119,76 @@ export default function VisualTimelineEditor({
     parentsNames: 'Smt. Sarojini & Sri. Rama Rao',
   });
   const [showTestDataPanel, setShowTestDataPanel] = useState(false);
+
+  // Live real photo previews mapped by slotKey (photo_1, photo_2...) or elementId
+  const [previewUserPhotos, setPreviewUserPhotos] = useState<Record<string, string>>({
+    photo_1: '/samples/groom.jpg',
+    photo_2: '/samples/bride.jpg',
+    photo_3: '/samples/couple.jpg',
+    photo_4: '/samples/groom.jpg',
+    photo_5: '/samples/bride.jpg',
+    photo_6: '/samples/chroma_sample.png',
+    womanPhoto: '/samples/bride.jpg',
+    manPhoto: '/samples/groom.jpg',
+  });
+  const [processedChromaPhotos, setProcessedChromaPhotos] = useState<Record<string, string>>({});
+
+  // Client-side Chroma Key Processor using offscreen canvas
+  const processChromaKey = useCallback((sourceUrl: string, keyColorHex: string = '#00FF00', similarity: number = 0.25): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(sourceUrl);
+        ctx.drawImage(img, 0, 0);
+        try {
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const d = imgData.data;
+          const cleanHex = (keyColorHex || '#00FF00').replace('#', '');
+          const kr = parseInt(cleanHex.substring(0, 2), 16) || 0;
+          const kg = parseInt(cleanHex.substring(2, 4), 16) || 255;
+          const kb = parseInt(cleanHex.substring(4, 6), 16) || 0;
+          const threshold = (similarity || 0.25) * 440;
+
+          for (let i = 0; i < d.length; i += 4) {
+            const r = d[i], g = d[i + 1], b = d[i + 2];
+            const dist = Math.sqrt((r - kr) ** 2 + (g - kg) ** 2 + (b - kb) ** 2);
+            if (dist < threshold) {
+              d[i + 3] = 0; // Transparent
+            }
+          }
+          ctx.putImageData(imgData, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        } catch (_) {
+          resolve(sourceUrl);
+        }
+      };
+      img.onerror = () => resolve(sourceUrl);
+      img.src = sourceUrl;
+    });
+  }, []);
+
+  // Sync Chroma Key processing on any photo or chroma setting change
+  useEffect(() => {
+    (template.imageElements || []).forEach((imgEl, idx) => {
+      const isChroma = imgEl.chromaKey || imgEl.animationType === 'chroma_key';
+      if (isChroma) {
+        const defaultSrc = idx === 0 ? '/samples/groom.jpg' : idx === 1 ? '/samples/bride.jpg' : idx === 2 ? '/samples/couple.jpg' : '/samples/chroma_sample.png';
+        const src =
+          previewUserPhotos[imgEl.field] ||
+          previewUserPhotos[imgEl.id] ||
+          imgEl.placeholderUrl ||
+          defaultSrc;
+        processChromaKey(src, imgEl.chromaKeyColor || '#00FF00', imgEl.chromaKeySimilarity || 0.25).then((keyed) => {
+          setProcessedChromaPhotos((prev) => ({ ...prev, [imgEl.id]: keyed }));
+        });
+      }
+    });
+  }, [template.imageElements, previewUserPhotos, processChromaKey]);
 
   // Full Video Render Preview Modal State
   const [isRenderingPreview, setIsRenderingPreview] = useState(false);
@@ -806,22 +877,52 @@ export default function VisualTimelineEditor({
                         transform: animTransform,
                         transition: isPlaying ? 'none' : 'clip-path 0.05s ease-out, transform 0.05s ease-out',
                       }}
-                      className="w-full h-full relative overflow-hidden bg-purple-950/40 backdrop-blur-xs"
+                      className="w-full h-full relative overflow-hidden bg-purple-950/20 backdrop-blur-xs"
                     >
-                      <img
-                        src={imgEl.placeholderUrl || `/assets/candidate_logo${(idx % 4) + 1}.png`}
-                        alt={imgEl.label}
-                        className={`w-full h-full ${imgEl.fit === 'contain' ? 'object-contain' : 'object-cover'}`}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/assets/candidate_logo1.png';
-                        }}
-                      />
-                      {/* Photo slot tag only when selected */}
-                      {isSelected && (
-                        <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-purple-200 border border-purple-400/40 pointer-events-none">
-                          {imgEl.field} ({imgEl.animationType})
-                        </div>
-                      )}
+                      {(() => {
+                        const isChroma = imgEl.chromaKey || imgEl.animationType === 'chroma_key';
+                        const customPhoto = previewUserPhotos[imgEl.field] || previewUserPhotos[imgEl.id];
+                        const defaultPhoto =
+                          idx === 0
+                            ? '/samples/groom.jpg'
+                            : idx === 1
+                            ? '/samples/bride.jpg'
+                            : idx === 2
+                            ? '/samples/couple.jpg'
+                            : isChroma
+                            ? '/samples/chroma_sample.png'
+                            : idx % 2 === 0
+                            ? '/samples/groom.jpg'
+                            : '/samples/bride.jpg';
+
+                        const rawPhotoSrc = customPhoto || imgEl.placeholderUrl || defaultPhoto;
+                        const activePhotoSrc =
+                          isChroma && processedChromaPhotos[imgEl.id]
+                            ? processedChromaPhotos[imgEl.id]
+                            : rawPhotoSrc;
+
+                        return (
+                          <>
+                            <img
+                              src={activePhotoSrc}
+                              alt={imgEl.label || imgEl.field}
+                              className={`w-full h-full ${imgEl.fit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/samples/groom.jpg';
+                              }}
+                            />
+                            {/* Photo slot tag */}
+                            <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-purple-200 border border-purple-400/40 pointer-events-none flex items-center gap-1 shadow">
+                              <span>{imgEl.field}</span>
+                              {isChroma && (
+                                <span className="px-1 rounded bg-emerald-500 text-white text-[8px] font-bold">
+                                  CHROMA
+                                </span>
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
 
                     {/* Resize Handles (Only when selected) */}
@@ -1074,6 +1175,51 @@ export default function VisualTimelineEditor({
                   onChange={(e) => setPreviewUserData({ ...previewUserData, venue: e.target.value })}
                   className="w-full px-2.5 py-1.5 rounded bg-[#101018] border border-[#28283C] text-xs text-white"
                 />
+              </div>
+
+              {/* Photo Testing Section */}
+              <div className="pt-2 border-t border-[#28283C] space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-purple-300">Test Photos for Slots</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewUserPhotos({
+                        photo_1: '/samples/groom.jpg',
+                        photo_2: '/samples/bride.jpg',
+                        photo_3: '/samples/couple.jpg',
+                        photo_4: '/samples/groom.jpg',
+                        photo_5: '/samples/bride.jpg',
+                        photo_6: '/samples/chroma_sample.png',
+                        womanPhoto: '/samples/bride.jpg',
+                        manPhoto: '/samples/groom.jpg',
+                      });
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded bg-purple-600/30 text-purple-300 border border-purple-500/40 hover:bg-purple-600 hover:text-white transition-colors"
+                  >
+                    ✨ Fill All Sample Photos
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 text-[10px]">
+                  {(template.imageElements || []).map((imgEl, idx) => {
+                    const thumb =
+                      previewUserPhotos[imgEl.field] ||
+                      previewUserPhotos[imgEl.id] ||
+                      (idx === 0 ? '/samples/groom.jpg' : idx === 1 ? '/samples/bride.jpg' : idx === 2 ? '/samples/couple.jpg' : '/samples/chroma_sample.png');
+                    return (
+                      <div key={imgEl.id} className="p-1.5 rounded bg-[#101018] border border-[#26263A] flex flex-col items-center gap-1">
+                        <span className="text-[9px] text-slate-400 font-mono truncate max-w-full">{imgEl.field}</span>
+                        <div className="w-10 h-10 rounded bg-black/50 overflow-hidden border border-purple-500/30">
+                          <img
+                            src={thumb}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
@@ -1444,6 +1590,149 @@ export default function VisualTimelineEditor({
                   onChange={(e) => updateImageElement(selectedImageElement.id, { label: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl bg-[#171724] border border-[#2A2A3E] text-xs text-white outline-none"
                 />
+              </div>
+
+              {/* Actual Photo for Layout Preview & Chroma Testing */}
+              <div className="p-3 bg-[#181828] rounded-xl border border-purple-500/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Actual Photo for Layout Preview</span>
+                  </label>
+                  {(previewUserPhotos[selectedImageElement.field] || previewUserPhotos[selectedImageElement.id]) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = { ...previewUserPhotos };
+                        delete updated[selectedImageElement.field];
+                        delete updated[selectedImageElement.id];
+                        setPreviewUserPhotos(updated);
+                      }}
+                      className="text-[10px] text-rose-400 hover:underline"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* Current Thumbnail with Chroma Badge */}
+                  <div className="w-16 h-16 rounded-lg bg-black/60 border border-purple-500/40 overflow-hidden shrink-0 flex items-center justify-center relative">
+                    <img
+                      src={
+                        (selectedImageElement.chromaKey || selectedImageElement.animationType === 'chroma_key') && processedChromaPhotos[selectedImageElement.id]
+                          ? processedChromaPhotos[selectedImageElement.id]
+                          : (previewUserPhotos[selectedImageElement.field] || previewUserPhotos[selectedImageElement.id] || '/samples/groom.jpg')
+                      }
+                      alt="Preview thumbnail"
+                      className="w-full h-full object-cover"
+                    />
+                    {(selectedImageElement.chromaKey || selectedImageElement.animationType === 'chroma_key') && (
+                      <span className="absolute bottom-0 inset-x-0 bg-emerald-600/90 text-[8px] text-center font-bold text-white uppercase py-0.5">
+                        Keyed
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Upload file button */}
+                  <div className="flex-1 space-y-1">
+                    <label className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold cursor-pointer transition-colors shadow">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload Custom Photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              if (ev.target?.result) {
+                                const url = ev.target.result as string;
+                                setPreviewUserPhotos((prev) => ({
+                                  ...prev,
+                                  [selectedImageElement.field]: url,
+                                  [selectedImageElement.id]: url,
+                                }));
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                    <p className="text-[10px] text-slate-400">
+                      Upload any photo from your PC to preview this layout.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick Sample Presets */}
+                <div>
+                  <span className="block text-[10px] text-slate-400 mb-1 font-semibold uppercase tracking-wider">
+                    Quick Sample Presets:
+                  </span>
+                  <div className="grid grid-cols-4 gap-1.5 text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPreviewUserPhotos((prev) => ({
+                          ...prev,
+                          [selectedImageElement.field]: '/samples/groom.jpg',
+                          [selectedImageElement.id]: '/samples/groom.jpg',
+                        }))
+                      }
+                      className="p-1 rounded bg-[#12121C] border border-[#2A2A3E] hover:border-purple-400 text-slate-200 text-center"
+                    >
+                      🤵 Groom
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPreviewUserPhotos((prev) => ({
+                          ...prev,
+                          [selectedImageElement.field]: '/samples/bride.jpg',
+                          [selectedImageElement.id]: '/samples/bride.jpg',
+                        }))
+                      }
+                      className="p-1 rounded bg-[#12121C] border border-[#2A2A3E] hover:border-purple-400 text-slate-200 text-center"
+                    >
+                      👰 Bride
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPreviewUserPhotos((prev) => ({
+                          ...prev,
+                          [selectedImageElement.field]: '/samples/couple.jpg',
+                          [selectedImageElement.id]: '/samples/couple.jpg',
+                        }))
+                      }
+                      className="p-1 rounded bg-[#12121C] border border-[#2A2A3E] hover:border-purple-400 text-slate-200 text-center"
+                    >
+                      💑 Couple
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewUserPhotos((prev) => ({
+                          ...prev,
+                          [selectedImageElement.field]: '/samples/chroma_sample.png',
+                          [selectedImageElement.id]: '/samples/chroma_sample.png',
+                        }));
+                        updateImageElement(selectedImageElement.id, {
+                          chromaKey: true,
+                          chromaKeyColor: '#00FF00',
+                          animationType: 'chroma_key',
+                        });
+                      }}
+                      className="p-1 rounded bg-emerald-950/40 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 text-center font-bold"
+                    >
+                      🟩 Chroma
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Position and Dimensions */}
