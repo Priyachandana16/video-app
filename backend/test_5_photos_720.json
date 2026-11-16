@@ -1,0 +1,24 @@
+{
+  "templateId": "tmpl_telugu_chroma_01",
+  "hasPhoto": true,
+  "userData": {
+    "groomName": "Sai Krishna",
+    "brideName": "Deepika",
+    "ceremonyTitle": "Subha Vivaham",
+    "muhurthamTime": "Sumuhurtham: 10:24 AM",
+    "venue": "Hyderabad Kalyana Mandapam",
+    "rsvp": "Family & Friends"
+  },
+  "photos": {
+    "photo_1": "Y:\\Video Invitation App !\\assets\\candidate_logo1.png",
+    "photo_2": "Y:\\Video Invitation App !\\assets\\candidate_logo2.png",
+    "photo_3": "Y:\\Video Invitation App !\\assets\\candidate_screenshot.jpg",
+    "photo_4": "Y:\\Video Invitation App !\\assets\\meshy1.png",
+    "photo_5": "Y:\\Video Invitation App !\\assets\\meshy2.png"
+  },
+  "outputVideoPath": "Y:\\Video Invitation App !\\backend\\exports\\test_local_5_photos.mp4",
+  "template": {
+    "canvasWidth": 1280,
+    "canvasHeight": 720
+  }
+}

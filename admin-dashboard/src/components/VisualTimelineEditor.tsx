@@ -68,8 +68,10 @@ export default function VisualTimelineEditor({
   // Inactive Elements toggle (defaults to false so only elements active at current second are shown)
   const [showInactiveElements, setShowInactiveElements] = useState(false);
 
-  // Inspector tab: 'inspector' or 'layers'
-  const [inspectorTab, setInspectorTab] = useState<'inspector' | 'layers'>('inspector');
+  // Inspector tab: 'inspector' | 'layers' | 'video'
+  const [inspectorTab, setInspectorTab] = useState<'inspector' | 'layers' | 'video'>('inspector');
+  const [canvasBackdropColor, setCanvasBackdropColor] = useState('#0A0A10');
+  const videoCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Timeline track filter: 'all' | 'text' | 'image'
   const [trackFilter, setTrackFilter] = useState<'all' | 'text' | 'image'>('all');
@@ -190,6 +192,56 @@ export default function VisualTimelineEditor({
     });
   }, [template.imageElements, previewUserPhotos, processChromaKey]);
 
+  // Real-time canvas Chroma Key loop for Master Background Video
+  useEffect(() => {
+    if (!template.masterVideoChromaKey) return;
+    const v = videoRef.current;
+    const c = videoCanvasRef.current;
+    if (!v || !c) return;
+
+    let animId: number;
+    let isCancelled = false;
+
+    const renderKeyedVideoFrame = () => {
+      if (isCancelled) return;
+      if (v.readyState >= 2 && c) {
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        if (ctx) {
+          if (c.width !== v.videoWidth && v.videoWidth > 0) {
+            c.width = v.videoWidth;
+            c.height = v.videoHeight;
+          }
+          ctx.drawImage(v, 0, 0, c.width, c.height);
+          try {
+            const imgData = ctx.getImageData(0, 0, c.width, c.height);
+            const d = imgData.data;
+            const cleanHex = (template.masterVideoChromaKeyColor || '#00FF00').replace('#', '');
+            const kr = parseInt(cleanHex.substring(0, 2), 16) || 0;
+            const kg = parseInt(cleanHex.substring(2, 4), 16) || 255;
+            const kb = parseInt(cleanHex.substring(4, 6), 16) || 0;
+            const threshold = (template.masterVideoChromaKeySimilarity || 0.25) * 440;
+
+            for (let i = 0; i < d.length; i += 4) {
+              const r = d[i], g = d[i + 1], b = d[i + 2];
+              const dist = Math.sqrt((r - kr) ** 2 + (g - kg) ** 2 + (b - kb) ** 2);
+              if (dist < threshold) {
+                d[i + 3] = 0;
+              }
+            }
+            ctx.putImageData(imgData, 0, 0);
+          } catch (_) {}
+        }
+      }
+      animId = requestAnimationFrame(renderKeyedVideoFrame);
+    };
+
+    renderKeyedVideoFrame();
+    return () => {
+      isCancelled = true;
+      cancelAnimationFrame(animId);
+    };
+  }, [template.masterVideoChromaKey, template.masterVideoChromaKeyColor, template.masterVideoChromaKeySimilarity, isPlaying]);
+
   // Full Video Render Preview Modal State
   const [isRenderingPreview, setIsRenderingPreview] = useState(false);
   const [renderProgress, setRenderProgress] = useState(0);
@@ -302,17 +354,24 @@ export default function VisualTimelineEditor({
   // Add new elements
   const addTextElement = () => {
     const currentTexts = template.textElements || [];
+    const num = currentTexts.length + 1;
     const newId = `txt_${Date.now()}`;
     const newEl: TextElementConfig = {
       id: newId,
-      field: 'coupleNames',
-      label: `Text ${currentTexts.length + 1}`,
-      defaultText: 'Sai Krishna & Deepika',
+      field: `text_${num}`,
+      label: `Text ${num}`,
+      defaultText: `Custom Field ${num}`,
       x: Math.round(canvasWidth / 2),
       y: Math.round(canvasHeight / 2),
-      fontSize: 48,
-      fontFamily: 'Playfair Display',
+      fontSize: 46,
+      fontFamily: 'Ponnala',
       fontColor: '#FFE082',
+      fontWeight: 'normal',
+      strokeEnabled: false,
+      strokeWidth: 2,
+      strokeColor: '#000000',
+      animationType: 'fade',
+      animationDuration: 0.8,
       textAlign: 'center',
       startTime: Math.floor(currentTime),
       endTime: Math.min(duration, Math.floor(currentTime) + 10),
@@ -793,21 +852,44 @@ export default function VisualTimelineEditor({
               maxWidth: '100%',
             }}
           >
-            {/* Background Master Video */}
-            <video
-              ref={videoRef}
-              src={template.videoUrl}
-              className="w-full h-full object-cover pointer-events-none"
-              muted={isMuted}
-              playsInline
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              onEnded={() => setIsPlaying(false)}
-              onSeeked={() => {
-                if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
-              }}
-              onTimeUpdate={handleTimeUpdate}
-            />
+            {/* Background Master Video / Keyed Canvas */}
+            {template.masterVideoChromaKey ? (
+              <>
+                <canvas
+                  ref={videoCanvasRef}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+                <video
+                  ref={videoRef}
+                  src={template.videoUrl}
+                  className="hidden"
+                  muted={isMuted}
+                  playsInline
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                  onEnded={() => setIsPlaying(false)}
+                  onSeeked={() => {
+                    if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
+                  }}
+                  onTimeUpdate={handleTimeUpdate}
+                />
+              </>
+            ) : (
+              <video
+                ref={videoRef}
+                src={template.videoUrl}
+                className="w-full h-full object-cover pointer-events-none"
+                muted={isMuted}
+                playsInline
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => setIsPlaying(false)}
+                onSeeked={() => {
+                  if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
+                }}
+                onTimeUpdate={handleTimeUpdate}
+              />
+            )}
 
             {/* Canvas Interactive Overlay Layer */}
             <div className="absolute inset-0 pointer-events-auto overflow-hidden">
@@ -860,6 +942,7 @@ export default function VisualTimelineEditor({
                       height: `${height}px`,
                       transform: `rotate(${imgEl.rotation || 0}deg)`,
                       opacity: !isVisible ? 0.35 : 1,
+                      borderRadius: imgEl.shape === 'circle' ? '50%' : imgEl.shape === 'oval' ? '50% / 35%' : imgEl.shape === 'rounded' ? '20px' : undefined,
                     }}
                     className={`absolute cursor-move transition-shadow z-10 ${
                       isSelected
@@ -875,6 +958,7 @@ export default function VisualTimelineEditor({
                         clipPath,
                         opacity: animOpacity,
                         transform: animTransform,
+                        borderRadius: imgEl.shape === 'circle' ? '50%' : imgEl.shape === 'oval' ? '50% / 35%' : imgEl.shape === 'rounded' ? '20px' : undefined,
                         transition: isPlaying ? 'none' : 'clip-path 0.05s ease-out, transform 0.05s ease-out',
                       }}
                       className="w-full h-full relative overflow-hidden bg-purple-950/20 backdrop-blur-xs"
@@ -964,10 +1048,13 @@ export default function VisualTimelineEditor({
                 const left = txtEl.x * scale;
                 const top = txtEl.y * scale;
                 const fontSize = Math.max(12, (txtEl.fontSize || 36) * scale);
-                const displayText = resolveDisplayText(txtEl);
+                let displayText = resolveDisplayText(txtEl);
 
-                // Text fade-in / fade-out progress
+                // Text animation and timing calculations
                 let textOpacity = 1;
+                let animTranslateY = 0;
+                let animClipPath: string | undefined = undefined;
+
                 if (isSelected) {
                   textOpacity = 1; // Always fully visible when selected
                 } else if (isVisible) {
@@ -975,14 +1062,49 @@ export default function VisualTimelineEditor({
                   const remaining = txtEl.endTime - currentTime;
                   const fadeIn = txtEl.fadeIn || 0.5;
                   const fadeOut = txtEl.fadeOut || 0.5;
+                  const animType = txtEl.animationType || 'fade';
+                  const animDur = txtEl.animationDuration || 0.8;
+
+                  // 1. Fade calculation
                   if (elapsed < fadeIn && fadeIn > 0) {
                     textOpacity = Math.max(0.15, elapsed / fadeIn);
                   } else if (remaining < fadeOut && fadeOut > 0) {
                     textOpacity = Math.max(0.15, remaining / fadeOut);
                   }
+
+                  // 2. Slide animation (slide up smoothly)
+                  if (animType === 'slide' && elapsed < animDur && animDur > 0) {
+                    const slideProg = Math.min(1, Math.max(0, elapsed / animDur));
+                    animTranslateY = (1 - slideProg) * 20 * scale;
+                  }
+
+                  // 3. Typewriter animation (reveal letters incrementally)
+                  if (animType === 'typewriter' && elapsed < animDur && animDur > 0) {
+                    const typeProg = Math.min(1, Math.max(0, elapsed / animDur));
+                    const visibleChars = Math.max(1, Math.ceil(displayText.length * typeProg));
+                    displayText = displayText.substring(0, visibleChars);
+                  }
+
+                  // 4. Circle crop reveal (circular aperture expanding)
+                  if (animType === 'circle_crop' && elapsed < animDur && animDur > 0) {
+                    const circProg = Math.min(1, Math.max(0, elapsed / animDur));
+                    animClipPath = `circle(${Math.round(circProg * 100)}% at 50% 50%)`;
+                  }
                 } else {
                   textOpacity = 0.65; // Clear ghosting when inactive so editor can see and drag
                 }
+
+                const fontWeightCss =
+                  txtEl.fontWeight === 'light' || txtEl.fontWeight === '300'
+                    ? 300
+                    : txtEl.fontWeight === 'bold' || txtEl.fontWeight === '700'
+                    ? 700
+                    : 400;
+
+                const strokeCss =
+                  txtEl.strokeEnabled && (txtEl.strokeWidth || 0) > 0
+                    ? `${(txtEl.strokeWidth || 2) * scale}px ${txtEl.strokeColor || '#000000'}`
+                    : 'none';
 
                 return (
                   <div
@@ -993,10 +1115,10 @@ export default function VisualTimelineEditor({
                       top: `${top}px`,
                       transform:
                         txtEl.textAlign === 'center'
-                          ? `translate(-50%, -50%) rotate(${txtEl.rotation || 0}deg)`
+                          ? `translate(-50%, calc(-50% + ${animTranslateY}px)) rotate(${txtEl.rotation || 0}deg)`
                           : txtEl.textAlign === 'right'
-                          ? `translate(-100%, -50%) rotate(${txtEl.rotation || 0}deg)`
-                          : `translate(0, -50%) rotate(${txtEl.rotation || 0}deg)`,
+                          ? `translate(-100%, calc(-50% + ${animTranslateY}px)) rotate(${txtEl.rotation || 0}deg)`
+                          : `translate(0, calc(-50% + ${animTranslateY}px)) rotate(${txtEl.rotation || 0}deg)`,
                       opacity: textOpacity,
                     }}
                     className={`absolute cursor-move select-none transition-all ${
@@ -1010,20 +1132,23 @@ export default function VisualTimelineEditor({
                     {/* Element identifier badge shown only when selected */}
                     {isSelected && (
                       <div className="absolute -top-6 left-0 px-1.5 py-0.5 rounded bg-black/90 text-[10px] font-mono font-medium text-amber-300 border border-amber-500/50 pointer-events-none whitespace-nowrap z-50 shadow-md">
-                        {txtEl.field || txtEl.label} ({txtEl.startTime}s - {txtEl.endTime}s)
+                        {txtEl.label || txtEl.field} ({txtEl.startTime}s - {txtEl.endTime}s)
                       </div>
                     )}
 
                     {/* Raw, pristine styled text only */}
                     <span
                       style={{
-                        fontFamily: txtEl.fontFamily || 'Cinzel',
+                        fontFamily: txtEl.fontFamily || 'Ponnala',
                         fontSize: `${fontSize}px`,
                         color: txtEl.fontColor || '#FFD700',
+                        fontWeight: fontWeightCss,
+                        WebkitTextStroke: strokeCss,
                         textAlign: txtEl.textAlign,
-                        textShadow: '0 2px 8px rgba(0,0,0,0.95), 0 0 4px #000, 0 1px 3px rgba(0,0,0,0.9)',
+                        clipPath: animClipPath,
+                        textShadow: txtEl.strokeEnabled ? undefined : '0 1px 3px rgba(0,0,0,0.6)',
                       }}
-                      className="block leading-tight whitespace-nowrap font-semibold pointer-events-none"
+                      className="block leading-tight whitespace-nowrap pointer-events-none"
                     >
                       {displayText}
                     </span>
@@ -1093,12 +1218,12 @@ export default function VisualTimelineEditor({
 
         {/* Right Configuration Inspector & Layers Panel */}
         <aside className="w-80 md:w-96 bg-[#11111A] border-l border-[#222232] flex flex-col shrink-0 overflow-y-auto">
-          {/* Header Tab Switcher: Inspector vs Layers */}
+          {/* Header Tab Switcher: Inspector vs Layers vs Master Video */}
           <div className="p-3 border-b border-[#20202E] flex items-center justify-between">
             <div className="flex items-center gap-1 bg-[#181826] p-1 rounded-lg border border-[#28283C]">
               <button
                 onClick={() => setInspectorTab('inspector')}
-                className={`px-3 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1 transition-all ${
                   inspectorTab === 'inspector'
                     ? 'bg-amber-500 text-black shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -1109,14 +1234,29 @@ export default function VisualTimelineEditor({
               </button>
               <button
                 onClick={() => setInspectorTab('layers')}
-                className={`px-3 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1 transition-all ${
                   inspectorTab === 'layers'
                     ? 'bg-amber-500 text-black shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                All Layers ({((template.textElements || []).length + (template.imageElements || []).length)})
+                Layers ({((template.textElements || []).length + (template.imageElements || []).length)})
+              </button>
+              <button
+                onClick={() => {
+                  setInspectorTab('video');
+                  setSelectedElementId(null);
+                  setSelectedType(null);
+                }}
+                className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1 transition-all ${
+                  inspectorTab === 'video'
+                    ? 'bg-amber-500 text-black shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Film className="w-3.5 h-3.5" />
+                Master Video
               </button>
             </div>
 
@@ -1253,27 +1393,65 @@ export default function VisualTimelineEditor({
                 </button>
               </div>
 
-              {/* Dynamic Field Mapping */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Dynamic Field Mapping
-                </label>
-                <select
-                  value={selectedTextElement.field}
-                  onChange={(e) => updateTextElement(selectedTextElement.id, { field: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-[#171724] border border-[#2A2A3E] text-xs text-amber-300 font-mono outline-none"
-                >
-                  <option value="groomName">groomName (Groom)</option>
-                  <option value="brideName">brideName (Bride)</option>
-                  <option value="coupleNames">coupleNames (Groom & Bride)</option>
-                  <option value="ceremonyTitle">ceremonyTitle (e.g. Subha Vivaham)</option>
-                  <option value="eventDate">eventDate (Wedding Date)</option>
-                  <option value="muhurthamTime">muhurthamTime (Sumuhurtham)</option>
-                  <option value="venue">venue (Kalyana Mandapam)</option>
-                  <option value="rsvp">rsvp (Cordial Welcome)</option>
-                  <option value="parentsNames">parentsNames</option>
-                  <option value="customText">customText (Static / Free)</option>
-                </select>
+              {/* Dynamic Field Mapping & Editable Mobile Label */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Field Label (Displayed to User in Mobile App) *
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedTextElement.label || ''}
+                    onChange={(e) => updateTextElement(selectedTextElement.id, { label: e.target.value })}
+                    placeholder="e.g. Groom Name, Bride's Mother, Sumuhurtham"
+                    className="w-full px-3 py-2 rounded-xl bg-[#171724] border border-[#2A2A3E] focus:border-amber-500 text-xs text-white outline-none"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    This exact name appears as the input field title in the mobile app.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Field Identifier (Data Key)
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={selectedTextElement.field || ''}
+                      onChange={(e) => updateTextElement(selectedTextElement.id, { field: e.target.value })}
+                      placeholder="e.g. groomName, brideName"
+                      className="flex-1 px-3 py-2 rounded-xl bg-[#171724] border border-[#2A2A3E] focus:border-amber-500 text-xs text-amber-300 font-mono outline-none"
+                    />
+                    <select
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const optLabel = e.target.options[e.target.selectedIndex].text;
+                          updateTextElement(selectedTextElement.id, {
+                            field: e.target.value,
+                            label: selectedTextElement.label && !selectedTextElement.label.startsWith('Text ')
+                              ? selectedTextElement.label
+                              : optLabel,
+                          });
+                        }
+                      }}
+                      defaultValue=""
+                      className="px-2 py-2 rounded-xl bg-[#202030] border border-[#2A2A3E] text-[11px] text-slate-300 outline-none"
+                    >
+                      <option value="" disabled>Presets...</option>
+                      <option value="groomName">Groom Name</option>
+                      <option value="brideName">Bride Name</option>
+                      <option value="coupleNames">Couple Names</option>
+                      <option value="ceremonyTitle">Ceremony Title</option>
+                      <option value="eventDate">Event Date</option>
+                      <option value="muhurthamTime">Muhurtham Time</option>
+                      <option value="venue">Venue Location</option>
+                      <option value="rsvp">RSVP / Cordial Welcome</option>
+                      <option value="parentsNames">Parents Names</option>
+                      <option value="contactPhone">Contact Phone</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               {/* Default Preview Text */}
@@ -1344,45 +1522,176 @@ export default function VisualTimelineEditor({
                 </div>
               </div>
 
-              {/* Font Family & Size */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Font Family</label>
-                  <select
-                    value={selectedTextElement.fontFamily}
-                    onChange={(e) => updateTextElement(selectedTextElement.id, { fontFamily: e.target.value })}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-[#171724] border border-[#2A2A3E] text-xs text-white"
-                  >
-                    <optgroup label="Telugu Fonts (తెలుగు ఫాంట్లు)">
-                      <option value="Noto Sans Telugu">Noto Sans Telugu (స్పష్టమైన శైలి)</option>
-                      <option value="Ramabhadra">Ramabhadra (రామభద్ర - హెడ్డింగ్)</option>
-                      <option value="Suranna">Suranna (సూరన్న - సాంప్రదాయక)</option>
-                      <option value="Gidugu">Gidugu (గిడుగు - ఆధునిక శైలి)</option>
-                      <option value="Peddana">Peddana (పెద్దన - రాయల్ స్టైల్)</option>
-                      <option value="Ponnala">Ponnala (పొన్నాల - వేద మంత్రాలు)</option>
-                      <option value="Dhurjati">Dhurjati (ధూర్జటి - శుభకార్యం)</option>
-                    </optgroup>
-                    <optgroup label="English & Royal Fonts">
-                      <option value="Cinzel">Cinzel (Royal Header)</option>
-                      <option value="Playfair Display">Playfair (Classic Luxury)</option>
-                      <option value="Great Vibes">Great Vibes (Cursive Calligraphy)</option>
-                      <option value="Montserrat">Montserrat (Clean Modern)</option>
-                      <option value="Georgia">Georgia (Editorial Serif)</option>
-                      <option value="Roboto">Roboto (Simple Sans)</option>
-                    </optgroup>
-                  </select>
+              {/* Font Family & Weight Selection */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Font Family</label>
+                    <select
+                      value={selectedTextElement.fontFamily}
+                      onChange={(e) => updateTextElement(selectedTextElement.id, { fontFamily: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-[#171724] border border-[#2A2A3E] text-xs text-white"
+                    >
+                      <optgroup label="Telugu Fonts (తెలుగు ఫాంట్లు)">
+                        <option value="Potti Sreeramulu">Potti Sreeramulu (పొట్టి శ్రీరాములు)</option>
+                        <option value="Ponnala">Ponnala Regular (పొన్నాల - వేద మంత్రాలు)</option>
+                        <option value="NTR">NTR (బాపు శైలి అక్షరాలు / Bapu-lettering)</option>
+                        <option value="Ramabhadra">Ramabhadra (రామభద్ర - హెడ్డింగ్)</option>
+                        <option value="Suranna">Suranna (సూరన్న - సాంప్రదాయక)</option>
+                        <option value="Gidugu">Gidugu (గిడుగు - ఆధునిక శైలి)</option>
+                        <option value="Peddana">Peddana (పెద్దన - రాయల్ స్టైల్)</option>
+                        <option value="Dhurjati">Dhurjati (ధూర్జటి - శుభకార్యం)</option>
+                        <option value="Noto Sans Telugu">Noto Sans Telugu (స్పష్టమైన శైలి)</option>
+                      </optgroup>
+                      <optgroup label="English Fonts">
+                        <option value="Neuton">Neuton (Classic Editorial)</option>
+                        <option value="Tinos">Times New Roman (Tinos Serif)</option>
+                        <option value="Cinzel">Cinzel (Royal Header)</option>
+                        <option value="Playfair Display">Playfair (Classic Luxury)</option>
+                        <option value="Great Vibes">Great Vibes (Cursive Calligraphy)</option>
+                        <option value="Montserrat">Montserrat (Clean Modern)</option>
+                        <option value="Georgia">Georgia (Editorial Serif)</option>
+                        <option value="Roboto">Roboto (Simple Sans)</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Font Weight</label>
+                    <div className="grid grid-cols-3 gap-1 bg-[#171724] p-1 rounded-lg border border-[#2A2A3E]">
+                      {[
+                        { label: 'Light', val: 'light' },
+                        { label: 'Regular', val: 'normal' },
+                        { label: 'Bold', val: 'bold' },
+                      ].map((w) => (
+                        <button
+                          key={w.val}
+                          type="button"
+                          onClick={() => updateTextElement(selectedTextElement.id, { fontWeight: w.val as any })}
+                          className={`py-1 rounded text-[11px] font-semibold transition-all ${
+                            (selectedTextElement.fontWeight || 'normal') === w.val
+                              ? 'bg-amber-500 text-black shadow-sm'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {w.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Font Size ({selectedTextElement.fontSize}px)</label>
-                  <input
-                    type="range"
-                    min="18"
-                    max="96"
-                    value={selectedTextElement.fontSize}
-                    onChange={(e) => updateTextElement(selectedTextElement.id, { fontSize: Number(e.target.value) })}
-                    className="w-full accent-amber-500"
-                  />
+
+                {/* Stroke / Outline Toggle & Width Controls */}
+                <div className="p-3 bg-[#161622] rounded-xl border border-[#26263A] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-300 flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${selectedTextElement.strokeEnabled ? 'bg-amber-400' : 'bg-slate-600'}`} />
+                      Enable Text Stroke / Outline
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={!!selectedTextElement.strokeEnabled}
+                      onChange={(e) => updateTextElement(selectedTextElement.id, { strokeEnabled: e.target.checked })}
+                      className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                    />
+                  </div>
+
+                  {selectedTextElement.strokeEnabled && (
+                    <div className="pt-2 border-t border-[#222234] grid grid-cols-2 gap-3 animate-fadeIn">
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">
+                          Stroke Width ({selectedTextElement.strokeWidth || 2}px)
+                        </label>
+                        <input
+                          type="range"
+                          min="1"
+                          max="10"
+                          step="0.5"
+                          value={selectedTextElement.strokeWidth || 2}
+                          onChange={(e) => updateTextElement(selectedTextElement.id, { strokeWidth: Number(e.target.value) })}
+                          className="w-full accent-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Stroke Color</label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="color"
+                            value={selectedTextElement.strokeColor || '#000000'}
+                            onChange={(e) => updateTextElement(selectedTextElement.id, { strokeColor: e.target.value })}
+                            className="w-7 h-7 rounded border border-white/20 bg-transparent cursor-pointer"
+                          />
+                          <input
+                            type="text"
+                            value={selectedTextElement.strokeColor || '#000000'}
+                            onChange={(e) => updateTextElement(selectedTextElement.id, { strokeColor: e.target.value })}
+                            className="flex-1 px-2 py-1 rounded bg-[#101018] border border-[#2A2A3C] text-[11px] text-white font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Text Animation FX */}
+                <div className="p-3 bg-[#161622] rounded-xl border border-[#26263A] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-purple-300 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Text Animation FX
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono capitalize">
+                      {selectedTextElement.animationType || 'fade'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Animation Type</label>
+                      <select
+                        value={selectedTextElement.animationType || 'fade'}
+                        onChange={(e) => updateTextElement(selectedTextElement.id, { animationType: e.target.value as any })}
+                        className="w-full px-2 py-1.5 rounded bg-[#101018] border border-[#2A2A3C] text-xs text-white"
+                      >
+                        <option value="fade">1. Fade</option>
+                        <option value="slide">2. Slide (Bottom Up)</option>
+                        <option value="typewriter">3. Typewriter</option>
+                        <option value="circle_crop">4. Circle Crop Reveal</option>
+                        <option value="none">5. None</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">
+                        FX Duration ({selectedTextElement.animationDuration || 0.8}s)
+                      </label>
+                      <input
+                        type="range"
+                        min="0.2"
+                        max="3.0"
+                        step="0.1"
+                        value={selectedTextElement.animationDuration || 0.8}
+                        onChange={(e) => updateTextElement(selectedTextElement.id, { animationDuration: Number(e.target.value) })}
+                        className="w-full accent-purple-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Font Size */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Font Size ({selectedTextElement.fontSize}px)
+                </label>
+                <input
+                  type="range"
+                  min="18"
+                  max="96"
+                  value={selectedTextElement.fontSize}
+                  onChange={(e) => updateTextElement(selectedTextElement.id, { fontSize: Number(e.target.value) })}
+                  className="w-full accent-amber-500"
+                />
               </div>
 
               {/* Font Color & Text Align */}
@@ -1799,6 +2108,32 @@ export default function VisualTimelineEditor({
                 </div>
               </div>
 
+              {/* Photo Frame Shape */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Frame Shape</label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { val: 'rectangle', label: 'Rect' },
+                    { val: 'circle', label: 'Circle' },
+                    { val: 'oval', label: 'Oval' },
+                    { val: 'rounded', label: 'Rounded' },
+                  ].map((s) => (
+                    <button
+                      key={s.val}
+                      type="button"
+                      onClick={() => updateImageElement(selectedImageElement.id, { shape: s.val as any })}
+                      className={`py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
+                        (selectedImageElement.shape || 'rectangle') === s.val
+                          ? 'bg-purple-600 text-white shadow-md'
+                          : 'bg-[#171724] text-slate-400 hover:text-white border border-[#28283C]'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Reveal Animation FX */}
               <div className="p-3 bg-[#161622] rounded-xl border border-[#26263A] space-y-3">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-purple-300">
@@ -1981,8 +2316,140 @@ export default function VisualTimelineEditor({
             </div>
           )}
 
+          {/* MASTER VIDEO & CHROMA KEY SETTINGS TAB */}
+          {inspectorTab === 'video' && (
+            <div className="p-4 space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-[#20202E]">
+                <div className="flex items-center gap-2 text-amber-300 font-semibold text-xs">
+                  <Film className="w-4 h-4" />
+                  Master Background Video & Chroma Key
+                </div>
+              </div>
+
+              {/* Video URL Display */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Master Video Source</label>
+                <input
+                  type="text"
+                  value={template.videoUrl || template.masterVideoPath}
+                  onChange={(e) => setTemplate((prev) => ({ ...prev, videoUrl: e.target.value, masterVideoPath: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#171724] border border-[#2A2A3E] text-xs text-white outline-none font-mono"
+                />
+              </div>
+
+              {/* Master Video Chroma Key (Green Screen Removal) */}
+              <div className="p-3.5 bg-[#161622] rounded-xl border border-[#26263A] space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${template.masterVideoChromaKey ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
+                    Background Video Chroma Key
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={!!template.masterVideoChromaKey}
+                    onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKey: e.target.checked }))}
+                    className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Removes green screen colors directly from the master background video in real-time, allowing photos and textures to reveal seamlessly through transparent frame cutouts.
+                </p>
+
+                {template.masterVideoChromaKey && (
+                  <div className="pt-2 border-t border-[#222234] space-y-3 animate-fadeIn">
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-300 mb-1">
+                        <span>Chroma Key Color</span>
+                        <span className="font-mono text-emerald-400">{template.masterVideoChromaKeyColor || '#00FF00'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={template.masterVideoChromaKeyColor || '#00FF00'}
+                          onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKeyColor: e.target.value }))}
+                          className="w-8 h-8 rounded border border-white/20 bg-transparent cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={template.masterVideoChromaKeyColor || '#00FF00'}
+                          onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKeyColor: e.target.value }))}
+                          className="flex-1 px-3 py-1.5 rounded-lg bg-[#101018] border border-[#2A2A3C] text-xs text-white font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setTemplate((prev) => ({ ...prev, masterVideoChromaKeyColor: '#00FF00' }))}
+                          className="px-2 py-1 rounded bg-[#202030] text-[10px] text-emerald-400 border border-emerald-500/30"
+                        >
+                          Green (#00FF00)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-300 mb-1">
+                        <span>Key Sensitivity / Threshold</span>
+                        <span className="font-mono text-emerald-400">{template.masterVideoChromaKeySimilarity || 0.25}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.05"
+                        max="0.55"
+                        step="0.01"
+                        value={template.masterVideoChromaKeySimilarity || 0.25}
+                        onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKeySimilarity: Number(e.target.value) }))}
+                        className="w-full accent-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-300 mb-1">
+                        <span>Edge Softness / Blend</span>
+                        <span className="font-mono text-emerald-400">{template.masterVideoChromaKeyBlend || 0.05}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.00"
+                        max="0.20"
+                        step="0.01"
+                        value={template.masterVideoChromaKeyBlend || 0.05}
+                        onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKeyBlend: Number(e.target.value) }))}
+                        className="w-full accent-emerald-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Preview Backdrop Color */}
+              <div className="p-3 bg-[#161622] rounded-xl border border-[#26263A] space-y-2">
+                <span className="text-xs font-semibold text-slate-300">Canvas Backdrop (Behind Keyed Video)</span>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { label: 'Black', val: '#0A0A10' },
+                    { label: 'Navy', val: '#051026' },
+                    { label: 'Crimson', val: '#30050E' },
+                    { label: 'Gold', val: '#261F0A' },
+                  ].map((bg) => (
+                    <button
+                      key={bg.val}
+                      type="button"
+                      onClick={() => setCanvasBackdropColor(bg.val)}
+                      className={`py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
+                        canvasBackdropColor === bg.val
+                          ? 'border-amber-400 bg-amber-500/20 text-amber-300'
+                          : 'border-[#2D2D42] bg-[#12121C] text-slate-400'
+                      }`}
+                    >
+                      {bg.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* LAYERS VIEW: Always accessible or shown when nothing is selected */}
-          {(inspectorTab === 'layers' || !selectedElementId) && (
+          {((inspectorTab === 'layers' || !selectedElementId) && inspectorTab !== 'video') && (
             <div className="p-4 space-y-4">
               {/* Text Layers Section */}
               <div className="space-y-2">
@@ -2026,10 +2493,10 @@ export default function VisualTimelineEditor({
                             </span>
                             <div>
                               <p className="text-xs font-semibold text-white truncate max-w-[150px]">
-                                {txtEl.field}
+                                {txtEl.label || txtEl.field}
                               </p>
                               <p className="text-[10px] text-slate-400 truncate max-w-[160px]">
-                                &ldquo;{txtEl.defaultText}&rdquo;
+                                {txtEl.label && txtEl.label !== txtEl.field ? `[${txtEl.field}] ` : ''}&ldquo;{txtEl.defaultText}&rdquo;
                               </p>
                             </div>
                           </div>

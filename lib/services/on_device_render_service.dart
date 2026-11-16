@@ -74,40 +74,48 @@ class OnDeviceRenderService {
   }
 
   /// Render styled typography text to transparent PNG using Flutter Canvas
-  /// Natively supports Telugu, Hindi, English, all Unicode wedding glyphs, and rotation
+  /// Natively supports Telugu, Hindi, English, all Unicode wedding glyphs, custom weights, strokes, and rotation
   Future<File> _renderTextToPng({
     required String text,
     required String fontFamily,
     required double fontSize,
     required Color color,
+    FontWeight fontWeight = FontWeight.normal,
+    bool strokeEnabled = false,
+    double strokeWidth = 2.0,
+    Color strokeColor = Colors.black,
     required TextAlign align,
     required double maxWidth,
     required String outputPath,
     double rotation = 0.0,
   }) async {
     TextStyle style;
+    final cleanFont = fontFamily.trim();
+
     try {
       style = GoogleFonts.getFont(
-        fontFamily,
+        cleanFont,
         fontSize: fontSize,
         color: color,
-        fontWeight: FontWeight.bold,
-        shadows: const [
-          Shadow(color: Colors.black, blurRadius: 8, offset: Offset(0, 2)),
-          Shadow(color: Colors.black, blurRadius: 4, offset: Offset(0, 1)),
-        ],
+        fontWeight: fontWeight,
+        shadows: strokeEnabled
+            ? []
+            : const [
+                Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 1)),
+              ],
       );
     } catch (_) {
-      // Fallback for Telugu or system font
+      // Fallback for Telugu or bundled asset font
       style = TextStyle(
-        fontFamily: fontFamily,
+        fontFamily: cleanFont,
         fontSize: fontSize,
         color: color,
-        fontWeight: FontWeight.bold,
-        shadows: const [
-          Shadow(color: Colors.black, blurRadius: 8, offset: Offset(0, 2)),
-          Shadow(color: Colors.black, blurRadius: 4, offset: Offset(0, 1)),
-        ],
+        fontWeight: fontWeight,
+        shadows: strokeEnabled
+            ? []
+            : const [
+                Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 1)),
+              ],
       );
     }
 
@@ -128,12 +136,44 @@ class OnDeviceRenderService {
 
     double bw = tw;
     double bh = th;
+    final rad = rotation * math.pi / 180.0;
 
     if (rotation != 0.0) {
-      final rad = rotation * math.pi / 180.0;
       bw = (tw * math.cos(rad).abs() + th * math.sin(rad).abs()).ceilToDouble() + 16.0;
       bh = (tw * math.sin(rad).abs() + th * math.cos(rad).abs()).ceilToDouble() + 16.0;
+    }
 
+    // Optional Stroke Outline rendering
+    if (strokeEnabled && strokeWidth > 0) {
+      final strokeSpan = TextSpan(
+        text: text,
+        style: style.copyWith(
+          foreground: Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = strokeWidth
+            ..color = strokeColor,
+          shadows: [],
+        ),
+      );
+      final strokePainter = TextPainter(
+        text: strokeSpan,
+        textAlign: align,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: maxWidth);
+
+      if (rotation != 0.0) {
+        canvas.save();
+        canvas.translate(bw / 2, bh / 2);
+        canvas.rotate(rad);
+        strokePainter.paint(canvas, Offset(-tw / 2 + 8, -th / 2 + 8));
+        canvas.restore();
+      } else {
+        strokePainter.paint(canvas, const Offset(8, 8));
+      }
+    }
+
+    // Main Fill Typography
+    if (rotation != 0.0) {
       canvas.save();
       canvas.translate(bw / 2, bh / 2);
       canvas.rotate(rad);
@@ -159,7 +199,7 @@ class OnDeviceRenderService {
     void Function(double progress, String step)? onProgress,
   }) async {
     try {
-      onProgress?.call(0.02, 'Initializing hardware video engine...');
+      onProgress?.call(0.05, 'Initializing hardware video engine...');
       final tempDir = await getTemporaryDirectory();
       final appDocsDir = await getApplicationDocumentsDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -185,6 +225,7 @@ class OnDeviceRenderService {
       final double duration = activeTemplate.durationSeconds.toDouble();
 
       // Resolve master video
+      onProgress?.call(0.12, 'Loading template master video...');
       final masterVideoPath = await _resolveMasterVideo(activeTemplate, onProgress: onProgress);
 
       final origCanvasW = activeTemplate.canvasWidth > 0 ? activeTemplate.canvasWidth : 1920;
@@ -197,15 +238,25 @@ class OnDeviceRenderService {
       final List<String> inputs = ['-thread_queue_size', '16', '-i', masterVideoPath];
       final List<String> filterChains = [];
 
-      filterChains.add(
-        '[0:v]scale=$canvasW:$canvasH:force_original_aspect_ratio=decrease,pad=$canvasW:$canvasH:(ow-iw)/2:(oh-ih)/2,setsar=1[v_canvas]',
-      );
+      // Optional Master Video Chroma Key
+      if (activeTemplate.masterVideoChromaKey) {
+        final hex = activeTemplate.masterVideoChromaKeyColor.replaceAll('#', '').toLowerCase();
+        final sim = activeTemplate.masterVideoChromaKeySimilarity.clamp(0.01, 0.6);
+        final blend = activeTemplate.masterVideoChromaKeyBlend.clamp(0.0, 0.3);
+        filterChains.add(
+          '[0:v]scale=$canvasW:$canvasH:force_original_aspect_ratio=decrease,pad=$canvasW:$canvasH:(ow-iw)/2:(oh-ih)/2,setsar=1,colorkey=0x$hex:$sim:$blend[v_canvas]',
+        );
+      } else {
+        filterChains.add(
+          '[0:v]scale=$canvasW:$canvasH:force_original_aspect_ratio=decrease,pad=$canvasW:$canvasH:(ow-iw)/2:(oh-ih)/2,setsar=1[v_canvas]',
+        );
+      }
       String currentStream = 'v_canvas';
       int inputIdx = 1;
 
       // 1. Process Uploaded Photos (Multi-Photo Slots)
       if (data.hasPhoto && activeTemplate.imageElements.isNotEmpty) {
-        onProgress?.call(0.12, 'Composing wedding photos...');
+        onProgress?.call(0.20, 'Composing portrait photos & shapes...');
         for (int i = 0; i < activeTemplate.imageElements.length; i++) {
           final imgEl = activeTemplate.imageElements[i];
           final fieldName = imgEl.field.isNotEmpty ? imgEl.field : 'photo_${i + 1}';
@@ -219,6 +270,13 @@ class OnDeviceRenderService {
           final y = (imgEl.y * scaleFactor).round();
           final w = (imgEl.width * scaleFactor).round().clamp(16, canvasW);
           final h = (imgEl.height * scaleFactor).round().clamp(16, canvasH);
+
+          final slotScale = data.getSlotScale(fieldName);
+          final slotOffX = data.getSlotOffsetX(fieldName);
+          final slotOffY = data.getSlotOffsetY(fieldName);
+          final slotShape = data.getSlotShape(fieldName).isNotEmpty && data.getSlotShape(fieldName) != 'rectangle'
+              ? data.getSlotShape(fieldName)
+              : imgEl.shape;
 
           // Find picked photo path on device
           String? photoPath = data.getSlotPhotoPath(fieldName);
@@ -243,7 +301,16 @@ class OnDeviceRenderService {
             final photoInputId = inputIdx++;
             final nextStream = 'v_img_$i';
 
-            String imgFilters = 'scale=$w:$h:force_original_aspect_ratio=increase,crop=$w:$h';
+            final scaledW = (w * slotScale).round();
+            final scaledH = (h * slotScale).round();
+            final ox = slotOffX.round();
+            final oy = slotOffY.round();
+
+            String imgFilters = 'scale=$scaledW:$scaledH:force_original_aspect_ratio=increase,crop=$w:$h:(in_w-$w)/2+($ox):(in_h-$h)/2+($oy)';
+
+            if (slotShape == 'circle' || slotShape == 'oval') {
+              imgFilters += ',format=rgba,geq=r=\'r(X,Y)\':g=\'g(X,Y)\':b=\'b(X,Y)\':a=\'if(lte(pow((X-W/2)/(W/2),2)+pow((Y-H/2)/(H/2),2),1),255,0)\'';
+            }
 
             if (imgEl.chromaKey) {
               final hex = imgEl.chromaKeyColor.replaceAll('#', '').toLowerCase();
@@ -271,7 +338,7 @@ class OnDeviceRenderService {
       }
 
       // 2. Process Dynamic Typography Overlays (Telugu & English)
-      onProgress?.call(0.25, 'Rendering sacred typography & titles...');
+      onProgress?.call(0.28, 'Rendering sacred typography & titles...');
       final userFields = data.toFormFields();
 
       for (int i = 0; i < activeTemplate.textElements.length; i++) {
@@ -301,6 +368,21 @@ class OnDeviceRenderService {
           } catch (_) {}
         }
 
+        FontWeight fw = FontWeight.normal;
+        if (txtEl.fontWeight == 'light' || txtEl.fontWeight == '300') {
+          fw = FontWeight.w300;
+        } else if (txtEl.fontWeight == 'bold' || txtEl.fontWeight == '700') {
+          fw = FontWeight.bold;
+        }
+
+        Color strokeCol = Colors.black;
+        if (txtEl.strokeColor.isNotEmpty) {
+          try {
+            final hex = txtEl.strokeColor.replaceFirst('#', '');
+            strokeCol = Color(int.parse('FF$hex', radix: 16));
+          } catch (_) {}
+        }
+
         TextAlign align = TextAlign.center;
         if (txtEl.textAlign == 'left') align = TextAlign.left;
         if (txtEl.textAlign == 'right') align = TextAlign.right;
@@ -308,9 +390,13 @@ class OnDeviceRenderService {
         final txtPngPath = '${jobDir.path}/txt_$i.png';
         final txtFile = await _renderTextToPng(
           text: textVal,
-          fontFamily: txtEl.fontFamily.isNotEmpty ? txtEl.fontFamily : 'Cinzel',
+          fontFamily: txtEl.fontFamily.isNotEmpty ? txtEl.fontFamily : 'Ponnala',
           fontSize: fontSize,
           color: fontColor,
+          fontWeight: fw,
+          strokeEnabled: txtEl.strokeEnabled,
+          strokeWidth: (txtEl.strokeWidth * scaleFactor).clamp(1.0, 8.0),
+          strokeColor: strokeCol,
           align: align,
           maxWidth: (1600 * scaleFactor),
           outputPath: txtPngPath,
@@ -366,19 +452,37 @@ class OnDeviceRenderService {
       ];
 
       debugPrint('[OnDeviceRender] Launching native mobile FFmpeg command...');
-      onProgress?.call(0.35, 'Encoding on phone processor...');
+      onProgress?.call(0.35, 'Encoding on phone processor (35%)...');
 
       final completer = Completer<Map<String, dynamic>>();
+
+      double currentSimProgress = 0.35;
+      final progressTimer = Timer.periodic(const Duration(milliseconds: 320), (t) {
+        if (currentSimProgress < 0.94) {
+          currentSimProgress += 0.012;
+          onProgress?.call(
+            currentSimProgress,
+            'Encoding invitation video on hardware (${(currentSimProgress * 100).toInt()}%)...',
+          );
+        }
+      });
 
       FFmpegKitConfig.enableStatisticsCallback((Statistics stats) {
         final timeMs = stats.getTime();
         if (timeMs > 0 && duration > 0) {
           final progress = 0.35 + (timeMs / (duration * 1000.0)) * 0.60;
-          onProgress?.call(progress.clamp(0.35, 0.96), 'Rendering invitation video on device...');
+          if (progress > currentSimProgress) {
+            currentSimProgress = progress.clamp(0.35, 0.96);
+            onProgress?.call(
+              currentSimProgress,
+              'Encoding on phone processor (${(currentSimProgress * 100).toInt()}%)...',
+            );
+          }
         }
       });
 
       await FFmpegKit.executeWithArgumentsAsync(ffmpegArgs, (Session session) async {
+        progressTimer.cancel();
         final returnCode = await session.getReturnCode();
         if (ReturnCode.isSuccess(returnCode)) {
           debugPrint('[OnDeviceRender] Video render successful: $outputVideoPath');

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -19,15 +21,36 @@ class VideoProcessingScreen extends StatefulWidget {
 }
 
 class _VideoProcessingScreenState extends State<VideoProcessingScreen> {
-  double _displayedProgress = 0.01;
+  double _displayedProgress = 0.05;
   bool _hasStarted = false;
   bool _hasError = false;
   String? _errorMessage;
+  Timer? _progressTicker;
 
   @override
   void initState() {
     super.initState();
     _startRenderProcess();
+    _progressTicker = Timer.periodic(const Duration(milliseconds: 120), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final provider = context.read<PersonalizationProvider>();
+      final target = provider.renderProgress;
+      if (target > _displayedProgress) {
+        final step = (target - _displayedProgress) * 0.25;
+        setState(() {
+          _displayedProgress = (_displayedProgress + math.max(0.005, step)).clamp(0.02, target);
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _progressTicker?.cancel();
+    super.dispose();
   }
 
   void _startRenderProcess() async {

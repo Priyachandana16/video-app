@@ -1,7 +1,8 @@
-export type AnimationType = 'none' | 'fade' | 'ink_reveal' | 'brush_stroke' | 'chroma_key';
+export type AnimationType = 'none' | 'fade' | 'slide' | 'typewriter' | 'circle_crop' | 'ink_reveal' | 'brush_stroke' | 'chroma_key';
 export type TextAlign = 'left' | 'center' | 'right';
 export type ImageFit = 'cover' | 'contain';
 export type Orientation = '16:9' | '9:16';
+export type FontWeight = '300' | '400' | '700' | 'light' | 'normal' | 'bold';
 
 export interface TextElementConfig {
   id: string;
@@ -13,6 +14,12 @@ export interface TextElementConfig {
   fontSize: number;
   fontFamily: string;
   fontColor: string;
+  fontWeight?: FontWeight;
+  strokeEnabled?: boolean;
+  strokeWidth?: number;
+  strokeColor?: string;
+  animationType?: 'none' | 'fade' | 'slide' | 'typewriter' | 'circle_crop';
+  animationDuration?: number;
   textAlign: TextAlign;
   startTime: number;
   endTime: number;
@@ -34,6 +41,7 @@ export interface ImageElementConfig {
   endTime: number;
   animationType: AnimationType;
   animationDuration: number;
+  shape?: 'rectangle' | 'circle' | 'oval' | 'rounded';
   placeholderUrl?: string;
   rotation?: number;
   chromaKey?: boolean;
@@ -73,6 +81,10 @@ export interface InvitationTemplate {
   is_new?: boolean;
   audioPath?: string;
   audioUrl?: string;
+  masterVideoChromaKey?: boolean;
+  masterVideoChromaKeyColor?: string;
+  masterVideoChromaKeySimilarity?: number;
+  masterVideoChromaKeyBlend?: number;
   createdAt?: string;
   updatedAt?: string;
 }

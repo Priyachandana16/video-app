@@ -8,6 +8,12 @@ class TemplateTextElement {
   final double fontSize;
   final String fontFamily;
   final String fontColor;
+  final String fontWeight;
+  final bool strokeEnabled;
+  final double strokeWidth;
+  final String strokeColor;
+  final String animationType;
+  final double animationDuration;
   final String textAlign;
   final double startTime;
   final double endTime;
@@ -25,6 +31,12 @@ class TemplateTextElement {
     required this.fontSize,
     required this.fontFamily,
     required this.fontColor,
+    this.fontWeight = 'normal',
+    this.strokeEnabled = false,
+    this.strokeWidth = 2.0,
+    this.strokeColor = '#000000',
+    this.animationType = 'fade',
+    this.animationDuration = 0.8,
     required this.textAlign,
     required this.startTime,
     required this.endTime,
@@ -44,6 +56,12 @@ class TemplateTextElement {
       fontSize: (json['fontSize'] as num?)?.toDouble() ?? 40.0,
       fontFamily: json['fontFamily'] ?? 'Cinzel',
       fontColor: json['fontColor'] ?? '#FFD700',
+      fontWeight: json['fontWeight']?.toString() ?? 'normal',
+      strokeEnabled: json['strokeEnabled'] == true,
+      strokeWidth: (json['strokeWidth'] as num?)?.toDouble() ?? 2.0,
+      strokeColor: json['strokeColor'] ?? '#000000',
+      animationType: json['animationType'] ?? 'fade',
+      animationDuration: (json['animationDuration'] as num?)?.toDouble() ?? 0.8,
       textAlign: json['textAlign'] ?? 'center',
       startTime: (json['startTime'] as num?)?.toDouble() ?? 0.0,
       endTime: (json['endTime'] as num?)?.toDouble() ?? 10.0,
@@ -64,6 +82,12 @@ class TemplateTextElement {
       'fontSize': fontSize,
       'fontFamily': fontFamily,
       'fontColor': fontColor,
+      'fontWeight': fontWeight,
+      'strokeEnabled': strokeEnabled,
+      'strokeWidth': strokeWidth,
+      'strokeColor': strokeColor,
+      'animationType': animationType,
+      'animationDuration': animationDuration,
       'textAlign': textAlign,
       'startTime': startTime,
       'endTime': endTime,
@@ -87,6 +111,7 @@ class TemplateImageElement {
   final double endTime;
   final String animationType;
   final double animationDuration;
+  final String shape;
   final String? placeholderUrl;
   final double rotation;
   final bool chromaKey;
@@ -105,6 +130,7 @@ class TemplateImageElement {
     required this.endTime,
     required this.animationType,
     required this.animationDuration,
+    this.shape = 'rectangle',
     this.placeholderUrl,
     this.rotation = 0.0,
     this.chromaKey = false,
@@ -125,6 +151,7 @@ class TemplateImageElement {
       endTime: (json['endTime'] as num?)?.toDouble() ?? 10.0,
       animationType: json['animationType'] ?? 'fade',
       animationDuration: (json['animationDuration'] as num?)?.toDouble() ?? 1.2,
+      shape: json['shape'] ?? 'rectangle',
       placeholderUrl: json['placeholderUrl'],
       rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
       chromaKey: json['chromaKey'] == true || json['animationType'] == 'chroma_key',
@@ -146,6 +173,7 @@ class TemplateImageElement {
       'endTime': endTime,
       'animationType': animationType,
       'animationDuration': animationDuration,
+      'shape': shape,
       'placeholderUrl': placeholderUrl,
       'rotation': rotation,
       'chromaKey': chromaKey,
@@ -173,6 +201,10 @@ class TemplateModel {
   final int canvasWidth;
   final int canvasHeight;
   final Map<String, dynamic>? timelineConfig;
+  final bool masterVideoChromaKey;
+  final String masterVideoChromaKeyColor;
+  final double masterVideoChromaKeySimilarity;
+  final double masterVideoChromaKeyBlend;
   final List<TemplateTextElement> textElements;
   final List<TemplateImageElement> imageElements;
 
@@ -195,6 +227,10 @@ class TemplateModel {
     this.canvasWidth = 1920,
     this.canvasHeight = 1080,
     this.timelineConfig,
+    this.masterVideoChromaKey = false,
+    this.masterVideoChromaKeyColor = '#00FF00',
+    this.masterVideoChromaKeySimilarity = 0.25,
+    this.masterVideoChromaKeyBlend = 0.05,
     List<TemplateTextElement>? textElements,
     List<TemplateImageElement>? imageElements,
   })  : textElements = textElements ?? [],
@@ -267,6 +303,10 @@ class TemplateModel {
       canvasWidth: (json['canvasWidth'] ?? json['canvas_width'] as num?)?.toInt() ?? 1920,
       canvasHeight: (json['canvasHeight'] ?? json['canvas_height'] as num?)?.toInt() ?? 1080,
       timelineConfig: (json['timelineConfig'] ?? json['timeline_config']) as Map<String, dynamic>?,
+      masterVideoChromaKey: json['masterVideoChromaKey'] == true || json['master_video_chroma_key'] == true,
+      masterVideoChromaKeyColor: json['masterVideoChromaKeyColor'] ?? json['master_video_chroma_key_color'] ?? '#00FF00',
+      masterVideoChromaKeySimilarity: (json['masterVideoChromaKeySimilarity'] as num?)?.toDouble() ?? 0.25,
+      masterVideoChromaKeyBlend: (json['masterVideoChromaKeyBlend'] as num?)?.toDouble() ?? 0.05,
       textElements: textList,
       imageElements: imageList,
     );
@@ -289,6 +329,10 @@ class TemplateModel {
       'sampleResultPath': sampleResultPath,
       'templateThumbUrl': templateThumbUrl,
       'timelineConfig': timelineConfig,
+      'masterVideoChromaKey': masterVideoChromaKey,
+      'masterVideoChromaKeyColor': masterVideoChromaKeyColor,
+      'masterVideoChromaKeySimilarity': masterVideoChromaKeySimilarity,
+      'masterVideoChromaKeyBlend': masterVideoChromaKeyBlend,
       'textElements': textElements.map((e) => e.toJson()).toList(),
       'imageElements': imageElements.map((e) => e.toJson()).toList(),
     };

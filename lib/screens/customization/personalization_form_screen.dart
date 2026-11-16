@@ -553,6 +553,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
     required String slotRole,
     required VoidCallback onPick,
     required VoidCallback onRemove,
+    VoidCallback? onAdjust,
     String? localPath,
     Uint8List? bytes,
   }) {
@@ -562,6 +563,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
         slotRole: slotRole,
         onPick: onPick,
         onRemove: onRemove,
+        onAdjust: onAdjust,
         localPath: localPath,
         bytes: bytes,
       ),
@@ -573,6 +575,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
     required String slotRole,
     required VoidCallback onPick,
     required VoidCallback onRemove,
+    VoidCallback? onAdjust,
     String? localPath,
     Uint8List? bytes,
   }) {
@@ -644,6 +647,38 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                                     ))),
                     ),
                   ),
+                  // Adjust button top left
+                  if (onAdjust != null)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: GestureDetector(
+                        onTap: onAdjust,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.8),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.primaryGold.withValues(alpha: 0.85), width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.tune_rounded, color: AppColors.primaryGold, size: 12),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Adjust',
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: AppColors.primaryGold,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   // Remove button top right
                   Positioned(
                     top: 6,
@@ -833,6 +868,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                     provider.removeSlotPhoto(slotKey);
                     if (mounted) setState(() {});
                   },
+                  onAdjust: () => _openPhotoPlacementSheet(provider, targetSlotKey: slotKey),
                   localPath: slotPath,
                   bytes: slotBytes,
                 ),
@@ -871,6 +907,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                     provider.removeSlotPhoto(slotKey);
                     if (mounted) setState(() {});
                   },
+                  onAdjust: () => _openPhotoPlacementSheet(provider, targetSlotKey: slotKey),
                   localPath: slotPath,
                   bytes: slotBytes,
                 ),
@@ -891,6 +928,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                   provider.removeManPhoto();
                   if (mounted) setState(() {});
                 },
+                onAdjust: () => _openPhotoPlacementSheet(provider, targetSlotKey: 'photo_2'),
                 localPath: provider.data.manPhotoPath,
                 bytes: provider.data.manPhotoBytes,
               ),
@@ -906,6 +944,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                   provider.removeWomanPhoto();
                   if (mounted) setState(() {});
                 },
+                onAdjust: () => _openPhotoPlacementSheet(provider, targetSlotKey: 'photo_1'),
                 localPath: provider.data.womanPhotoPath,
                 bytes: provider.data.womanPhotoBytes,
               ),
@@ -929,6 +968,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                         : 'జంట ఫోటో'),
                 onPick: provider.pickWomanPhoto,
                 onRemove: provider.removeWomanPhoto,
+                onAdjust: () => _openPhotoPlacementSheet(provider, targetSlotKey: 'photo_1'),
                 localPath: provider.data.womanPhotoPath,
                 bytes: provider.data.womanPhotoBytes,
               ),
@@ -959,7 +999,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                       const Icon(Icons.crop_rotate_rounded, color: AppColors.primaryGold, size: 20),
                       const SizedBox(width: 8),
                       Text(
-                        'Photo Placement & Framing',
+                        'Photo Placement, Framing & Shapes',
                         style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
                           fontSize: 13,
@@ -972,7 +1012,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                     onPressed: () => _openPhotoPlacementSheet(provider),
                     icon: const Icon(Icons.tune_rounded, size: 16, color: AppColors.primaryGold),
                     label: Text(
-                      'Adjust',
+                      'Adjust All',
                       style: GoogleFonts.plusJakartaSans(
                         color: AppColors.primaryGold,
                         fontWeight: FontWeight.bold,
@@ -989,7 +1029,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Selected: ${provider.data.photoPlacement.toUpperCase()} • Scale ${(provider.data.photoScale * 100).toInt()}% • Offset (${provider.data.photoOffsetX.toInt()}px, ${provider.data.photoOffsetY.toInt()}px)',
+                'Adjust framing, zoom & shapes (Rectangle, Circle/Round, Oval) for all uploaded photos.',
                 style: GoogleFonts.plusJakartaSans(
                   color: AppColors.champagne,
                   fontSize: 11,
@@ -1059,6 +1099,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
           child: Center(
             child: Text(
               label,
+              textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 color: isSelected ? Colors.black : Colors.white70,
                 fontSize: 10,
@@ -1071,17 +1112,135 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
     );
   }
 
-  void _openPhotoPlacementSheet(PersonalizationProvider provider) {
-    double tempScale = provider.data.photoScale;
-    double tempOffsetX = provider.data.photoOffsetX;
-    double tempOffsetY = provider.data.photoOffsetY;
-    String tempPlacement = provider.data.photoPlacement;
+  Widget _buildClippedPhotoPreview({
+    Uint8List? bytes,
+    String? localPath,
+    required bool hasPhoto,
+    required String shape,
+    required double scale,
+    required double offsetX,
+    required double offsetY,
+  }) {
+    Widget imageContent;
+    if (hasPhoto && bytes != null) {
+      imageContent = Image.memory(bytes, fit: BoxFit.cover, width: 130, height: 130);
+    } else if (hasPhoto && localPath != null && localPath.isNotEmpty) {
+      imageContent = kIsWeb
+          ? Image.network(localPath, fit: BoxFit.cover, width: 130, height: 130)
+          : Image.file(File(localPath), fit: BoxFit.cover, width: 130, height: 130);
+    } else {
+      imageContent = Container(
+        width: 130,
+        height: 130,
+        color: AppColors.surfaceHigh,
+        child: const Icon(Icons.person_rounded, size: 54, color: AppColors.primaryGold),
+      );
+    }
 
-    final hasPhoto = provider.data.womanPhotoBytes != null ||
-        provider.data.manPhotoBytes != null ||
-        (provider.data.womanPhotoPath != null && provider.data.womanPhotoPath!.isNotEmpty) ||
-        (provider.data.manPhotoPath != null && provider.data.manPhotoPath!.isNotEmpty);
-    final photoBytes = provider.data.womanPhotoBytes ?? provider.data.manPhotoBytes;
+    final transformed = Transform.translate(
+      offset: Offset(offsetX, offsetY),
+      child: Transform.scale(
+        scale: scale,
+        child: imageContent,
+      ),
+    );
+
+    if (shape == 'circle') {
+      return ClipOval(
+        child: SizedBox(width: 130, height: 130, child: transformed),
+      );
+    } else if (shape == 'oval') {
+      return ClipOval(
+        child: SizedBox(width: 110, height: 145, child: transformed),
+      );
+    } else if (shape == 'rounded') {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: SizedBox(width: 125, height: 135, child: transformed),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: SizedBox(width: 125, height: 135, child: transformed),
+    );
+  }
+
+  Widget _buildShapeBorderOverlay(String shape) {
+    if (shape == 'circle') {
+      return Container(
+        width: 134,
+        height: 134,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.primaryGold, width: 2.2),
+        ),
+      );
+    } else if (shape == 'oval') {
+      return Container(
+        width: 114,
+        height: 149,
+        decoration: BoxDecoration(
+          shape: BoxShape.rectangle,
+          borderRadius: const BorderRadius.all(Radius.elliptical(57, 74)),
+          border: Border.all(color: AppColors.primaryGold, width: 2.2),
+        ),
+      );
+    } else if (shape == 'rounded') {
+      return Container(
+        width: 129,
+        height: 139,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppColors.primaryGold, width: 2),
+        ),
+      );
+    }
+    return Container(
+      width: 129,
+      height: 139,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.primaryGold, width: 2),
+      ),
+    );
+  }
+
+  void _openPhotoPlacementSheet(PersonalizationProvider provider, {String? targetSlotKey}) {
+    final tmpl = _getActiveTemplate();
+
+    // 1. Gather all slot definitions available for this template
+    final List<Map<String, String>> availableSlots = [];
+    if (tmpl.imageElements.isNotEmpty) {
+      for (int i = 0; i < tmpl.imageElements.length; i++) {
+        final imgEl = tmpl.imageElements[i];
+        final key = imgEl.field.isNotEmpty ? imgEl.field : 'photo_${i + 1}';
+        final label = imgEl.label.isNotEmpty ? imgEl.label : 'Photo ${i + 1}';
+        availableSlots.add({'key': key, 'label': label});
+      }
+    } else if (tmpl.photoSlotsCount > 2) {
+      for (int i = 0; i < tmpl.photoSlotsCount; i++) {
+        final key = 'photo_${i + 1}';
+        final label = i == 0 ? "Groom" : i == 1 ? "Bride" : "Photo ${i + 1}";
+        availableSlots.add({'key': key, 'label': label});
+      }
+    } else if (tmpl.photoSlotsCount == 2) {
+      availableSlots.add({'key': 'photo_2', 'label': "Groom (పెళ్లికొడుకు)"});
+      availableSlots.add({'key': 'photo_1', 'label': "Bride (పెళ్లికూతురు)"});
+    } else {
+      availableSlots.add({'key': 'photo_1', 'label': "Photo 1"});
+    }
+
+    // Default current slot
+    String currentSlot = targetSlotKey ?? (availableSlots.isNotEmpty ? availableSlots.first['key']! : 'photo_1');
+    if (!availableSlots.any((s) => s['key'] == currentSlot) && availableSlots.isNotEmpty) {
+      currentSlot = availableSlots.first['key']!;
+    }
+
+    double tempScale = provider.data.getSlotScale(currentSlot);
+    double tempOffsetX = provider.data.getSlotOffsetX(currentSlot);
+    double tempOffsetY = provider.data.getSlotOffsetY(currentSlot);
+    String tempShape = provider.data.getSlotShape(currentSlot);
+    String tempPlacement = provider.data.photoPlacement;
 
     showModalBottomSheet(
       context: context,
@@ -1093,6 +1252,11 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            // Get photo bytes & path for the currently selected slot
+            final currentBytes = provider.data.getSlotPhotoBytes(currentSlot);
+            final currentPath = provider.data.getSlotPhotoPath(currentSlot);
+            final hasPhoto = currentBytes != null || (currentPath != null && currentPath.isNotEmpty);
+
             return Padding(
               padding: EdgeInsets.only(
                 left: 20,
@@ -1100,280 +1264,301 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 top: 16,
                 bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(2),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.crop_rotate_rounded, color: AppColors.primaryGold, size: 22),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Photo Framing & Shape Adjustment',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white70),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Select a photo slot, customize framing shape (Round/Rectangle), zoom, and positioning.',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: const Color(0xFF94A3B8),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Slot Switcher Chips (when multiple slots exist)
+                    if (availableSlots.length > 1) ...[
+                      Text(
+                        'Select Photo Slot to Adjust:',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: AppColors.champagne,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 38,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: availableSlots.length,
+                          separatorBuilder: (context, index) => const SizedBox(width: 8),
+                          itemBuilder: (_, idx) {
+                            final slot = availableSlots[idx];
+                            final isSel = slot['key'] == currentSlot;
+                            final sBytes = provider.data.getSlotPhotoBytes(slot['key']!);
+                            final hasSlotPic = sBytes != null || (provider.data.getSlotPhotoPath(slot['key']!)?.isNotEmpty ?? false);
+
+                            return ChoiceChip(
+                              label: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    hasSlotPic ? Icons.check_circle_rounded : Icons.photo_outlined,
+                                    size: 14,
+                                    color: isSel ? Colors.black : (hasSlotPic ? AppColors.primaryGold : Colors.white60),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(slot['label']!),
+                                ],
+                              ),
+                              selected: isSel,
+                              selectedColor: AppColors.primaryGold,
+                              backgroundColor: const Color(0xFF1E1E2A),
+                              labelStyle: GoogleFonts.plusJakartaSans(
+                                color: isSel ? Colors.black : Colors.white70,
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                                fontSize: 11,
+                              ),
+                              onSelected: (_) {
+                                setModalState(() {
+                                  currentSlot = slot['key']!;
+                                  tempScale = provider.data.getSlotScale(currentSlot);
+                                  tempOffsetX = provider.data.getSlotOffsetX(currentSlot);
+                                  tempOffsetY = provider.data.getSlotOffsetY(currentSlot);
+                                  tempShape = provider.data.getSlotShape(currentSlot);
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+
+                    // Frame Shape Selection: Rectangle, Circle / Round, Oval, Rounded
+                    Text(
+                      'Photo Frame Shape (క్రాపింగ్ ఆకారం)',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildPresetChip('rectangle', 'Rectangle / చతురస్రం', tempShape, (s) {
+                          setModalState(() => tempShape = s);
+                        }),
+                        const SizedBox(width: 6),
+                        _buildPresetChip('circle', 'Circle / గుండ్రంగా', tempShape, (s) {
+                          setModalState(() => tempShape = s);
+                        }),
+                        const SizedBox(width: 6),
+                        _buildPresetChip('oval', 'Oval / అండాకారం', tempShape, (s) {
+                          setModalState(() => tempShape = s);
+                        }),
+                        const SizedBox(width: 6),
+                        _buildPresetChip('rounded', 'Rounded / వంపు', tempShape, (s) {
+                          setModalState(() => tempShape = s);
+                        }),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Interactive Framing Preview Box
+                    Container(
+                      height: 180,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0A0A0F),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.goldBorder, width: 1.2),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        alignment: Alignment.center,
                         children: [
-                          const Icon(Icons.crop_rotate_rounded, color: AppColors.primaryGold, size: 22),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Edit Photo Placement & Framing',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          Container(
+                            decoration: const BoxDecoration(
+                              gradient: RadialGradient(
+                                colors: [
+                                  Color(0xFF1F1D2B),
+                                  Color(0xFF0F0E17),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Masked photo preview based on selected shape
+                          Center(
+                            child: _buildClippedPhotoPreview(
+                              bytes: currentBytes,
+                              localPath: currentPath,
+                              hasPhoto: hasPhoto,
+                              shape: tempShape,
+                              scale: tempScale,
+                              offsetX: tempOffsetX,
+                              offsetY: tempOffsetY,
+                            ),
+                          ),
+                          // Shape Overlay outline border
+                          IgnorePointer(
+                            child: _buildShapeBorderOverlay(tempShape),
+                          ),
+                          // Helper pill at bottom
+                          Positioned(
+                            bottom: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black87,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'Slot: ${currentSlot.toUpperCase()} • Shape: ${tempShape.toUpperCase()} • Zoom: ${(tempScale * 100).toInt()}%',
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: AppColors.champagne,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white70),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Position where your photo appears within the video invitation frame.',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: const Color(0xFF94A3B8),
-                      fontSize: 12,
                     ),
-                  ),
-                  const SizedBox(height: 16),
 
-                  // Interactive Framing Preview Box
-                  Container(
-                    height: 180,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0A0A0F),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.goldBorder, width: 1.2),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Stack(
-                      alignment: Alignment.center,
+                    const SizedBox(height: 16),
+
+                    // Sliders: Scale / Zoom
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          decoration: const BoxDecoration(
-                            gradient: RadialGradient(
-                              colors: [
-                                Color(0xFF1F1D2B),
-                                Color(0xFF0F0E17),
-                              ],
-                            ),
-                          ),
+                        Text(
+                          'Photo Scale / Zoom: ${(tempScale * 100).toInt()}%',
+                          style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 12),
                         ),
-                        // Photo with applied offset & scale
-                        Transform.translate(
-                          offset: Offset(tempOffsetX, tempOffsetY),
-                          child: Transform.scale(
-                            scale: tempScale,
-                            child: hasPhoto && photoBytes != null
-                                ? Image.memory(
-                                    photoBytes,
-                                    height: 140,
-                                    width: 140,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Container(
-                                    height: 140,
-                                    width: 140,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: AppColors.surfaceHigh,
-                                      border: Border.all(color: AppColors.brandPink, width: 2),
-                                    ),
-                                    child: const Icon(
-                                      Icons.person,
-                                      size: 64,
-                                      color: AppColors.primaryGold,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        // Golden Arch / Oval Frame Overlay
-                        IgnorePointer(
-                          child: Container(
-                            margin: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(
-                                tempPlacement == 'full' ? 16 : 100,
-                              ),
-                              border: Border.all(
-                                color: AppColors.primaryGold.withValues(alpha: 0.6),
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Helper pill
-                        Positioned(
-                          bottom: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.black87,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Placement: ${tempPlacement.toUpperCase()} • Scale: ${(tempScale * 100).toInt()}%',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: AppColors.champagne,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+                        TextButton(
+                          onPressed: () => setModalState(() {
+                            tempScale = 1.0;
+                            tempOffsetX = 0.0;
+                            tempOffsetY = 0.0;
+                          }),
+                          child: Text('Reset', style: GoogleFonts.plusJakartaSans(color: AppColors.primaryGold, fontSize: 11)),
                         ),
                       ],
                     ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Placement presets
-                  Text(
-                    'Frame Position Preset',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                    Slider(
+                      value: tempScale.clamp(0.7, 2.0),
+                      min: 0.7,
+                      max: 2.0,
+                      divisions: 26,
+                      activeColor: AppColors.primaryGold,
+                      inactiveColor: Colors.white12,
+                      onChanged: (v) => setModalState(() => tempScale = v),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildPresetChip('center', 'Arch Center', tempPlacement, (p) {
-                        setModalState(() {
-                          tempPlacement = p;
-                          tempOffsetX = 0.0;
-                          tempOffsetY = 0.0;
-                        });
-                      }),
-                      const SizedBox(width: 8),
-                      _buildPresetChip('left', 'Left Frame', tempPlacement, (p) {
-                        setModalState(() {
-                          tempPlacement = p;
-                          tempOffsetX = -25.0;
-                        });
-                      }),
-                      const SizedBox(width: 8),
-                      _buildPresetChip('right', 'Right Frame', tempPlacement, (p) {
-                        setModalState(() {
-                          tempPlacement = p;
-                          tempOffsetX = 25.0;
-                        });
-                      }),
-                      const SizedBox(width: 8),
-                      _buildPresetChip('full', 'Full View', tempPlacement, (p) {
-                        setModalState(() {
-                          tempPlacement = p;
-                          tempScale = 1.15;
-                          tempOffsetX = 0.0;
-                          tempOffsetY = 0.0;
-                        });
-                      }),
-                    ],
-                  ),
 
-                  const SizedBox(height: 16),
+                    // Sliders: Horizontal Offset
+                    Text(
+                      'Horizontal Position (X): ${tempOffsetX.toInt()}px',
+                      style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 12),
+                    ),
+                    Slider(
+                      value: tempOffsetX.clamp(-100.0, 100.0),
+                      min: -100.0,
+                      max: 100.0,
+                      divisions: 40,
+                      activeColor: AppColors.brandPink,
+                      inactiveColor: Colors.white12,
+                      onChanged: (v) => setModalState(() => tempOffsetX = v),
+                    ),
 
-                  // Sliders: Scale / Zoom
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Photo Scale / Zoom: ${(tempScale * 100).toInt()}%',
-                        style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 12),
+                    // Sliders: Vertical Offset
+                    Text(
+                      'Vertical Position (Y): ${tempOffsetY.toInt()}px',
+                      style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 12),
+                    ),
+                    Slider(
+                      value: tempOffsetY.clamp(-100.0, 100.0),
+                      min: -100.0,
+                      max: 100.0,
+                      divisions: 40,
+                      activeColor: AppColors.champagne,
+                      inactiveColor: Colors.white12,
+                      onChanged: (v) => setModalState(() => tempOffsetY = v),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    ElevatedButton(
+                      onPressed: () {
+                        provider.updateSlotAdjustment(
+                          slotKey: currentSlot,
+                          scale: tempScale,
+                          offsetX: tempOffsetX,
+                          offsetY: tempOffsetY,
+                          shape: tempShape,
+                          placement: tempPlacement,
+                        );
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFF166534),
+                            content: Text('$currentSlot framing & adjustments saved!'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGold,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      TextButton(
-                        onPressed: () => setModalState(() {
-                          tempScale = 1.0;
-                          tempOffsetX = 0.0;
-                          tempOffsetY = 0.0;
-                        }),
-                        child: Text('Reset', style: GoogleFonts.plusJakartaSans(color: AppColors.primaryGold, fontSize: 11)),
+                      child: Text(
+                        'Apply Adjustments to $currentSlot',
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
-                    ],
-                  ),
-                  Slider(
-                    value: tempScale.clamp(0.8, 1.6),
-                    min: 0.8,
-                    max: 1.6,
-                    divisions: 16,
-                    activeColor: AppColors.primaryGold,
-                    inactiveColor: Colors.white12,
-                    onChanged: (v) => setModalState(() => tempScale = v),
-                  ),
-
-                  // Sliders: Horizontal Offset
-                  Text(
-                    'Horizontal Position (X): ${tempOffsetX.toInt()}px',
-                    style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 12),
-                  ),
-                  Slider(
-                    value: tempOffsetX.clamp(-60.0, 60.0),
-                    min: -60.0,
-                    max: 60.0,
-                    divisions: 24,
-                    activeColor: AppColors.brandPink,
-                    inactiveColor: Colors.white12,
-                    onChanged: (v) => setModalState(() => tempOffsetX = v),
-                  ),
-
-                  // Sliders: Vertical Offset
-                  Text(
-                    'Vertical Position (Y): ${tempOffsetY.toInt()}px',
-                    style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 12),
-                  ),
-                  Slider(
-                    value: tempOffsetY.clamp(-60.0, 60.0),
-                    min: -60.0,
-                    max: 60.0,
-                    divisions: 24,
-                    activeColor: AppColors.champagne,
-                    inactiveColor: Colors.white12,
-                    onChanged: (v) => setModalState(() => tempOffsetY = v),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  ElevatedButton(
-                    onPressed: () {
-                      provider.updatePhotoPlacement(
-                        placement: tempPlacement,
-                        scale: tempScale,
-                        offsetX: tempOffsetX,
-                        offsetY: tempOffsetY,
-                      );
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          backgroundColor: Color(0xFF166534),
-                          content: Text('Photo placement & framing saved!'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryGold,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: Text(
-                      'Apply Photo Placement',
-                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },

@@ -149,6 +149,29 @@ class PersonalizationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateSlotAdjustment({
+    required String slotKey,
+    required double scale,
+    required double offsetX,
+    required double offsetY,
+    required String shape,
+    String? placement,
+  }) {
+    _data.setSlotScale(slotKey, scale);
+    _data.setSlotOffsetX(slotKey, offsetX);
+    _data.setSlotOffsetY(slotKey, offsetY);
+    _data.setSlotShape(slotKey, shape);
+    if (slotKey == 'photo_1' || slotKey == 'womanPhoto' || slotKey == 'photo') {
+      _data = _data.copyWith(
+        photoPlacement: placement ?? _data.photoPlacement,
+        photoScale: scale,
+        photoOffsetX: offsetX,
+        photoOffsetY: offsetY,
+      );
+    }
+    notifyListeners();
+  }
+
   Future<void> pickWomanPhoto() async {
     try {
       print('[PhotoPicker] Opening gallery picker for womanPhoto');

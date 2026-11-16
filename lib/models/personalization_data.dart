@@ -22,6 +22,10 @@ class PersonalizationData {
   // Multi-slot dynamic photo mapping (photo_1, photo_2, photo_3, photo_4, photo_5, etc.)
   Map<String, String> slotPhotoPaths;
   Map<String, Uint8List> slotPhotoBytes;
+  Map<String, double> slotPhotoScales;
+  Map<String, double> slotPhotoOffsetsX;
+  Map<String, double> slotPhotoOffsetsY;
+  Map<String, String> slotPhotoShapes; // 'rectangle', 'circle', 'oval', 'rounded'
 
   // Dynamic custom text elements mapped directly from published Template textElements
   Map<String, String> customTextValues;
@@ -55,6 +59,10 @@ class PersonalizationData {
     this.photoOffsetY = 0.0,
     Map<String, String>? slotPhotoPaths,
     Map<String, Uint8List>? slotPhotoBytes,
+    Map<String, double>? slotPhotoScales,
+    Map<String, double>? slotPhotoOffsetsX,
+    Map<String, double>? slotPhotoOffsetsY,
+    Map<String, String>? slotPhotoShapes,
     Map<String, String>? customTextValues,
     this.womanPhotoPath,
     this.womanPhotoBytes,
@@ -65,8 +73,35 @@ class PersonalizationData {
     List<String>? additionalPhotos,
   })  : slotPhotoPaths = slotPhotoPaths ?? {},
         slotPhotoBytes = slotPhotoBytes ?? {},
+        slotPhotoScales = slotPhotoScales ?? {},
+        slotPhotoOffsetsX = slotPhotoOffsetsX ?? {},
+        slotPhotoOffsetsY = slotPhotoOffsetsY ?? {},
+        slotPhotoShapes = slotPhotoShapes ?? {},
         customTextValues = customTextValues ?? {},
         additionalPhotos = additionalPhotos ?? [];
+
+  double getSlotScale(String slotKey) => slotPhotoScales[slotKey] ?? photoScale;
+  void setSlotScale(String slotKey, double scale) {
+    slotPhotoScales[slotKey] = scale;
+    photoScale = scale;
+  }
+
+  double getSlotOffsetX(String slotKey) => slotPhotoOffsetsX[slotKey] ?? photoOffsetX;
+  void setSlotOffsetX(String slotKey, double x) {
+    slotPhotoOffsetsX[slotKey] = x;
+    photoOffsetX = x;
+  }
+
+  double getSlotOffsetY(String slotKey) => slotPhotoOffsetsY[slotKey] ?? photoOffsetY;
+  void setSlotOffsetY(String slotKey, double y) {
+    slotPhotoOffsetsY[slotKey] = y;
+    photoOffsetY = y;
+  }
+
+  String getSlotShape(String slotKey) => slotPhotoShapes[slotKey] ?? 'rectangle';
+  void setSlotShape(String slotKey, String shape) {
+    slotPhotoShapes[slotKey] = shape;
+  }
 
   String get coupleTitle {
     if (groomName.isNotEmpty && brideName.isNotEmpty) {
@@ -229,6 +264,10 @@ class PersonalizationData {
     double? photoOffsetY,
     Map<String, String>? slotPhotoPaths,
     Map<String, Uint8List>? slotPhotoBytes,
+    Map<String, double>? slotPhotoScales,
+    Map<String, double>? slotPhotoOffsetsX,
+    Map<String, double>? slotPhotoOffsetsY,
+    Map<String, String>? slotPhotoShapes,
     Map<String, String>? customTextValues,
     String? womanPhotoPath,
     Uint8List? womanPhotoBytes,
@@ -256,6 +295,10 @@ class PersonalizationData {
       photoOffsetY: photoOffsetY ?? this.photoOffsetY,
       slotPhotoPaths: slotPhotoPaths ?? Map.from(this.slotPhotoPaths),
       slotPhotoBytes: slotPhotoBytes ?? Map.from(this.slotPhotoBytes),
+      slotPhotoScales: slotPhotoScales ?? Map.from(this.slotPhotoScales),
+      slotPhotoOffsetsX: slotPhotoOffsetsX ?? Map.from(this.slotPhotoOffsetsX),
+      slotPhotoOffsetsY: slotPhotoOffsetsY ?? Map.from(this.slotPhotoOffsetsY),
+      slotPhotoShapes: slotPhotoShapes ?? Map.from(this.slotPhotoShapes),
       customTextValues: customTextValues ?? Map.from(this.customTextValues),
       womanPhotoPath: womanPhotoPath ?? this.womanPhotoPath,
       womanPhotoBytes: womanPhotoBytes ?? this.womanPhotoBytes,

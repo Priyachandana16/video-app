@@ -72,6 +72,36 @@ flutter:
     - assets/
     - assets/templates/
     - assets/images/
+    - assets/fonts/
+
+  fonts:
+    - family: Potti Sreeramulu
+      fonts:
+        - asset: assets/fonts/PottiSreeramulu.ttf
+    - family: Ponnala
+      fonts:
+        - asset: assets/fonts/Ponnala.ttf
+    - family: NTR
+      fonts:
+        - asset: assets/fonts/NTR.ttf
+    - family: Noto Sans Telugu
+      fonts:
+        - asset: assets/fonts/NotoSansTelugu.ttf
+    - family: Ramabhadra
+      fonts:
+        - asset: assets/fonts/ramabhadra.ttf
+    - family: Suranna
+      fonts:
+        - asset: assets/fonts/suranna.ttf
+    - family: Peddana
+      fonts:
+        - asset: assets/fonts/Peddana-Regular.ttf
+    - family: Dhurjati
+      fonts:
+        - asset: assets/fonts/dhurjati.ttf
+    - family: Gidugu
+      fonts:
+        - asset: assets/fonts/Gidugu.ttf
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
