@@ -233,10 +233,21 @@ export default function CreateTemplateModal({ isOpen, categories, onClose, onCre
       },
     ];
 
-    const newTemplatePayload: Partial<InvitationTemplate> = {
+    const occasion_id = category.toLowerCase().includes('saree')
+      ? 'half_saree'
+      : category.toLowerCase().includes('birth')
+      ? 'birthday'
+      : category.toLowerCase().includes('house') || category.toLowerCase().includes('gruha')
+      ? 'housewarming'
+      : category.toLowerCase().includes('engage')
+      ? 'engagement'
+      : 'wedding';
+
+    const newTemplatePayload: Partial<InvitationTemplate> & { occasion_id?: string } = {
       id: `tmpl_${(category || 'custom').toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}`,
       title,
       category,
+      occasion_id,
       religion,
       orientation,
       canvasWidth,

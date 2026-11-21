@@ -994,25 +994,33 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.crop_rotate_rounded, color: AppColors.primaryGold, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Photo Placement, Framing & Shapes',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.crop_rotate_rounded, color: AppColors.primaryGold, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Photo Framing & Shapes',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.plusJakartaSans(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   TextButton.icon(
                     onPressed: () => _openPhotoPlacementSheet(provider),
-                    icon: const Icon(Icons.tune_rounded, size: 16, color: AppColors.primaryGold),
+                    icon: const Icon(Icons.tune_rounded, size: 15, color: AppColors.primaryGold),
                     label: Text(
-                      'Adjust All',
+                      'Adjust',
                       style: GoogleFonts.plusJakartaSans(
                         color: AppColors.primaryGold,
                         fontWeight: FontWeight.bold,
@@ -1023,6 +1031,7 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       backgroundColor: AppColors.primaryGold.withValues(alpha: 0.12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      visualDensity: VisualDensity.compact,
                     ),
                   ),
                 ],

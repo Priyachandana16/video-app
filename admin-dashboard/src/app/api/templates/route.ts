@@ -81,6 +81,16 @@ export async function GET(request: Request) {
   }
 }
 
+function getOccasionId(category?: string): string {
+  const cat = (category || '').toLowerCase();
+  if (cat.includes('saree') || cat.includes('voni')) return 'half_saree';
+  if (cat.includes('birth')) return 'birthday';
+  if (cat.includes('house') || cat.includes('gruha')) return 'housewarming';
+  if (cat.includes('engage') || cat.includes('nishchit')) return 'engagement';
+  if (cat.includes('ai')) return 'ai_generated';
+  return 'wedding';
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -91,9 +101,11 @@ export async function POST(request: Request) {
     const durationSeconds = body.durationSeconds || 60;
     const imageElements = Array.isArray(body.imageElements) ? body.imageElements : [];
     const textElements = Array.isArray(body.textElements) ? body.textElements : [];
+    const occasionId = body.occasion_id || body.occasionId || getOccasionId(body.category);
 
     const newRow = {
       id,
+      occasion_id: occasionId,
       title: body.title || 'Untitled Template',
       description: body.description || '',
       badge_text: body.badgeText || 'NEW',

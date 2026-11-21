@@ -39,6 +39,7 @@ import {
   ChevronRight,
   Filter,
   Upload,
+  Video,
 } from 'lucide-react';
 
 interface VisualTimelineEditorProps {
@@ -134,6 +135,95 @@ export default function VisualTimelineEditor({
     manPhoto: '/samples/groom.jpg',
   });
   const [processedChromaPhotos, setProcessedChromaPhotos] = useState<Record<string, string>>({});
+  const [previewUserVideos, setPreviewUserVideos] = useState<Record<string, string>>({});
+  const [customUploadedFonts, setCustomUploadedFonts] = useState<string[]>([]);
+  const [previewingAnimId, setPreviewingAnimId] = useState<string | null>(null);
+  const [previewingAnimProgress, setPreviewingAnimProgress] = useState<number>(1);
+  const fontFileInputRef = useRef<HTMLInputElement>(null);
+  const userVideoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const userVideoCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
+
+  // Restore previously uploaded custom fonts from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('custom_uploaded_fonts');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setCustomUploadedFonts(parsed);
+        }
+      }
+    } catch (_) {}
+  }, []);
+
+  // Real-time canvas Chroma Key loop for Custom Uploaded Videos (< 6s)
+  useEffect(() => {
+    let animId: number;
+    let isCancelled = false;
+
+    const renderKeyedUserVideos = () => {
+      if (isCancelled) return;
+
+      (template.imageElements || []).forEach((imgEl) => {
+        const videoSrc = previewUserVideos[imgEl.id] || previewUserVideos[imgEl.field];
+        if (!videoSrc) return;
+
+        const v = userVideoRefs.current[imgEl.id];
+        const c = userVideoCanvasRefs.current[imgEl.id];
+        if (!v) return;
+
+        const isVisible = currentTime >= imgEl.startTime && currentTime <= (imgEl.endTime || template.durationSeconds || 60);
+        if (isPlaying && isVisible) {
+          if (v.paused) v.play().catch(() => {});
+        } else {
+          if (!v.paused) v.pause();
+          if (v.duration) {
+            const relTime = Math.max(0, (currentTime - imgEl.startTime) % v.duration);
+            if (Math.abs(v.currentTime - relTime) > 0.15) {
+              v.currentTime = relTime;
+            }
+          }
+        }
+
+        if (c && imgEl.chromaKey && v.readyState >= 2) {
+          const ctx = c.getContext('2d', { willReadFrequently: true });
+          if (ctx) {
+            if (c.width !== v.videoWidth && v.videoWidth > 0) {
+              c.width = v.videoWidth;
+              c.height = v.videoHeight;
+            }
+            ctx.drawImage(v, 0, 0, c.width, c.height);
+            try {
+              const imgData = ctx.getImageData(0, 0, c.width, c.height);
+              const d = imgData.data;
+              const cleanHex = (imgEl.chromaKeyColor || '#00FF00').replace('#', '');
+              const kr = parseInt(cleanHex.substring(0, 2), 16) || 0;
+              const kg = parseInt(cleanHex.substring(2, 4), 16) || 255;
+              const kb = parseInt(cleanHex.substring(4, 6), 16) || 0;
+              const threshold = (imgEl.chromaKeySimilarity || 0.25) * 440;
+
+              for (let i = 0; i < d.length; i += 4) {
+                const r = d[i], g = d[i + 1], b = d[i + 2];
+                const dist = Math.sqrt((r - kr) ** 2 + (g - kg) ** 2 + (b - kb) ** 2);
+                if (dist < threshold) {
+                  d[i + 3] = 0;
+                }
+              }
+              ctx.putImageData(imgData, 0, 0);
+            } catch (_) {}
+          }
+        }
+      });
+
+      animId = requestAnimationFrame(renderKeyedUserVideos);
+    };
+
+    renderKeyedUserVideos();
+    return () => {
+      isCancelled = true;
+      cancelAnimationFrame(animId);
+    };
+  }, [previewUserVideos, template.imageElements, isPlaying, currentTime, template.durationSeconds]);
 
   // Client-side Chroma Key Processor using offscreen canvas
   const processChromaKey = useCallback((sourceUrl: string, keyColorHex: string = '#00FF00', similarity: number = 0.25): Promise<string> => {
@@ -965,6 +1055,7 @@ export default function VisualTimelineEditor({
                     >
                       {(() => {
                         const isChroma = imgEl.chromaKey || imgEl.animationType === 'chroma_key';
+                        const customVideo = previewUserVideos[imgEl.id] || previewUserVideos[imgEl.field];
                         const customPhoto = previewUserPhotos[imgEl.field] || previewUserPhotos[imgEl.id];
                         const defaultPhoto =
                           idx === 0
@@ -987,17 +1078,56 @@ export default function VisualTimelineEditor({
 
                         return (
                           <>
-                            <img
-                              src={activePhotoSrc}
-                              alt={imgEl.label || imgEl.field}
-                              className={`w-full h-full ${imgEl.fit === 'contain' ? 'object-contain' : 'object-cover'}`}
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/samples/groom.jpg';
-                              }}
-                            />
-                            {/* Photo slot tag */}
+                            {customVideo ? (
+                              isChroma ? (
+                                <>
+                                  <canvas
+                                    ref={(el) => {
+                                      userVideoCanvasRefs.current[imgEl.id] = el;
+                                    }}
+                                    className={`w-full h-full ${imgEl.fit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                                  />
+                                  <video
+                                    ref={(el) => {
+                                      userVideoRefs.current[imgEl.id] = el;
+                                    }}
+                                    src={customVideo}
+                                    loop
+                                    muted
+                                    playsInline
+                                    className="hidden"
+                                  />
+                                </>
+                              ) : (
+                                <video
+                                  ref={(el) => {
+                                    userVideoRefs.current[imgEl.id] = el;
+                                  }}
+                                  src={customVideo}
+                                  loop
+                                  muted
+                                  playsInline
+                                  className={`w-full h-full ${imgEl.fit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                                />
+                              )
+                            ) : (
+                              <img
+                                src={activePhotoSrc}
+                                alt={imgEl.label || imgEl.field}
+                                className={`w-full h-full ${imgEl.fit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = '/samples/groom.jpg';
+                                }}
+                              />
+                            )}
+                            {/* Photo / Video slot tag */}
                             <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-purple-200 border border-purple-400/40 pointer-events-none flex items-center gap-1 shadow">
                               <span>{imgEl.field}</span>
+                              {customVideo && (
+                                <span className="px-1 rounded bg-blue-500 text-white text-[8px] font-bold">
+                                  VIDEO
+                                </span>
+                              )}
                               {isChroma && (
                                 <span className="px-1 rounded bg-emerald-500 text-white text-[8px] font-bold">
                                   CHROMA
@@ -1055,43 +1185,60 @@ export default function VisualTimelineEditor({
                 let animTranslateY = 0;
                 let animClipPath: string | undefined = undefined;
 
-                if (isSelected) {
-                  textOpacity = 1; // Always fully visible when selected
-                } else if (isVisible) {
-                  const elapsed = currentTime - txtEl.startTime;
-                  const remaining = txtEl.endTime - currentTime;
-                  const fadeIn = txtEl.fadeIn || 0.5;
-                  const fadeOut = txtEl.fadeOut || 0.5;
-                  const animType = txtEl.animationType || 'fade';
+                const isPreviewingThis = previewingAnimId === txtEl.id;
+                const shouldAnimate = isPlaying || isPreviewingThis || (!isSelected && isVisible);
+
+                if (shouldAnimate) {
                   const animDur = txtEl.animationDuration || 0.8;
+                  const elapsed = isPreviewingThis
+                    ? previewingAnimProgress * animDur
+                    : (currentTime - txtEl.startTime);
+                  const remaining = txtEl.endTime - currentTime;
+                  const animType = txtEl.animationType || 'fade';
+                  const fadeOut = txtEl.fadeOut || 0.5;
 
                   // 1. Fade calculation
-                  if (elapsed < fadeIn && fadeIn > 0) {
-                    textOpacity = Math.max(0.15, elapsed / fadeIn);
-                  } else if (remaining < fadeOut && fadeOut > 0) {
-                    textOpacity = Math.max(0.15, remaining / fadeOut);
+                  if (animType === 'fade') {
+                    if (elapsed < animDur && animDur > 0) {
+                      textOpacity = Math.max(0, Math.min(1, elapsed / animDur));
+                    } else if (!isPreviewingThis && remaining < fadeOut && fadeOut > 0) {
+                      textOpacity = Math.max(0, Math.min(1, remaining / fadeOut));
+                    }
                   }
 
                   // 2. Slide animation (slide up smoothly)
-                  if (animType === 'slide' && elapsed < animDur && animDur > 0) {
-                    const slideProg = Math.min(1, Math.max(0, elapsed / animDur));
-                    animTranslateY = (1 - slideProg) * 20 * scale;
+                  if (animType === 'slide') {
+                    if (elapsed < animDur && animDur > 0) {
+                      const slideProg = Math.min(1, Math.max(0, elapsed / animDur));
+                      animTranslateY = (1 - slideProg) * 24 * scale;
+                      textOpacity = slideProg;
+                    } else if (!isPreviewingThis && remaining < fadeOut && fadeOut > 0) {
+                      textOpacity = Math.max(0, Math.min(1, remaining / fadeOut));
+                    }
                   }
 
                   // 3. Typewriter animation (reveal letters incrementally)
-                  if (animType === 'typewriter' && elapsed < animDur && animDur > 0) {
-                    const typeProg = Math.min(1, Math.max(0, elapsed / animDur));
-                    const visibleChars = Math.max(1, Math.ceil(displayText.length * typeProg));
-                    displayText = displayText.substring(0, visibleChars);
+                  if (animType === 'typewriter') {
+                    if (elapsed < animDur && animDur > 0) {
+                      const typeProg = Math.min(1, Math.max(0, elapsed / animDur));
+                      const visibleChars = Math.max(0, Math.ceil(displayText.length * typeProg));
+                      displayText = displayText.substring(0, visibleChars);
+                    } else if (!isPreviewingThis && remaining < fadeOut && fadeOut > 0) {
+                      textOpacity = Math.max(0, Math.min(1, remaining / fadeOut));
+                    }
                   }
 
                   // 4. Circle crop reveal (circular aperture expanding)
-                  if (animType === 'circle_crop' && elapsed < animDur && animDur > 0) {
-                    const circProg = Math.min(1, Math.max(0, elapsed / animDur));
-                    animClipPath = `circle(${Math.round(circProg * 100)}% at 50% 50%)`;
+                  if (animType === 'circle_crop') {
+                    if (elapsed < animDur && animDur > 0) {
+                      const circProg = Math.min(1, Math.max(0, elapsed / animDur));
+                      animClipPath = `circle(${Math.round(circProg * 100)}% at 50% 50%)`;
+                    } else if (!isPreviewingThis && remaining < fadeOut && fadeOut > 0) {
+                      textOpacity = Math.max(0, Math.min(1, remaining / fadeOut));
+                    }
                   }
-                } else {
-                  textOpacity = 0.65; // Clear ghosting when inactive so editor can see and drag
+                } else if (!isVisible && !isSelected) {
+                  textOpacity = 0.5; // Clear ghosting when inactive so editor can see and drag
                 }
 
                 const fontWeightCss =
@@ -1526,12 +1673,58 @@ export default function VisualTimelineEditor({
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Font Family</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-slate-300">Font Family</label>
+                      <button
+                        type="button"
+                        onClick={() => fontFileInputRef.current?.click()}
+                        className="text-[10px] text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1 cursor-pointer"
+                        title="Upload a custom .ttf, .otf or .woff font file from your PC"
+                      >
+                        <Upload className="w-3 h-3" />
+                        <span>+ Custom Font</span>
+                      </button>
+                    </div>
+                    <input
+                      ref={fontFileInputRef}
+                      type="file"
+                      accept=".ttf,.otf,.woff,.woff2"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const fontName = file.name.replace(/\.[^/.]+$/, '').trim();
+                        try {
+                          const buffer = await file.arrayBuffer();
+                          const fontFace = new FontFace(fontName, buffer);
+                          await fontFace.load();
+                          document.fonts.add(fontFace);
+                          setCustomUploadedFonts((prev) => {
+                            const next = Array.from(new Set([...prev, fontName]));
+                            try {
+                              localStorage.setItem('custom_uploaded_fonts', JSON.stringify(next));
+                            } catch (_) {}
+                            return next;
+                          });
+                          updateTextElement(selectedTextElement.id, { fontFamily: fontName });
+                          alert(`Custom Font "${fontName}" loaded and applied to layer!`);
+                        } catch (err: any) {
+                          alert(`Failed to load font: ${err.message}`);
+                        }
+                      }}
+                    />
                     <select
                       value={selectedTextElement.fontFamily}
                       onChange={(e) => updateTextElement(selectedTextElement.id, { fontFamily: e.target.value })}
                       className="w-full px-2.5 py-1.5 rounded-lg bg-[#171724] border border-[#2A2A3E] text-xs text-white"
                     >
+                      {customUploadedFonts.length > 0 && (
+                        <optgroup label="Uploaded Custom Fonts (మీ ఫాంట్లు)">
+                          {customUploadedFonts.map((f) => (
+                            <option key={f} value={f}>★ {f}</option>
+                          ))}
+                        </optgroup>
+                      )}
                       <optgroup label="Telugu Fonts (తెలుగు ఫాంట్లు)">
                         <option value="Potti Sreeramulu">Potti Sreeramulu (పొట్టి శ్రీరాములు)</option>
                         <option value="Ponnala">Ponnala Regular (పొన్నాల - వేద మంత్రాలు)</option>
@@ -1640,9 +1833,35 @@ export default function VisualTimelineEditor({
                       <Sparkles className="w-3.5 h-3.5" />
                       Text Animation FX
                     </span>
-                    <span className="text-[10px] text-slate-400 font-mono capitalize">
-                      {selectedTextElement.animationType || 'fade'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewingAnimId(selectedTextElement.id);
+                          setPreviewingAnimProgress(0);
+                          const start = performance.now();
+                          const durMs = (selectedTextElement.animationDuration || 0.8) * 1000;
+                          const animate = (time: number) => {
+                            const p = Math.min(1, (time - start) / durMs);
+                            setPreviewingAnimProgress(p);
+                            if (p < 1) {
+                              requestAnimationFrame(animate);
+                            } else {
+                              setTimeout(() => setPreviewingAnimId(null), 500);
+                            }
+                          };
+                          requestAnimationFrame(animate);
+                        }}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded bg-purple-600/40 hover:bg-purple-600 text-[10px] font-bold text-white border border-purple-500/50 shadow transition-colors"
+                        title="Preview this text animation on canvas right now"
+                      >
+                        <Play className="w-3 h-3 fill-current" />
+                        <span>Play Preview</span>
+                      </button>
+                      <span className="text-[10px] text-slate-400 font-mono capitalize">
+                        {selectedTextElement.animationType || 'fade'}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -1650,7 +1869,25 @@ export default function VisualTimelineEditor({
                       <label className="block text-[11px] text-slate-400 mb-1">Animation Type</label>
                       <select
                         value={selectedTextElement.animationType || 'fade'}
-                        onChange={(e) => updateTextElement(selectedTextElement.id, { animationType: e.target.value as any })}
+                        onChange={(e) => {
+                          const anim = e.target.value as any;
+                          updateTextElement(selectedTextElement.id, { animationType: anim });
+                          // Auto trigger animation preview when changed
+                          setPreviewingAnimId(selectedTextElement.id);
+                          setPreviewingAnimProgress(0);
+                          const start = performance.now();
+                          const durMs = (selectedTextElement.animationDuration || 0.8) * 1000;
+                          const animate = (time: number) => {
+                            const p = Math.min(1, (time - start) / durMs);
+                            setPreviewingAnimProgress(p);
+                            if (p < 1) {
+                              requestAnimationFrame(animate);
+                            } else {
+                              setTimeout(() => setPreviewingAnimId(null), 500);
+                            }
+                          };
+                          requestAnimationFrame(animate);
+                        }}
                         className="w-full px-2 py-1.5 rounded bg-[#101018] border border-[#2A2A3C] text-xs text-white"
                       >
                         <option value="fade">1. Fade</option>
@@ -1679,16 +1916,29 @@ export default function VisualTimelineEditor({
                 </div>
               </div>
 
-              {/* Font Size */}
+              {/* Font Size - with Direct Number Input + Slider */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Font Size ({selectedTextElement.fontSize}px)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-300">
+                    Font Size ({selectedTextElement.fontSize || 46}px)
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min="12"
+                      max="240"
+                      value={selectedTextElement.fontSize || 46}
+                      onChange={(e) => updateTextElement(selectedTextElement.id, { fontSize: Math.max(12, Number(e.target.value)) })}
+                      className="w-16 px-1.5 py-0.5 rounded bg-[#171724] border border-[#2A2A3E] text-xs font-mono font-bold text-amber-400 text-center"
+                    />
+                    <span className="text-[10px] text-slate-400">px</span>
+                  </div>
+                </div>
                 <input
                   type="range"
-                  min="18"
-                  max="96"
-                  value={selectedTextElement.fontSize}
+                  min="12"
+                  max="180"
+                  value={selectedTextElement.fontSize || 46}
                   onChange={(e) => updateTextElement(selectedTextElement.id, { fontSize: Number(e.target.value) })}
                   className="w-full accent-amber-500"
                 />
@@ -1901,21 +2151,25 @@ export default function VisualTimelineEditor({
                 />
               </div>
 
-              {/* Actual Photo for Layout Preview & Chroma Testing */}
+              {/* Actual Photo / Video for Layout Preview & Chroma Testing */}
               <div className="p-3 bg-[#181828] rounded-xl border border-purple-500/40 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
                     <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
-                    <span>Actual Photo for Layout Preview</span>
+                    <span>Actual Photo / Video for Layout Preview</span>
                   </label>
-                  {(previewUserPhotos[selectedImageElement.field] || previewUserPhotos[selectedImageElement.id]) && (
+                  {(previewUserPhotos[selectedImageElement.field] || previewUserPhotos[selectedImageElement.id] || previewUserVideos[selectedImageElement.field] || previewUserVideos[selectedImageElement.id]) && (
                     <button
                       type="button"
                       onClick={() => {
-                        const updated = { ...previewUserPhotos };
-                        delete updated[selectedImageElement.field];
-                        delete updated[selectedImageElement.id];
-                        setPreviewUserPhotos(updated);
+                        const updatedP = { ...previewUserPhotos };
+                        delete updatedP[selectedImageElement.field];
+                        delete updatedP[selectedImageElement.id];
+                        setPreviewUserPhotos(updatedP);
+                        const updatedV = { ...previewUserVideos };
+                        delete updatedV[selectedImageElement.field];
+                        delete updatedV[selectedImageElement.id];
+                        setPreviewUserVideos(updatedV);
                       }}
                       className="text-[10px] text-rose-400 hover:underline"
                     >
@@ -1925,54 +2179,105 @@ export default function VisualTimelineEditor({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {/* Current Thumbnail with Chroma Badge */}
+                  {/* Current Thumbnail with Video & Chroma Badge */}
                   <div className="w-16 h-16 rounded-lg bg-black/60 border border-purple-500/40 overflow-hidden shrink-0 flex items-center justify-center relative">
-                    <img
-                      src={
-                        (selectedImageElement.chromaKey || selectedImageElement.animationType === 'chroma_key') && processedChromaPhotos[selectedImageElement.id]
-                          ? processedChromaPhotos[selectedImageElement.id]
-                          : (previewUserPhotos[selectedImageElement.field] || previewUserPhotos[selectedImageElement.id] || '/samples/groom.jpg')
-                      }
-                      alt="Preview thumbnail"
-                      className="w-full h-full object-cover"
-                    />
-                    {(selectedImageElement.chromaKey || selectedImageElement.animationType === 'chroma_key') && (
-                      <span className="absolute bottom-0 inset-x-0 bg-emerald-600/90 text-[8px] text-center font-bold text-white uppercase py-0.5">
-                        Keyed
-                      </span>
+                    {(previewUserVideos[selectedImageElement.field] || previewUserVideos[selectedImageElement.id]) ? (
+                      <video
+                        src={previewUserVideos[selectedImageElement.field] || previewUserVideos[selectedImageElement.id]}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={
+                          (selectedImageElement.chromaKey || selectedImageElement.animationType === 'chroma_key') && processedChromaPhotos[selectedImageElement.id]
+                            ? processedChromaPhotos[selectedImageElement.id]
+                            : (previewUserPhotos[selectedImageElement.field] || previewUserPhotos[selectedImageElement.id] || '/samples/groom.jpg')
+                        }
+                        alt="Preview thumbnail"
+                        className="w-full h-full object-cover"
+                      />
                     )}
+                    <div className="absolute bottom-0 inset-x-0 flex items-center justify-center gap-0.5 bg-black/80 py-0.5">
+                      {(previewUserVideos[selectedImageElement.field] || previewUserVideos[selectedImageElement.id]) && (
+                        <span className="bg-blue-600 text-[7px] font-bold text-white uppercase px-1 rounded">
+                          VID
+                        </span>
+                      )}
+                      {(selectedImageElement.chromaKey || selectedImageElement.animationType === 'chroma_key') && (
+                        <span className="bg-emerald-600 text-[7px] font-bold text-white uppercase px-1 rounded">
+                          KEY
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Upload file button */}
-                  <div className="flex-1 space-y-1">
-                    <label className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold cursor-pointer transition-colors shadow">
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>Upload Custom Photo</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              if (ev.target?.result) {
-                                const url = ev.target.result as string;
-                                setPreviewUserPhotos((prev) => ({
-                                  ...prev,
-                                  [selectedImageElement.field]: url,
-                                  [selectedImageElement.id]: url,
-                                }));
-                              }
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                    </label>
+                  {/* Upload file buttons */}
+                  <div className="flex-1 space-y-1.5">
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <label className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-semibold cursor-pointer transition-colors shadow text-center">
+                        <Upload className="w-3 h-3" />
+                        <span>Upload Photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                if (ev.target?.result) {
+                                  const url = ev.target.result as string;
+                                  setPreviewUserPhotos((prev) => ({
+                                    ...prev,
+                                    [selectedImageElement.field]: url,
+                                    [selectedImageElement.id]: url,
+                                  }));
+                                  setPreviewUserVideos((prev) => {
+                                    const next = { ...prev };
+                                    delete next[selectedImageElement.field];
+                                    delete next[selectedImageElement.id];
+                                    return next;
+                                  });
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+
+                      <label className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold cursor-pointer transition-colors shadow text-center">
+                        <Video className="w-3 h-3" />
+                        <span>Upload Video</span>
+                        <input
+                          type="file"
+                          accept="video/mp4,video/webm,video/quicktime"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const url = URL.createObjectURL(file);
+                              setPreviewUserVideos((prev) => ({
+                                ...prev,
+                                [selectedImageElement.field]: url,
+                                [selectedImageElement.id]: url,
+                              }));
+                              updateImageElement(selectedImageElement.id, {
+                                chromaKey: true,
+                                chromaKeyColor: selectedImageElement.chromaKeyColor || '#00FF00',
+                              });
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
                     <p className="text-[10px] text-slate-400">
-                      Upload any photo from your PC to preview this layout.
+                      Upload photo or video (&lt; 6s) with green screen to preview live chroma keying.
                     </p>
                   </div>
                 </div>

@@ -54,6 +54,16 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
+function getOccasionId(category?: string): string {
+  const cat = (category || '').toLowerCase();
+  if (cat.includes('saree') || cat.includes('voni')) return 'half_saree';
+  if (cat.includes('birth')) return 'birthday';
+  if (cat.includes('house') || cat.includes('gruha')) return 'housewarming';
+  if (cat.includes('engage') || cat.includes('nishchit')) return 'engagement';
+  if (cat.includes('ai')) return 'ai_generated';
+  return 'wedding';
+}
+
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
@@ -70,8 +80,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     const nextVersion = (current.current_version || 1) + 1;
+    const resolvedCategory = body.category || current.category;
+    const resolvedOccasion = body.occasion_id || body.occasionId || current.occasion_id || getOccasionId(resolvedCategory);
 
     const updateFields: any = {
+      occasion_id: resolvedOccasion,
       title: body.title || current.title,
       description: body.description !== undefined ? body.description : current.description,
       badge_text: body.badgeText || current.badge_text,
