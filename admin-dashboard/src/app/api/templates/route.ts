@@ -49,7 +49,9 @@ export async function GET(request: Request) {
 
     const templates = (rows || []).map((row) => {
       const cfg = versionsMap[row.id] || {};
+      const videoSource = row.master_video_url || cfg.videoUrl || cfg.masterVideoPath || '';
       return {
+        ...cfg,
         id: row.id,
         title: row.title,
         description: row.description,
@@ -62,15 +64,22 @@ export async function GET(request: Request) {
         durationSeconds: row.duration_seconds,
         hasPhoto: row.has_photo,
         photoSlotsCount: row.photo_slots_count,
-        masterVideoUrl: row.master_video_url,
-        videoUrl: row.master_video_url,
-        thumbnailUrl: row.thumbnail_url,
-        sampleResultUrl: row.sample_result_url,
+        masterVideoUrl: videoSource,
+        videoUrl: videoSource,
+        masterVideoPath: videoSource,
+        audioUrl: cfg.audioUrl || cfg.audioPath || (row as any).audio_url || '',
+        audioPath: cfg.audioPath || cfg.audioUrl || (row as any).audio_url || '',
+        thumbnailUrl: row.thumbnail_url || cfg.thumbnailUrl,
+        sampleResultUrl: row.sample_result_url || cfg.sampleResultUrl,
         isPublished: row.is_published,
         currentVersion: row.current_version,
         textElements: Array.isArray(cfg.textElements) ? cfg.textElements : [],
         imageElements: Array.isArray(cfg.imageElements) ? cfg.imageElements : [],
         timelineConfig: cfg.timelineConfig || null,
+        masterVideoChromaKey: cfg.masterVideoChromaKey || false,
+        masterVideoChromaKeyColor: cfg.masterVideoChromaKeyColor || '#00FF00',
+        masterVideoChromaKeySimilarity: cfg.masterVideoChromaKeySimilarity ?? 0.25,
+        masterVideoChromaKeyBlend: cfg.masterVideoChromaKeyBlend ?? 0.05,
         updatedAt: row.updated_at,
       };
     });

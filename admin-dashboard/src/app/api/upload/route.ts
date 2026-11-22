@@ -19,12 +19,16 @@ export async function POST(request: Request) {
 
     // Sanitize file name
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const filePath = `videos/${Date.now()}_${sanitizedName}`;
+    const isAudio = file.type.startsWith('audio/') || !!file.name.match(/\.(mp3|wav|m4a|aac|ogg)$/i);
+    const isImage = file.type.startsWith('image/') || !!file.name.match(/\.(png|jpe?g|webp|gif|svg)$/i);
+    const subfolder = isAudio ? 'audio' : isImage ? 'images' : 'videos';
+    const filePath = `${subfolder}/${Date.now()}_${sanitizedName}`;
+    const contentType = file.type || (isAudio ? 'audio/mpeg' : isImage ? 'image/jpeg' : 'video/mp4');
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucket)
       .upload(filePath, buffer, {
-        contentType: file.type || 'video/mp4',
+        contentType,
         upsert: true,
       });
 
@@ -35,7 +39,7 @@ export async function POST(request: Request) {
       const { data: fbData, error: fbErr } = await supabase.storage
         .from(fallbackBucket)
         .upload(filePath, buffer, {
-          contentType: file.type || 'video/mp4',
+          contentType,
           upsert: true,
         });
 

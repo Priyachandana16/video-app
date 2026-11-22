@@ -5,7 +5,6 @@ import Navbar from '../components/Navbar';
 import TemplateCard from '../components/TemplateCard';
 import CreateTemplateModal from '../components/CreateTemplateModal';
 import VisualTimelineEditor from '../components/VisualTimelineEditor';
-import MediaAssetsList from '../components/MediaAssetsList';
 import AdminLogin from '../components/AdminLogin';
 import { InvitationTemplate } from '../types/template';
 import { Film, Sparkles, Filter, RefreshCw, AlertCircle, Layers, CheckCircle } from 'lucide-react';
@@ -233,11 +232,8 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Tab Content */}
-        {activeTab === 'assets' ? (
-          <MediaAssetsList />
-        ) : (
-          <div className="space-y-6">
+        {/* Templates Catalog */}
+        <div className="space-y-6">
             {/* Filter Bar */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#13131D] border border-[#232334]">
               {/* Category pills with Add & Delete capability */}
@@ -372,7 +368,6 @@ export default function AdminDashboardPage() {
               </div>
             )}
           </div>
-        )}
       </main>
 
       {/* Create Template Modal */}

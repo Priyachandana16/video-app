@@ -39,40 +39,14 @@ export default function CreateTemplateModal({ isOpen, categories, onClose, onCre
   const [description, setDescription] = useState('');
 
   // Video Selection & Direct Upload
-  const [videoSourceMode, setVideoSourceMode] = useState<'upload' | 'library'>('upload');
   const [selectedVideo, setSelectedVideo] = useState('');
   const [uploadedVideoName, setUploadedVideoName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-
-  // Media Library
-  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
-  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsLoadingAssets(true);
-      fetch('/api/admin/media-assets')
-        .then((res) => res.json())
-        .then((data) => {
-          const videos = (data.assets || []).filter((a: MediaAsset) => a.type === 'video');
-          setMediaAssets(videos);
-          if (videos.length > 0 && !selectedVideo) {
-            setSelectedVideo(videos[0].filePath);
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to load media assets:', err);
-        })
-        .finally(() => {
-          setIsLoadingAssets(false);
-        });
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -496,121 +470,67 @@ export default function CreateTemplateModal({ isOpen, categories, onClose, onCre
               <label className="text-xs font-semibold text-slate-300">
                 Master Background Video * (Stored in Supabase)
               </label>
-              <div className="flex items-center gap-1 bg-[#1A1A26] p-0.5 rounded-lg border border-[#28283C]">
-                <button
-                  type="button"
-                  onClick={() => setVideoSourceMode('upload')}
-                  className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
-                    videoSourceMode === 'upload' ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Direct Upload
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVideoSourceMode('library')}
-                  className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
-                    videoSourceMode === 'library' ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Media Library
-                </button>
-              </div>
+              <span className="text-[11px] font-medium text-amber-400">Direct Supabase Upload</span>
             </div>
 
-            {videoSourceMode === 'upload' ? (
-              <div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="video/mp4,video/quicktime,video/webm"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <div
-                  onClick={() => !isUploading && fileInputRef.current?.click()}
-                  className={`flex flex-col items-center justify-center p-5 rounded-xl border-2 border-dashed cursor-pointer transition-all ${
-                    selectedVideo && uploadedVideoName
-                      ? 'border-amber-500/50 bg-amber-500/10'
-                      : 'border-[#2D2D42] hover:border-amber-500/40 bg-[#171724]'
-                  }`}
-                >
-                  {isUploading ? (
-                    <div className="flex flex-col items-center gap-2 py-2">
-                      <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
-                      <p className="text-xs font-medium text-amber-300">Uploading to Supabase Storage... {uploadProgress}%</p>
-                      <div className="w-48 h-1.5 bg-[#252538] rounded-full overflow-hidden mt-1">
-                        <div
-                          className="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-300"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="video/mp4,video/quicktime,video/webm"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <div
+                onClick={() => !isUploading && fileInputRef.current?.click()}
+                className={`flex flex-col items-center justify-center p-5 rounded-xl border-2 border-dashed cursor-pointer transition-all ${
+                  selectedVideo && uploadedVideoName
+                    ? 'border-amber-500/50 bg-amber-500/10'
+                    : 'border-[#2D2D42] hover:border-amber-500/40 bg-[#171724]'
+                }`}
+              >
+                {isUploading ? (
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
+                    <p className="text-xs font-medium text-amber-300">Uploading to Supabase Storage... {uploadProgress}%</p>
+                    <div className="w-48 h-1.5 bg-[#252538] rounded-full overflow-hidden mt-1">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
                     </div>
-                  ) : selectedVideo && uploadedVideoName ? (
-                    <div className="flex flex-col items-center gap-1.5 text-center">
-                      <div className="p-2 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                        <Check className="w-5 h-5" />
-                      </div>
-                      <p className="text-xs font-bold text-white truncate max-w-sm">{uploadedVideoName}</p>
-                      <p className="text-[11px] text-emerald-400 font-mono">Stored securely in Supabase Storage</p>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          fileInputRef.current?.click();
-                        }}
-                        className="mt-1 px-3 py-1 rounded bg-[#252538] text-[11px] text-slate-300 hover:text-white"
-                      >
-                        Change Video File
-                      </button>
+                  </div>
+                ) : selectedVideo && uploadedVideoName ? (
+                  <div className="flex flex-col items-center gap-1.5 text-center">
+                    <div className="p-2 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      <Check className="w-5 h-5" />
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-center py-2">
-                      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                        <UploadCloud className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-slate-200">Click to upload Master Video</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">MP4, MOV, or WebM (Stores directly in Supabase Storage)</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div>
-                {isLoadingAssets ? (
-                  <div className="py-8 text-center text-xs text-slate-400">Loading available videos...</div>
-                ) : mediaAssets.length === 0 ? (
-                  <div className="p-4 rounded-xl bg-[#1A1A26] border border-amber-500/20 text-xs text-amber-300">
-                    No videos found in storage. Please use "Direct Upload" tab to add a video.
+                    <p className="text-xs font-bold text-white truncate max-w-sm">{uploadedVideoName}</p>
+                    <p className="text-[11px] text-emerald-400 font-mono">Stored securely in Supabase Storage</p>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                      className="mt-1 px-3 py-1 rounded bg-[#252538] text-[11px] text-slate-300 hover:text-white"
+                    >
+                      Change Video File
+                    </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
-                    {mediaAssets.map((asset) => (
-                      <div
-                        key={asset.filePath}
-                        onClick={() => setSelectedVideo(asset.filePath)}
-                        className={`flex items-center gap-2.5 p-2 rounded-xl border cursor-pointer transition-all ${
-                          selectedVideo === asset.filePath
-                            ? 'bg-amber-500/15 border-amber-500 text-amber-200'
-                            : 'bg-[#181824] border-[#28283C] hover:border-slate-500 text-slate-300'
-                        }`}
-                      >
-                        <Video className="w-4 h-4 text-amber-400 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{asset.name}</p>
-                          <p className="text-[10px] text-slate-500">{(asset.sizeBytes / (1024 * 1024)).toFixed(1)} MB</p>
-                        </div>
-                        {selectedVideo === asset.filePath && (
-                          <Check className="w-4 h-4 text-amber-400 shrink-0" />
-                        )}
-                      </div>
-                    ))}
+                  <div className="flex flex-col items-center gap-2 text-center py-2">
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                      <UploadCloud className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-200">Click to upload Master Video</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">MP4, MOV, or WebM (Stores directly in Supabase Storage)</p>
+                    </div>
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

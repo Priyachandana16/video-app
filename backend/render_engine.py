@@ -227,8 +227,10 @@ def render_dynamic_invitation(config_path):
     canvas_h = int(round(orig_canvas_h * (canvas_w / float(orig_canvas_w))))
     scale_factor = canvas_w / float(orig_canvas_w)
     duration = float(template.get('durationSeconds', 102))
-    master_video_rel = template.get('masterVideoPath', 'assets/templates/template_01_green_screen.mp4')
-    if os.path.isabs(master_video_rel) and os.path.exists(master_video_rel):
+    master_video_rel = template.get('masterVideoPath') or template.get('videoUrl') or 'assets/templates/template_01_green_screen.mp4'
+    if master_video_rel.startswith('http://') or master_video_rel.startswith('https://'):
+        master_video = master_video_rel
+    elif os.path.isabs(master_video_rel) and os.path.exists(master_video_rel):
         master_video = master_video_rel
     else:
         candidate1 = os.path.abspath(os.path.join(assets_base, master_video_rel))
@@ -242,6 +244,24 @@ def render_dynamic_invitation(config_path):
             master_video = candidate3
         else:
             master_video = candidate1
+
+    # Check for dedicated custom background audio / music track
+    audio_source = template.get('audioUrl') or template.get('audioPath') or data.get('audioUrl') or data.get('audioPath')
+    custom_audio = None
+    if audio_source:
+        if audio_source.startswith('http://') or audio_source.startswith('https://'):
+            custom_audio = audio_source
+        elif os.path.isabs(audio_source) and os.path.exists(audio_source):
+            custom_audio = audio_source
+        else:
+            cand_a1 = os.path.abspath(os.path.join(assets_base, audio_source))
+            cand_a2 = os.path.abspath(os.path.join(project_root, audio_source))
+            if os.path.exists(cand_a1):
+                custom_audio = cand_a1
+            elif os.path.exists(cand_a2):
+                custom_audio = cand_a2
+            else:
+                custom_audio = cand_a1
 
     output_video = data.get('outputVideoPath')
     if not output_video:
@@ -407,12 +427,23 @@ def render_dynamic_invitation(config_path):
 
     filter_complex = ';'.join(filter_chains)
 
+    # Audio track resolution: custom background music track takes precedence with smooth end fadeout
+    audio_map = ['-map', '0:a?']
+    audio_extra_args = []
+    if custom_audio:
+        inputs.extend(['-thread_queue_size', '16', '-i', custom_audio])
+        audio_input_id = input_idx
+        input_idx += 1
+        audio_map = ['-map', f"{audio_input_id}:a"]
+        audio_extra_args = ['-af', f"afade=t=out:st={max(0, duration - 1.5):.2f}:d=1.5"]
+
     cmd = [
         ffmpeg_bin, '-y',
         *inputs,
         '-filter_complex', filter_complex,
         '-map', f"[{current_stream}]",
-        '-map', '0:a?',
+        *audio_map,
+        *audio_extra_args,
         '-c:v', 'libx264',
         '-preset', 'ultrafast',
         '-crf', '26',

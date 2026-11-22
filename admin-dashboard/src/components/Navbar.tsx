@@ -53,25 +53,10 @@ export default function Navbar({ onNewTemplateClick, activeTab = 'templates', on
           <nav className="hidden md:flex items-center gap-1 bg-[#161622] p-1 rounded-xl border border-[#262638]">
             <button
               onClick={() => onTabChange('templates')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'templates'
-                  ? 'bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-[#FFE082] border border-amber-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-[#FFE082] border border-amber-500/40 shadow-sm"
             >
               <Layers className="w-3.5 h-3.5" />
               Templates Catalog
-            </button>
-            <button
-              onClick={() => onTabChange('assets')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'assets'
-                  ? 'bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-[#FFE082] border border-amber-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Video className="w-3.5 h-3.5" />
-              Media Storage Assets
             </button>
           </nav>
         )}

@@ -995,12 +995,28 @@ app.post('/api/render', upload.fields([
       }
     }
 
+    // Resolve audio track path (custom background music)
+    let audioPath = template.audioPath || template.audioUrl || req.body.audioUrl || req.body.audioPath || '';
+    if (audioPath && (audioPath.startsWith('http://') || audioPath.startsWith('https://'))) {
+      const baseName = path.basename(audioPath.split('?')[0]);
+      const localCandidate = path.join(ASSETS_PATH, 'audio', baseName);
+      if (fs.existsSync(localCandidate)) {
+        audioPath = localCandidate;
+      }
+    }
+
     // Write temp config JSON for data-driven python render engine
     const configPath = path.join(DATA_DIR, `render_config_${timestamp}.json`);
     const renderConfig = {
-      template,
+      template: {
+        ...template,
+        audioPath,
+        audioUrl: audioPath
+      },
       templateId: template.id,
       masterVideoPath,
+      audioPath,
+      audioUrl: audioPath,
       outputVideoPath,
       hasPhoto,
       photos,

@@ -40,6 +40,9 @@ import {
   Filter,
   Upload,
   Video,
+  Music,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 
 interface VisualTimelineEditorProps {
@@ -73,6 +76,18 @@ export default function VisualTimelineEditor({
   const [inspectorTab, setInspectorTab] = useState<'inspector' | 'layers' | 'video'>('inspector');
   const [canvasBackdropColor, setCanvasBackdropColor] = useState('#0A0A10');
   const videoCanvasRef = useRef<HTMLCanvasElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const videoFileInputRef = useRef<HTMLInputElement>(null);
+  const audioFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Video & Audio Upload & Status states
+  const [videoLoadError, setVideoLoadError] = useState<string | null>(null);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+
+  const [isAudioUploading, setIsAudioUploading] = useState(false);
+  const [audioUploadProgress, setAudioUploadProgress] = useState(0);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   // Timeline track filter: 'all' | 'text' | 'image'
   const [trackFilter, setTrackFilter] = useState<'all' | 'text' | 'image'>('all');
@@ -359,15 +374,153 @@ export default function VisualTimelineEditor({
   const selectedTextElement = (template.textElements || []).find((t) => t.id === selectedElementId);
   const selectedImageElement = (template.imageElements || []).find((i) => i.id === selectedElementId);
 
+  // Master Background Video Direct Upload in Editor
+  const handleMasterVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      alert('Please upload a valid MP4/MOV/WebM video file');
+      return;
+    }
+
+    // Immediately create local object URL so video starts playing instantly in editor
+    const localBlob = URL.createObjectURL(file);
+    setTemplate((prev) => ({
+      ...prev,
+      videoUrl: localBlob,
+      masterVideoPath: localBlob,
+    }));
+    setVideoLoadError(null);
+    setIsVideoUploading(true);
+    setVideoUploadProgress(20);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('bucket', 'template-assets');
+
+      setVideoUploadProgress(50);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to upload video to Supabase Storage');
+      }
+
+      setVideoUploadProgress(100);
+      setTemplate((prev) => ({
+        ...prev,
+        videoUrl: data.publicUrl,
+        masterVideoPath: data.publicUrl,
+      }));
+      setSaveToast('Master video uploaded and connected to Supabase!');
+      setTimeout(() => setSaveToast(null), 3500);
+    } catch (err: any) {
+      console.error('Video upload error:', err);
+      alert(`Local preview is active, but Supabase upload failed: ${err.message}`);
+    } finally {
+      setIsVideoUploading(false);
+      setVideoUploadProgress(0);
+    }
+  };
+
+  // Background Audio / Music Track Direct Upload in Editor
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('audio/') && !file.name.match(/\.(mp3|wav|m4a|aac|ogg)$/i)) {
+      alert('Please upload a valid MP3/WAV/M4A/AAC audio file');
+      return;
+    }
+
+    const localBlob = URL.createObjectURL(file);
+    setTemplate((prev) => ({
+      ...prev,
+      audioUrl: localBlob,
+      audioPath: localBlob,
+    }));
+    setIsAudioUploading(true);
+    setAudioUploadProgress(25);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('bucket', 'template-assets');
+
+      setAudioUploadProgress(60);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to upload audio to Supabase Storage');
+      }
+
+      setAudioUploadProgress(100);
+      setTemplate((prev) => ({
+        ...prev,
+        audioUrl: data.publicUrl,
+        audioPath: data.publicUrl,
+      }));
+      setSaveToast('Audio track uploaded and connected to Supabase!');
+      setTimeout(() => setSaveToast(null), 3500);
+    } catch (err: any) {
+      console.error('Audio upload error:', err);
+      alert(`Local audio preview is active, but Supabase upload failed: ${err.message}`);
+    } finally {
+      setIsAudioUploading(false);
+      setAudioUploadProgress(0);
+    }
+  };
+
+  const handleRemoveAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setTemplate((prev) => ({
+      ...prev,
+      audioUrl: '',
+      audioPath: '',
+    }));
+    setSaveToast('Audio track removed');
+    setTimeout(() => setSaveToast(null), 3000);
+  };
+
   // Video playback sync with high-precision 60 FPS requestAnimationFrame loop
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (!videoRef.current) return;
     if (isPlaying) {
       videoRef.current.pause();
+      if (audioRef.current) audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      videoRef.current.play();
-      setIsPlaying(true);
+      try {
+        setVideoLoadError(null);
+        await videoRef.current.play();
+        if (audioRef.current && (template.audioUrl || template.audioPath)) {
+          audioRef.current.currentTime = videoRef.current.currentTime;
+          audioRef.current.play().catch(() => {});
+        }
+        setIsPlaying(true);
+      } catch (err: any) {
+        console.warn('Playback error, retrying muted:', err);
+        if (!isMuted && videoRef.current) {
+          setIsMuted(true);
+          videoRef.current.muted = true;
+          try {
+            await videoRef.current.play();
+            setIsPlaying(true);
+          } catch (e2) {
+            setVideoLoadError('Could not start video playback. Click "Upload / Change Video" to re-upload.');
+          }
+        } else {
+          setVideoLoadError('Could not start video playback. Please verify master video source.');
+        }
+      }
     }
   };
 
@@ -375,7 +528,13 @@ export default function VisualTimelineEditor({
     let animId: number;
     const syncFrame = () => {
       if (videoRef.current && !videoRef.current.paused) {
-        setCurrentTime(videoRef.current.currentTime);
+        const vTime = videoRef.current.currentTime;
+        setCurrentTime(vTime);
+        if (audioRef.current && (template.audioUrl || template.audioPath)) {
+          if (Math.abs(audioRef.current.currentTime - vTime) > 0.3) {
+            audioRef.current.currentTime = vTime;
+          }
+        }
         animId = requestAnimationFrame(syncFrame);
       }
     };
@@ -385,11 +544,17 @@ export default function VisualTimelineEditor({
     return () => {
       if (animId) cancelAnimationFrame(animId);
     };
-  }, [isPlaying]);
+  }, [isPlaying, template.audioUrl, template.audioPath]);
 
   const handleTimeUpdate = () => {
     if (videoRef.current && !isPlaying) {
-      setCurrentTime(videoRef.current.currentTime);
+      const vTime = videoRef.current.currentTime;
+      setCurrentTime(vTime);
+      if (audioRef.current && (template.audioUrl || template.audioPath)) {
+        if (Math.abs(audioRef.current.currentTime - vTime) > 0.3) {
+          audioRef.current.currentTime = vTime;
+        }
+      }
     }
   };
 
@@ -398,6 +563,9 @@ export default function VisualTimelineEditor({
     setCurrentTime(clamped);
     if (videoRef.current) {
       videoRef.current.currentTime = clamped;
+    }
+    if (audioRef.current && (template.audioUrl || template.audioPath)) {
+      audioRef.current.currentTime = clamped;
     }
   };
 
@@ -951,13 +1119,29 @@ export default function VisualTimelineEditor({
                 />
                 <video
                   ref={videoRef}
-                  src={template.videoUrl}
+                  src={template.videoUrl || template.masterVideoPath || (template as any).master_video_url || ''}
                   className="hidden"
                   muted={isMuted}
                   playsInline
+                  crossOrigin="anonymous"
+                  preload="auto"
+                  onError={() => setVideoLoadError('Master background video could not be loaded from URL. Click "Video & Audio" to re-upload.')}
+                  onLoadedData={() => setVideoLoadError(null)}
+                  onLoadedMetadata={(e) => {
+                    const vidDur = Math.round(e.currentTarget.duration);
+                    if (vidDur && vidDur > 0 && Math.abs(vidDur - duration) > 1) {
+                      setTemplate((p) => ({ ...p, durationSeconds: vidDur }));
+                    }
+                  }}
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}
-                  onEnded={() => setIsPlaying(false)}
+                  onEnded={() => {
+                    setIsPlaying(false);
+                    if (audioRef.current) {
+                      audioRef.current.pause();
+                      audioRef.current.currentTime = 0;
+                    }
+                  }}
                   onSeeked={() => {
                     if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
                   }}
@@ -967,18 +1151,67 @@ export default function VisualTimelineEditor({
             ) : (
               <video
                 ref={videoRef}
-                src={template.videoUrl}
+                src={template.videoUrl || template.masterVideoPath || (template as any).master_video_url || ''}
                 className="w-full h-full object-cover pointer-events-none"
                 muted={isMuted}
                 playsInline
+                crossOrigin="anonymous"
+                preload="auto"
+                onError={() => setVideoLoadError('Master background video could not be loaded from URL. Click "Video & Audio" to re-upload.')}
+                onLoadedData={() => setVideoLoadError(null)}
+                onLoadedMetadata={(e) => {
+                  const vidDur = Math.round(e.currentTarget.duration);
+                  if (vidDur && vidDur > 0 && Math.abs(vidDur - duration) > 1) {
+                    setTemplate((p) => ({ ...p, durationSeconds: vidDur }));
+                  }
+                }}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
-                onEnded={() => setIsPlaying(false)}
+                onEnded={() => {
+                  setIsPlaying(false);
+                  if (audioRef.current) {
+                    audioRef.current.pause();
+                    audioRef.current.currentTime = 0;
+                  }
+                }}
                 onSeeked={() => {
                   if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
                 }}
                 onTimeUpdate={handleTimeUpdate}
               />
+            )}
+
+            {/* Background Audio (Music Track) synchronized with video */}
+            {(template.audioUrl || template.audioPath) && (
+              <audio
+                ref={audioRef}
+                src={template.audioUrl || template.audioPath}
+                preload="auto"
+                muted={isMuted}
+                onPlay={() => setIsAudioPlaying(true)}
+                onPause={() => setIsAudioPlaying(false)}
+                onEnded={() => setIsAudioPlaying(false)}
+              />
+            )}
+
+            {/* Video Load Warning Banner */}
+            {videoLoadError && (
+              <div className="absolute inset-x-4 top-4 z-40 p-3 rounded-xl bg-amber-500/20 border border-amber-500/40 backdrop-blur-md text-amber-200 text-xs flex items-center justify-between shadow-2xl">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>{videoLoadError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInspectorTab('video');
+                    videoFileInputRef.current?.click();
+                  }}
+                  className="px-2.5 py-1 rounded bg-amber-500 text-black font-bold text-[11px] hover:bg-amber-400 shrink-0"
+                >
+                  Upload Video
+                </button>
+              </div>
             )}
 
             {/* Canvas Interactive Overlay Layer */}
@@ -1403,7 +1636,7 @@ export default function VisualTimelineEditor({
                 }`}
               >
                 <Film className="w-3.5 h-3.5" />
-                Master Video
+                Video & Audio
               </button>
             </div>
 
@@ -2621,134 +2854,234 @@ export default function VisualTimelineEditor({
             </div>
           )}
 
-          {/* MASTER VIDEO & CHROMA KEY SETTINGS TAB */}
+          {/* MASTER VIDEO & AUDIO SETTINGS TAB */}
           {inspectorTab === 'video' && (
-            <div className="p-4 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-[#20202E]">
-                <div className="flex items-center gap-2 text-amber-300 font-semibold text-xs">
-                  <Film className="w-4 h-4" />
-                  Master Background Video & Chroma Key
-                </div>
-              </div>
+            <div className="p-4 space-y-5">
+              {/* Hidden file inputs for direct uploads */}
+              <input
+                ref={videoFileInputRef}
+                type="file"
+                accept="video/mp4,video/quicktime,video/webm"
+                onChange={handleMasterVideoUpload}
+                className="hidden"
+              />
+              <input
+                ref={audioFileInputRef}
+                type="file"
+                accept="audio/mp3,audio/wav,audio/m4a,audio/aac,audio/mpeg"
+                onChange={handleAudioUpload}
+                className="hidden"
+              />
 
-              {/* Video URL Display */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Master Video Source</label>
-                <input
-                  type="text"
-                  value={template.videoUrl || template.masterVideoPath}
-                  onChange={(e) => setTemplate((prev) => ({ ...prev, videoUrl: e.target.value, masterVideoPath: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl bg-[#171724] border border-[#2A2A3E] text-xs text-white outline-none font-mono"
-                />
-              </div>
-
-              {/* Master Video Chroma Key (Green Screen Removal) */}
-              <div className="p-3.5 bg-[#161622] rounded-xl border border-[#26263A] space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${template.masterVideoChromaKey ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
-                    Background Video Chroma Key
+              {/* Master Background Video Card */}
+              <div className="space-y-3 p-3.5 bg-[#161622] rounded-2xl border border-[#26263A]">
+                <div className="flex items-center justify-between pb-2 border-b border-[#20202E]">
+                  <div className="flex items-center gap-2 text-amber-300 font-semibold text-xs">
+                    <Film className="w-4 h-4 text-amber-400" />
+                    Master Background Video
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {duration}s Duration
                   </span>
+                </div>
+
+                {/* Direct Upload Button */}
+                <button
+                  type="button"
+                  onClick={() => !isVideoUploading && videoFileInputRef.current?.click()}
+                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 hover:from-amber-500/30 hover:to-amber-600/30 border border-amber-500/40 text-amber-300 font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow"
+                >
+                  {isVideoUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                      <span>Uploading to Supabase ({videoUploadProgress}%)...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 text-amber-400" />
+                      <span>Upload / Replace Background Video</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Video URL Display */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">Video Source URL / Path</label>
                   <input
-                    type="checkbox"
-                    checked={!!template.masterVideoChromaKey}
-                    onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKey: e.target.checked }))}
-                    className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                    type="text"
+                    value={template.videoUrl || template.masterVideoPath}
+                    onChange={(e) => setTemplate((prev) => ({ ...prev, videoUrl: e.target.value, masterVideoPath: e.target.value }))}
+                    className="w-full px-3 py-1.5 rounded-lg bg-[#12121C] border border-[#2A2A3E] text-[11px] text-white outline-none font-mono"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Removes green screen colors directly from the master background video in real-time, allowing photos and textures to reveal seamlessly through transparent frame cutouts.
-                </p>
 
-                {template.masterVideoChromaKey && (
-                  <div className="pt-2 border-t border-[#222234] space-y-3 animate-fadeIn">
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-300 mb-1">
-                        <span>Chroma Key Color</span>
-                        <span className="font-mono text-emerald-400">{template.masterVideoChromaKeyColor || '#00FF00'}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={template.masterVideoChromaKeyColor || '#00FF00'}
-                          onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKeyColor: e.target.value }))}
-                          className="w-8 h-8 rounded border border-white/20 bg-transparent cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={template.masterVideoChromaKeyColor || '#00FF00'}
-                          onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKeyColor: e.target.value }))}
-                          className="flex-1 px-3 py-1.5 rounded-lg bg-[#101018] border border-[#2A2A3C] text-xs text-white font-mono"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setTemplate((prev) => ({ ...prev, masterVideoChromaKeyColor: '#00FF00' }))}
-                          className="px-2 py-1 rounded bg-[#202030] text-[10px] text-emerald-400 border border-emerald-500/30"
-                        >
-                          Green (#00FF00)
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-300 mb-1">
-                        <span>Key Sensitivity / Threshold</span>
-                        <span className="font-mono text-emerald-400">{template.masterVideoChromaKeySimilarity || 0.25}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.05"
-                        max="0.55"
-                        step="0.01"
-                        value={template.masterVideoChromaKeySimilarity || 0.25}
-                        onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKeySimilarity: Number(e.target.value) }))}
-                        className="w-full accent-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-300 mb-1">
-                        <span>Edge Softness / Blend</span>
-                        <span className="font-mono text-emerald-400">{template.masterVideoChromaKeyBlend || 0.05}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.00"
-                        max="0.20"
-                        step="0.01"
-                        value={template.masterVideoChromaKeyBlend || 0.05}
-                        onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKeyBlend: Number(e.target.value) }))}
-                        className="w-full accent-emerald-500"
-                      />
-                    </div>
+                {/* Master Video Chroma Key (Green Screen Removal) */}
+                <div className="p-3 bg-[#12121C] rounded-xl border border-[#232334] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-400 flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${template.masterVideoChromaKey ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
+                      Chroma Key (Green Screen)
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={!!template.masterVideoChromaKey}
+                      onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKey: e.target.checked }))}
+                      className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                    />
                   </div>
-                )}
+                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                    Removes green screen colors directly from the master background video in real-time.
+                  </p>
+
+                  {template.masterVideoChromaKey && (
+                    <div className="pt-2 border-t border-[#1E1E2C] space-y-2.5 animate-fadeIn">
+                      <div>
+                        <div className="flex items-center justify-between text-[10px] text-slate-300 mb-1">
+                          <span>Chroma Key Color</span>
+                          <span className="font-mono text-emerald-400">{template.masterVideoChromaKeyColor || '#00FF00'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={template.masterVideoChromaKeyColor || '#00FF00'}
+                            onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKeyColor: e.target.value }))}
+                            className="w-7 h-7 rounded border border-white/20 bg-transparent cursor-pointer"
+                          />
+                          <input
+                            type="text"
+                            value={template.masterVideoChromaKeyColor || '#00FF00'}
+                            onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKeyColor: e.target.value }))}
+                            className="flex-1 px-2.5 py-1 rounded bg-[#0D0D14] border border-[#2A2A3C] text-[11px] text-white font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setTemplate((prev) => ({ ...prev, masterVideoChromaKeyColor: '#00FF00' }))}
+                            className="px-2 py-1 rounded bg-[#181824] text-[10px] text-emerald-400 border border-emerald-500/30"
+                          >
+                            Green
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between text-[10px] text-slate-300 mb-1">
+                          <span>Sensitivity</span>
+                          <span className="font-mono text-emerald-400">{template.masterVideoChromaKeySimilarity || 0.25}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.05"
+                          max="0.55"
+                          step="0.01"
+                          value={template.masterVideoChromaKeySimilarity || 0.25}
+                          onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKeySimilarity: Number(e.target.value) }))}
+                          className="w-full accent-emerald-500"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between text-[10px] text-slate-300 mb-1">
+                          <span>Edge Blend</span>
+                          <span className="font-mono text-emerald-400">{template.masterVideoChromaKeyBlend || 0.05}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.00"
+                          max="0.20"
+                          step="0.01"
+                          value={template.masterVideoChromaKeyBlend || 0.05}
+                          onChange={(e) => setTemplate((prev) => ({ ...prev, masterVideoChromaKeyBlend: Number(e.target.value) }))}
+                          className="w-full accent-emerald-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Preview Backdrop Color */}
-              <div className="p-3 bg-[#161622] rounded-xl border border-[#26263A] space-y-2">
-                <span className="text-xs font-semibold text-slate-300">Canvas Backdrop (Behind Keyed Video)</span>
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { label: 'Black', val: '#0A0A10' },
-                    { label: 'Navy', val: '#051026' },
-                    { label: 'Crimson', val: '#30050E' },
-                    { label: 'Gold', val: '#261F0A' },
-                  ].map((bg) => (
-                    <button
-                      key={bg.val}
-                      type="button"
-                      onClick={() => setCanvasBackdropColor(bg.val)}
-                      className={`py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
-                        canvasBackdropColor === bg.val
-                          ? 'border-amber-400 bg-amber-500/20 text-amber-300'
-                          : 'border-[#2D2D42] bg-[#12121C] text-slate-400'
-                      }`}
-                    >
-                      {bg.label}
-                    </button>
-                  ))}
+              {/* Background Audio / Music Track Card */}
+              <div className="space-y-3 p-3.5 bg-[#161622] rounded-2xl border border-[#26263A]">
+                <div className="flex items-center justify-between pb-2 border-b border-[#20202E]">
+                  <div className="flex items-center gap-2 text-purple-300 font-semibold text-xs">
+                    <Music className="w-4 h-4 text-purple-400" />
+                    Background Music / Audio Track
+                  </div>
                 </div>
+
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Attach custom background music (BGM) to your template. Audio plays in perfect synchronization with timeline playback and video generation.
+                </p>
+
+                {(template.audioUrl || template.audioPath) ? (
+                  <div className="p-3 bg-[#12121C] rounded-xl border border-purple-500/30 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        Audio Track Attached
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleRemoveAudio}
+                        className="text-[10px] text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-colors"
+                      >
+                        <Trash2 className="w-3 h-3" /> Remove
+                      </button>
+                    </div>
+                    <div className="text-[11px] font-mono text-slate-300 bg-black/40 px-2.5 py-1.5 rounded-lg truncate border border-white/5">
+                      {template.audioUrl || template.audioPath}
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (audioRef.current) {
+                            if (audioRef.current.paused) {
+                              audioRef.current.play().catch(() => {});
+                              setIsAudioPlaying(true);
+                            } else {
+                              audioRef.current.pause();
+                              setIsAudioPlaying(false);
+                            }
+                          }
+                        }}
+                        className="flex-1 py-1.5 px-3 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        {isAudioPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                        <span>{isAudioPlaying ? 'Pause Audio' : 'Preview Audio'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => !isAudioUploading && audioFileInputRef.current?.click()}
+                        className="py-1.5 px-3 rounded-lg bg-[#202030] hover:bg-white/10 text-slate-300 text-xs font-semibold transition-all"
+                      >
+                        Replace File
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-[#12121C] rounded-xl border border-[#232334] space-y-2.5">
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      No custom audio track attached. The master video's native audio stream will be used.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => !isAudioUploading && audioFileInputRef.current?.click()}
+                      className="w-full py-2.5 px-3 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow"
+                    >
+                      {isAudioUploading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                          <span>Uploading Audio ({audioUploadProgress}%)...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Music className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Upload Audio Track (.mp3, .wav)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2988,10 +3321,45 @@ export default function VisualTimelineEditor({
           </div>
 
           {/* Master Video Track */}
-          <div className="relative h-6 rounded bg-[#171724] border border-[#26263A] flex items-center px-2 text-[10px] text-slate-400 font-mono">
-            <Film className="w-3 h-3 mr-2 text-slate-500" />
-            <span>Master Video Layer: {template.title} ({duration}s)</span>
+          <div className="relative h-6 rounded bg-[#171724] border border-[#26263A] flex items-center justify-between px-2 text-[10px] text-slate-400 font-mono">
+            <div className="flex items-center">
+              <Film className="w-3 h-3 mr-2 text-amber-500" />
+              <span>Master Video Track: {template.title} ({duration}s)</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setInspectorTab('video');
+                videoFileInputRef.current?.click();
+              }}
+              className="text-[9px] text-amber-400 hover:text-amber-300 underline"
+            >
+              Change Video
+            </button>
           </div>
+
+          {/* Background Audio Track */}
+          {(template.audioUrl || template.audioPath) && (
+            <div className="relative h-6 rounded bg-purple-950/20 border border-purple-500/30 flex items-center justify-between px-2 text-[10px] text-purple-300 font-mono">
+              <div className="flex items-center min-w-0">
+                <Music className="w-3 h-3 mr-2 text-purple-400 shrink-0" />
+                <span className="truncate max-w-xs sm:max-w-md">Audio Track (BGM): {template.audioUrl || template.audioPath}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold">AUDIO SYNCED</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInspectorTab('video');
+                    audioFileInputRef.current?.click();
+                  }}
+                  className="text-[9px] text-purple-300 hover:text-white underline"
+                >
+                  Change Audio
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Text Overlay Tracks */}
           {(trackFilter === 'all' || trackFilter === 'text') &&
