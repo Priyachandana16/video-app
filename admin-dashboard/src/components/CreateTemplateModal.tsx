@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { InvitationTemplate, MediaAsset, ImageElementConfig, TextElementConfig } from '../types/template';
 import { X, Film, Check, Video, AlertCircle, UploadCloud, Loader2, Sparkles, Image as ImageIcon, FileText } from 'lucide-react';
+import { uploadDirectToSupabase } from '../lib/supabaseClient';
 
 interface CreateTemplateModalProps {
   isOpen: boolean;
@@ -50,7 +51,7 @@ export default function CreateTemplateModal({ isOpen, categories, onClose, onCre
 
   if (!isOpen) return null;
 
-  // Handle direct file upload to Supabase Storage
+  // Handle direct file upload to Supabase Storage (Bypasses Vercel 4.5MB Serverless limit)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -61,27 +62,19 @@ export default function CreateTemplateModal({ isOpen, categories, onClose, onCre
     }
 
     setIsUploading(true);
-    setUploadProgress(20);
+    setUploadProgress(5);
     setError('');
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('bucket', 'template-assets');
-
-      setUploadProgress(50);
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to upload video to Supabase Storage');
-      }
+      const result = await uploadDirectToSupabase(
+        file,
+        'template-assets',
+        'videos',
+        (pct) => setUploadProgress(pct)
+      );
 
       setUploadProgress(100);
-      setSelectedVideo(data.publicUrl);
+      setSelectedVideo(result.publicUrl);
       setUploadedVideoName(file.name);
       // Auto-detect duration or set default
     } catch (err: any) {

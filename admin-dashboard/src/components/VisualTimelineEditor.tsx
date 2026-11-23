@@ -44,6 +44,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
+import { uploadDirectToSupabase } from '../lib/supabaseClient';
 
 interface VisualTimelineEditorProps {
   template: InvitationTemplate;
@@ -392,28 +393,21 @@ export default function VisualTimelineEditor({
     }));
     setVideoLoadError(null);
     setIsVideoUploading(true);
-    setVideoUploadProgress(20);
+    setVideoUploadProgress(5);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('bucket', 'template-assets');
-
-      setVideoUploadProgress(50);
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to upload video to Supabase Storage');
-      }
+      const result = await uploadDirectToSupabase(
+        file,
+        'template-assets',
+        'videos',
+        (pct) => setVideoUploadProgress(pct)
+      );
 
       setVideoUploadProgress(100);
       setTemplate((prev) => ({
         ...prev,
-        videoUrl: data.publicUrl,
-        masterVideoPath: data.publicUrl,
+        videoUrl: result.publicUrl,
+        masterVideoPath: result.publicUrl,
       }));
       setSaveToast('Master video uploaded and connected to Supabase!');
       setTimeout(() => setSaveToast(null), 3500);
@@ -426,7 +420,7 @@ export default function VisualTimelineEditor({
     }
   };
 
-  // Background Audio / Music Track Direct Upload in Editor
+  // Background Audio / Music Track Direct Upload in Editor (Bypasses Vercel 4.5MB limit)
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -442,28 +436,21 @@ export default function VisualTimelineEditor({
       audioPath: localBlob,
     }));
     setIsAudioUploading(true);
-    setAudioUploadProgress(25);
+    setAudioUploadProgress(5);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('bucket', 'template-assets');
-
-      setAudioUploadProgress(60);
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to upload audio to Supabase Storage');
-      }
+      const result = await uploadDirectToSupabase(
+        file,
+        'template-assets',
+        'audio',
+        (pct) => setAudioUploadProgress(pct)
+      );
 
       setAudioUploadProgress(100);
       setTemplate((prev) => ({
         ...prev,
-        audioUrl: data.publicUrl,
-        audioPath: data.publicUrl,
+        audioUrl: result.publicUrl,
+        audioPath: result.publicUrl,
       }));
       setSaveToast('Audio track uploaded and connected to Supabase!');
       setTimeout(() => setSaveToast(null), 3500);
