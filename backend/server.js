@@ -1017,6 +1017,8 @@ app.post('/api/render', upload.fields([
       masterVideoPath,
       audioPath,
       audioUrl: audioPath,
+      masterVideoChromaKey: template.masterVideoChromaKey || req.body.masterVideoChromaKey || false,
+      masterVideoChromaKeyColor: template.masterVideoChromaKeyColor || req.body.masterVideoChromaKeyColor || '#00FF00',
       outputVideoPath,
       hasPhoto,
       photos,

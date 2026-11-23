@@ -313,9 +313,26 @@ def render_dynamic_invitation(config_path):
     # Filter chains & inputs
     inputs = ['-thread_queue_size', '16', '-i', master_video]
     filter_chains = []
-    filter_chains.append(f"[0:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease,pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2,setsar=1[v_canvas]")
-    current_stream = "v_canvas"
     input_idx = 1
+
+    master_chroma_enabled = template.get('masterVideoChromaKey', False)
+    if isinstance(master_chroma_enabled, str):
+        master_chroma_enabled = master_chroma_enabled.lower() in ['true', '1', 'yes']
+
+    if master_chroma_enabled:
+        chroma_color = (template.get('masterVideoChromaKeyColor') or '#00FF00').replace('#', '').upper()
+        chroma_sim = float(template.get('masterVideoChromaKeySimilarity') or 0.25)
+        chroma_blend = float(template.get('masterVideoChromaKeyBlend') or 0.05)
+        # 1. Scale and apply chromakey to master video
+        filter_chains.append(
+            f"[0:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease,pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=rgba,chromakey=0x{chroma_color}:{chroma_sim:.2f}:{chroma_blend:.2f}[v_master_keyed]"
+        )
+        # 2. Base canvas for photos
+        filter_chains.append(f"color=c=black:s={canvas_w}x{canvas_h}:d={duration:.2f}[v_canvas]")
+        current_stream = "v_canvas"
+    else:
+        filter_chains.append(f"[0:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease,pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2,setsar=1[v_canvas]")
+        current_stream = "v_canvas"
 
     # 1. Image Elements
     for idx, img_el in enumerate(image_elements):
@@ -366,6 +383,11 @@ def render_dynamic_invitation(config_path):
         next_stream = f"v_img_{idx}"
         filter_chains.append(f"[{current_stream}][img_timed_{idx}]overlay={x}:{y}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]")
         current_stream = next_stream
+
+    if master_chroma_enabled:
+        # Overlay the keyed green-screen master video ON TOP OF the photos so photos reveal through cutouts
+        filter_chains.append(f"[{current_stream}][v_master_keyed]overlay=0:0[v_chroma_composite]")
+        current_stream = "v_chroma_composite"
 
     print("PROGRESS: 0.25 | Rendering custom typography & overlays...", flush=True)
 

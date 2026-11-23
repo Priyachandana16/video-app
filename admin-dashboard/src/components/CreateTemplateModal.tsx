@@ -44,6 +44,8 @@ export default function CreateTemplateModal({ isOpen, categories, onClose, onCre
   const [uploadedVideoName, setUploadedVideoName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [masterVideoChromaKey, setMasterVideoChromaKey] = useState(false);
+  const [masterVideoChromaKeyColor, setMasterVideoChromaKeyColor] = useState('#00FF00');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -229,8 +231,8 @@ export default function CreateTemplateModal({ isOpen, categories, onClose, onCre
       thumbnailUrl: '/assets/templates/thumb_01_green.jpg',
       textElements: initialTextElements,
       imageElements: generatedImageElements,
-      masterVideoChromaKey: false,
-      masterVideoChromaKeyColor: '#00FF00',
+      masterVideoChromaKey,
+      masterVideoChromaKeyColor,
       masterVideoChromaKeySimilarity: 0.25,
       masterVideoChromaKeyBlend: 0.05,
     };
@@ -523,6 +525,58 @@ export default function CreateTemplateModal({ isOpen, categories, onClose, onCre
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Master Video Chroma Key (Green Screen) */}
+            <div className="p-3 bg-[#161624] rounded-xl border border-[#2A2A3E] space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${masterVideoChromaKey ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
+                  <span className="text-xs font-bold text-emerald-400">Master Video Chroma Key (Green Screen)</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={masterVideoChromaKey}
+                    onChange={(e) => setMasterVideoChromaKey(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Enable if the video you uploaded has a green screen where photos will be revealed.
+              </p>
+              {masterVideoChromaKey && (
+                <div className="pt-2 border-t border-[#222234] flex items-center justify-between gap-3 animate-fadeIn">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-slate-300 font-semibold">Chroma Color:</span>
+                    <input
+                      type="color"
+                      value={masterVideoChromaKeyColor}
+                      onChange={(e) => setMasterVideoChromaKeyColor(e.target.value)}
+                      className="w-7 h-7 rounded border border-white/20 bg-transparent cursor-pointer"
+                    />
+                    <span className="font-mono text-xs text-emerald-400 font-bold">{masterVideoChromaKeyColor}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setMasterVideoChromaKeyColor('#00FF00')}
+                      className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold border border-emerald-500/30"
+                    >
+                      Green
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMasterVideoChromaKeyColor('#0000FF')}
+                      className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-semibold border border-blue-500/30"
+                    >
+                      Blue
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
