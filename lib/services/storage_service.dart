@@ -104,15 +104,25 @@ class StorageService {
         return;
       }
 
-      final savedPath = await saveVideoToDevice(
-        videoSource: videoSource,
-        isAsset: isAsset,
-      );
+      String? shareableFilePath;
+      if (!isAsset && !videoSource.startsWith('http') && File(videoSource).existsSync()) {
+        shareableFilePath = videoSource;
+      } else {
+        shareableFilePath = await saveVideoToDevice(
+          videoSource: videoSource,
+          isAsset: isAsset,
+        );
+      }
 
-      if (savedPath != null && File(savedPath).existsSync()) {
+      if (shareableFilePath != null && File(shareableFilePath).existsSync()) {
         await Share.shareXFiles(
-          [XFile(savedPath, mimeType: 'video/mp4')],
+          [XFile(shareableFilePath, mimeType: 'video/mp4')],
           text: 'Cordially inviting you to the wedding celebrations of $coupleTitle! ✨ Made with My Invitation.',
+          subject: 'Wedding Invitation: $coupleTitle',
+        );
+      } else {
+        await Share.share(
+          'Cordially inviting you to the wedding celebrations of $coupleTitle! ✨ Made with My Invitation.\n$videoSource',
           subject: 'Wedding Invitation: $coupleTitle',
         );
       }

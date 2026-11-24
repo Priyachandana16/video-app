@@ -17,6 +17,10 @@
     "thumbnailUrl": "https://fyohjrfsiftpqmjhrpjm.supabase.co/storage/v1/object/public/invitation-templates/thumbnails/thumb_01_green.jpg",
     "templateThumbUrl": "/assets/templates/thumb_01_green.jpg",
     "sampleResultPath": "assets/templates/template_01_sample_result.mp4",
+    "masterVideoChromaKey": true,
+    "masterVideoChromaKeyColor": "#00FF00",
+    "masterVideoChromaKeySimilarity": 0.32,
+    "masterVideoChromaKeyBlend": 0.10,
     "textElements": [
       {
         "x": 1499,
@@ -1704,6 +1708,10 @@
     "thumbnailUrl": "/assets/templates/thumb_01_green.jpg",
     "templateThumbUrl": "/assets/templates/thumb_01_green.jpg",
     "sampleResultPath": "assets/templates/template_01_sample_result.mp4",
+    "masterVideoChromaKey": true,
+    "masterVideoChromaKeyColor": "#00FF00",
+    "masterVideoChromaKeySimilarity": 0.32,
+    "masterVideoChromaKeyBlend": 0.10,
     "textElements": [
       {
         "id": "txt_ceremony",

@@ -247,8 +247,9 @@ class TemplateModel {
   factory TemplateModel.fromJson(Map<String, dynamic> json) {
     var rawText = (json['textElements'] ?? json['text_elements']) as List?;
     var rawImage = (json['imageElements'] ?? json['image_elements']) as List?;
+    Map<String, dynamic> config = {};
 
-    // If Supabase returned template_versions join, extract config for textElements and imageElements!
+    // If Supabase returned template_versions join, extract full config!
     if (json['template_versions'] is List && (json['template_versions'] as List).isNotEmpty) {
       final versions = List<dynamic>.from(json['template_versions']);
       versions.sort((a, b) {
@@ -258,7 +259,7 @@ class TemplateModel {
       });
       final first = versions.first;
       if (first is Map && first['config'] is Map) {
-        final config = first['config'] as Map<String, dynamic>;
+        config = Map<String, dynamic>.from(first['config'] as Map);
         if (rawText == null || rawText.isEmpty) {
           rawText = (config['textElements'] ?? config['text_elements']) as List?;
         }
@@ -278,43 +279,79 @@ class TemplateModel {
       imageList = rawImage.map((e) => TemplateImageElement.fromJson(e as Map<String, dynamic>)).toList();
     }
 
-    // Explicitly respect boolean hasPhoto / has_photo if defined in JSON
-    final dynamic explicitHasPhoto = json['hasPhoto'] ?? json['has_photo'];
+    // Explicitly respect boolean hasPhoto / has_photo if defined in JSON or config
+    final dynamic explicitHasPhoto = json['hasPhoto'] ?? json['has_photo'] ?? config['hasPhoto'] ?? config['has_photo'];
     final bool hasPhotoVal = explicitHasPhoto != null
         ? (explicitHasPhoto == true || explicitHasPhoto == 'true')
         : imageList.isNotEmpty;
 
-    final dynamic rawSlots = json['photoSlotsCount'] ?? json['photo_slots_count'];
+    final dynamic rawSlots = json['photoSlotsCount'] ?? json['photo_slots_count'] ?? config['photoSlotsCount'] ?? config['photo_slots_count'];
     final int slotCount = rawSlots != null
         ? (rawSlots is num ? rawSlots.toInt() : int.tryParse(rawSlots.toString()) ?? 0)
         : (hasPhotoVal ? (imageList.isNotEmpty ? imageList.length : 2) : 0);
 
-    final dynamic rawDuration = json['durationSeconds'] ?? json['duration_seconds'];
+    final dynamic rawDuration = json['durationSeconds'] ?? json['duration_seconds'] ?? config['durationSeconds'] ?? config['duration_seconds'];
     final int duration = rawDuration is num ? rawDuration.toInt() : (int.tryParse(rawDuration?.toString() ?? '60') ?? 60);
+
+    // Master Video Chroma Key Resolution
+    bool resolvedMasterChroma = json['masterVideoChromaKey'] == true ||
+        json['master_video_chroma_key'] == true ||
+        config['masterVideoChromaKey'] == true ||
+        config['master_video_chroma_key'] == true;
+
+    final String tid = (json['id'] ?? '').toString().toLowerCase();
+    final String badge = (json['badgeText'] ?? json['badge_text'] ?? config['badgeText'] ?? '').toString().toLowerCase();
+    final String mvPath = (json['masterVideoPath'] ?? json['master_video_url'] ?? json['videoUrl'] ?? config['masterVideoPath'] ?? config['videoUrl'] ?? '').toString().toLowerCase();
+    if (!resolvedMasterChroma) {
+      if (tid.contains('chroma') || badge.contains('chroma') || mvPath.contains('green_screen') || mvPath.contains('chroma')) {
+        resolvedMasterChroma = true;
+      }
+    }
+
+    final String chromaColor = (config['masterVideoChromaKeyColor'] ??
+        config['master_video_chroma_key_color'] ??
+        json['masterVideoChromaKeyColor'] ??
+        json['master_video_chroma_key_color'] ??
+        '#00FF00').toString();
+
+    final double rawSim = (config['masterVideoChromaKeySimilarity'] ??
+            config['master_video_chroma_key_similarity'] ??
+            json['masterVideoChromaKeySimilarity'] ??
+            json['master_video_chroma_key_similarity'] as num?)
+        ?.toDouble() ??
+        0.32;
+    final double chromaSim = rawSim < 0.15 ? 0.32 : rawSim.clamp(0.15, 0.60);
+
+    final double chromaBlend = (config['masterVideoChromaKeyBlend'] ??
+            config['master_video_chroma_key_blend'] ??
+            json['masterVideoChromaKeyBlend'] ??
+            json['master_video_chroma_key_blend'] as num?)
+        ?.toDouble() ??
+        0.10;
 
     return TemplateModel(
       id: json['id'] ?? '',
-      title: json['title'] ?? '',
-      category: json['category'] ?? 'Wedding',
-      religion: json['religion'] ?? 'Hindu',
-      orientation: json['orientation'] ?? '9:16',
+      title: json['title'] ?? config['title'] ?? '',
+      category: json['category'] ?? config['category'] ?? 'Wedding',
+      religion: json['religion'] ?? config['religion'] ?? 'Hindu',
+      orientation: json['orientation'] ?? config['orientation'] ?? '9:16',
       hasPhoto: hasPhotoVal,
       photoSlotsCount: slotCount,
       durationSeconds: duration,
-      badgeText: json['badgeText'] ?? json['badge_text'] ?? '',
-      description: json['description'] ?? '',
-      masterVideoPath: json['masterVideoPath'] ?? json['master_video_url'] ?? json['videoUrl'] ?? 'assets/wedding_template_master.mp4',
-      videoUrl: json['videoUrl'] ?? json['video_url'] ?? json['masterVideoPath'] ?? json['master_video_url'],
-      thumbnailUrl: json['thumbnailUrl'] ?? json['thumbnail_url'] ?? '',
-      sampleResultPath: json['sampleResultPath'] ?? json['sample_result_url'],
-      templateThumbUrl: json['templateThumbUrl'] ?? json['thumbnail_url'],
-      canvasWidth: (json['canvasWidth'] ?? json['canvas_width'] as num?)?.toInt() ?? 1920,
-      canvasHeight: (json['canvasHeight'] ?? json['canvas_height'] as num?)?.toInt() ?? 1080,
-      timelineConfig: (json['timelineConfig'] ?? json['timeline_config']) as Map<String, dynamic>?,
-      masterVideoChromaKey: json['masterVideoChromaKey'] == true || json['master_video_chroma_key'] == true,
-      masterVideoChromaKeyColor: json['masterVideoChromaKeyColor'] ?? json['master_video_chroma_key_color'] ?? '#00FF00',
-      masterVideoChromaKeySimilarity: (json['masterVideoChromaKeySimilarity'] as num?)?.toDouble() ?? 0.25,
-      masterVideoChromaKeyBlend: (json['masterVideoChromaKeyBlend'] as num?)?.toDouble() ?? 0.05,
+      badgeText: json['badgeText'] ?? json['badge_text'] ?? config['badgeText'] ?? '',
+      description: json['description'] ?? config['description'] ?? '',
+      masterVideoPath: json['masterVideoPath'] ?? json['master_video_url'] ?? json['videoUrl'] ?? config['masterVideoPath'] ?? config['videoUrl'] ?? 'assets/wedding_template_master.mp4',
+      videoUrl: json['videoUrl'] ?? json['video_url'] ?? json['masterVideoPath'] ?? json['master_video_url'] ?? config['videoUrl'] ?? config['masterVideoPath'],
+      thumbnailUrl: json['thumbnailUrl'] ?? json['thumbnail_url'] ?? config['thumbnailUrl'] ?? '',
+      sampleResultPath: json['sampleResultPath'] ?? json['sample_result_url'] ?? config['sampleResultPath'] ?? config['sampleResultUrl'],
+      templateThumbUrl: json['templateThumbUrl'] ?? json['thumbnail_url'] ?? config['thumbnailUrl'],
+      canvasWidth: (json['canvasWidth'] ?? json['canvas_width'] ?? config['canvasWidth'] as num?)?.toInt() ?? 1920,
+      canvasHeight: (json['canvasHeight'] ?? json['canvas_height'] ?? config['canvasHeight'] as num?)?.toInt() ?? 1080,
+      timelineConfig: (json['timelineConfig'] ?? json['timeline_config'] ?? config['timelineConfig']) as Map<String, dynamic>?,
+      masterVideoChromaKey: resolvedMasterChroma,
+      masterVideoChromaKeyColor: chromaColor,
+      masterVideoChromaKeySimilarity: chromaSim,
+      masterVideoChromaKeyBlend: chromaBlend,
       textElements: textList,
       imageElements: imageList,
     );

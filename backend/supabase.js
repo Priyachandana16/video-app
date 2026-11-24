@@ -88,6 +88,7 @@ async function getTemplates({ religion, orientation, hasPhoto, category } = {}) 
     const imgEls = Array.isArray(cfg.imageElements) ? cfg.imageElements : [];
 
     return {
+      ...cfg,
       id: row.id,
       title: row.title,
       description: row.description,
@@ -100,14 +101,18 @@ async function getTemplates({ religion, orientation, hasPhoto, category } = {}) 
       durationSeconds: row.duration_seconds,
       hasPhoto: row.has_photo,
       photoSlotsCount: imgEls.length > 0 ? imgEls.length : (row.photo_slots_count || 0),
-      masterVideoPath: row.master_video_url,
-      videoUrl: row.master_video_url,
-      thumbnailUrl: row.thumbnail_url,
-      templateThumbUrl: row.thumbnail_url,
-      sampleResultPath: row.sample_result_url,
+      masterVideoPath: row.master_video_url || cfg.masterVideoPath || cfg.videoUrl,
+      videoUrl: row.master_video_url || cfg.videoUrl || cfg.masterVideoPath,
+      thumbnailUrl: row.thumbnail_url || cfg.thumbnailUrl,
+      templateThumbUrl: row.thumbnail_url || cfg.thumbnailUrl,
+      sampleResultPath: row.sample_result_url || cfg.sampleResultPath,
       currentVersion: row.current_version,
       textElements: textEls,
-      imageElements: imgEls
+      imageElements: imgEls,
+      masterVideoChromaKey: cfg.masterVideoChromaKey || false,
+      masterVideoChromaKeyColor: cfg.masterVideoChromaKeyColor || '#00FF00',
+      masterVideoChromaKeySimilarity: cfg.masterVideoChromaKeySimilarity ?? 0.35,
+      masterVideoChromaKeyBlend: cfg.masterVideoChromaKeyBlend ?? 0.10
     };
   });
 }

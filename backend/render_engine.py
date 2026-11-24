@@ -315,17 +315,23 @@ def render_dynamic_invitation(config_path):
     filter_chains = []
     input_idx = 1
 
-    master_chroma_enabled = template.get('masterVideoChromaKey', False)
-    if isinstance(master_chroma_enabled, str):
+    master_chroma_enabled = template.get('masterVideoChromaKey')
+    if master_chroma_enabled is None:
+        tid = str(template.get('id', '')).lower()
+        badge = str(template.get('badgeText', '')).lower()
+        mv = str(template.get('masterVideoPath', '') or template.get('videoUrl', '')).lower()
+        master_chroma_enabled = 'chroma' in tid or 'chroma' in badge or 'green_screen' in mv or 'green' in mv
+    elif isinstance(master_chroma_enabled, str):
         master_chroma_enabled = master_chroma_enabled.lower() in ['true', '1', 'yes']
 
     if master_chroma_enabled:
         chroma_color = (template.get('masterVideoChromaKeyColor') or '#00FF00').replace('#', '').upper()
-        chroma_sim = float(template.get('masterVideoChromaKeySimilarity') or 0.25)
-        chroma_blend = float(template.get('masterVideoChromaKeyBlend') or 0.05)
-        # 1. Scale and apply chromakey to master video
+        raw_sim = float(template.get('masterVideoChromaKeySimilarity') or 0.38)
+        chroma_sim = 0.38 if raw_sim < 0.20 else min(0.65, max(0.20, raw_sim))
+        chroma_blend = float(template.get('masterVideoChromaKeyBlend') or 0.10)
+        # 1. Scale and apply colorkey (RGB distance removal) to master video
         filter_chains.append(
-            f"[0:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease,pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=rgba,chromakey=0x{chroma_color}:{chroma_sim:.2f}:{chroma_blend:.2f}[v_master_keyed]"
+            f"[0:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease,pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=rgba,colorkey=0x{chroma_color}:{chroma_sim:.2f}:{chroma_blend:.2f}[v_master_keyed]"
         )
         # 2. Base canvas for photos
         filter_chains.append(f"color=c=black:s={canvas_w}x{canvas_h}:d={duration:.2f}[v_canvas]")
@@ -380,9 +386,10 @@ def render_dynamic_invitation(config_path):
         img_filters = "format=rgba"
         if img_el.get('chromaKey') or img_el.get('animationType') == 'chroma_key':
             c_hex = (img_el.get('chromaKeyColor') or '#00FF00').replace('#', '').upper()
-            c_sim = float(img_el.get('chromaKeySimilarity', 0.25))
-            c_bld = float(img_el.get('chromaKeyBlend', 0.05))
-            img_filters += f",chromakey=0x{c_hex}:{c_sim:.2f}:{c_bld:.2f}"
+            c_sim = float(img_el.get('chromaKeySimilarity') or 0.32)
+            c_sim = 0.32 if c_sim < 0.15 else min(0.60, max(0.15, c_sim))
+            c_bld = float(img_el.get('chromaKeyBlend') or 0.10)
+            img_filters += f",colorkey=0x{c_hex}:{c_sim:.2f}:{c_bld:.2f}"
         img_filters += f",fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB"
 
         filter_chains.append(
@@ -454,21 +461,34 @@ def render_dynamic_invitation(config_path):
         if anim_dur <= 0:
             anim_dur = fi
 
-        if anim_type in ['slide', 'slide_up', 'slide_in']:
-            overlay_expr = f"x={ox}:y='if(lt(t-{st:.2f},{anim_dur:.2f}),{oy}+40*(1-(t-{st:.2f})/{anim_dur:.2f}),{oy})'"
-        elif anim_type == 'typewriter':
-            overlay_expr = f"x='if(lt(t-{st:.2f},{anim_dur:.2f}),{ox}-50*(1-(t-{st:.2f})/{anim_dur:.2f}),{ox})':y={oy}"
-        elif anim_type in ['circle_crop', 'circle', 'zoom']:
-            overlay_expr = f"x='if(lt(t-{st:.2f},{anim_dur:.2f}),{ox}-20*(1-(t-{st:.2f})/{anim_dur:.2f}),{ox})':y='if(lt(t-{st:.2f},{anim_dur:.2f}),{oy}+20*(1-(t-{st:.2f})/{anim_dur:.2f}),{oy})'"
+        if anim_type == 'typewriter':
+            filter_chains.append(
+                f"[{txt_input_id}:v]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(X,W*min(1,T/{anim_dur:.2f})),alpha(X,Y),0)',fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
+            )
+            filter_chains.append(
+                f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
+            )
+        elif anim_type in ['circle_crop', 'circle']:
+            filter_chains.append(
+                f"[{txt_input_id}:v]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(hypot(X-W/2,Y-H/2),hypot(W/2,H/2)*min(1,T/{anim_dur:.2f})),alpha(X,Y),0)',fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
+            )
+            filter_chains.append(
+                f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
+            )
+        elif anim_type in ['slide', 'slide_up', 'slide_in']:
+            filter_chains.append(
+                f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
+            )
+            filter_chains.append(
+                f"[{current_stream}][txt_timed_{idx}]overlay={ox}:'if(lt(t-{st:.2f},{anim_dur:.2f}),{oy}+40*(1-(t-{st:.2f})/{anim_dur:.2f}),{oy})':enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
+            )
         else:
-            overlay_expr = f"x={ox}:y={oy}"
-
-        filter_chains.append(
-            f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
-        )
-        filter_chains.append(
-            f"[{current_stream}][txt_timed_{idx}]overlay={overlay_expr}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
-        )
+            filter_chains.append(
+                f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={fi:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
+            )
+            filter_chains.append(
+                f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
+            )
         current_stream = next_stream
 
     filter_complex = ';'.join(filter_chains)

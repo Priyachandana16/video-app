@@ -238,18 +238,21 @@ class OnDeviceRenderService {
       final List<String> inputs = ['-thread_queue_size', '16', '-i', masterVideoPath];
       final List<String> filterChains = [];
 
-      // Optional Master Video Chroma Key
+      // Optional Master Video Chroma Key (RGB Colorkey)
       final bool masterChromaEnabled = activeTemplate.masterVideoChromaKey;
       String currentStream = 'v_canvas';
       int inputIdx = 1;
 
       if (masterChromaEnabled) {
         final hex = activeTemplate.masterVideoChromaKeyColor.replaceAll('#', '').toLowerCase();
-        final sim = activeTemplate.masterVideoChromaKeySimilarity.clamp(0.01, 0.6);
-        final blend = activeTemplate.masterVideoChromaKeyBlend.clamp(0.0, 0.3);
-        // 1. Scale and apply chromakey to master video
+        final rawSim = activeTemplate.masterVideoChromaKeySimilarity;
+        final sim = rawSim >= 0.20 ? rawSim.clamp(0.20, 0.65) : 0.38;
+        final blend = activeTemplate.masterVideoChromaKeyBlend > 0
+            ? activeTemplate.masterVideoChromaKeyBlend.clamp(0.01, 0.30)
+            : 0.10;
+        // 1. Scale and apply colorkey (RGB distance removal) to master video
         filterChains.add(
-          '[0:v]scale=$canvasW:$canvasH:force_original_aspect_ratio=decrease,pad=$canvasW:$canvasH:(ow-iw)/2:(oh-ih)/2,setsar=1,format=rgba,chromakey=0x$hex:$sim:$blend[v_master_keyed]',
+          '[0:v]scale=$canvasW:$canvasH:force_original_aspect_ratio=decrease,pad=$canvasW:$canvasH:(ow-iw)/2:(oh-ih)/2,setsar=1,format=rgba,colorkey=0x$hex:$sim:$blend[v_master_keyed]',
         );
         // 2. Base canvas for photos
         filterChains.add('color=c=black:s=${canvasW}x$canvasH:d=${duration.toStringAsFixed(2)}[v_canvas]');
@@ -304,7 +307,14 @@ class OnDeviceRenderService {
           }
 
           if (photoPath != null && File(photoPath).existsSync()) {
-            inputs.addAll(['-thread_queue_size', '16', '-loop', '1', '-t', dur.toStringAsFixed(2), '-i', photoPath]);
+            final isVideo = photoPath.toLowerCase().endsWith('.mp4') ||
+                photoPath.toLowerCase().endsWith('.mov') ||
+                photoPath.toLowerCase().endsWith('.webm');
+            if (isVideo) {
+              inputs.addAll(['-thread_queue_size', '16', '-stream_loop', '-1', '-t', dur.toStringAsFixed(2), '-i', photoPath]);
+            } else {
+              inputs.addAll(['-thread_queue_size', '16', '-loop', '1', '-t', dur.toStringAsFixed(2), '-i', photoPath]);
+            }
             final photoInputId = inputIdx++;
             final nextStream = 'v_img_$i';
 
@@ -322,9 +332,9 @@ class OnDeviceRenderService {
             if (imgEl.chromaKey) {
               final hex = imgEl.chromaKeyColor.replaceAll('#', '').toLowerCase();
               if (hex.length == 6) {
-                final sim = imgEl.chromaKeySimilarity > 0 ? imgEl.chromaKeySimilarity : 0.25;
-                final blend = imgEl.chromaKeyBlend > 0 ? imgEl.chromaKeyBlend : 0.05;
-                imgFilters += ',format=rgba,chromakey=0x$hex:$sim:$blend';
+                final sim = imgEl.chromaKeySimilarity > 0 ? imgEl.chromaKeySimilarity : 0.32;
+                final blend = imgEl.chromaKeyBlend > 0 ? imgEl.chromaKeyBlend : 0.10;
+                imgFilters += ',format=rgba,colorkey=0x$hex:$sim:$blend';
               }
             }
 
@@ -444,23 +454,26 @@ class OnDeviceRenderService {
             ? txtEl.animationDuration.clamp(0.2, dur)
             : fi.clamp(0.2, dur);
 
-        String overlayExpr;
-        if (animType == 'slide' || animType == 'slide_up' || animType == 'slide_in') {
-          // Slide upwards smoothly into position
-          overlayExpr = 'x=$ox:y=\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$oy+40*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$oy)\'';
-        } else if (animType == 'typewriter') {
-          // Smooth slide-in tracking
-          overlayExpr = 'x=\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$ox-50*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$ox)\':y=$oy';
-        } else if (animType == 'circle_crop' || animType == 'circle' || animType == 'zoom') {
-          // Micro dynamic diagonal drift entrance
-          overlayExpr = 'x=\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$ox-20*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$ox)\':y=\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$oy+20*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$oy)\'';
-        } else {
-          // Default: steady position with alpha fade
-          overlayExpr = 'x=$ox:y=$oy';
-        }
+        String txtFilter;
+        String overlayFilter;
 
-        final txtFilter = '[$txtInputId:v]format=rgba,fade=t=in:st=0:d=${animDur.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
-        final overlayFilter = '[$currentStream][txt_timed_$i]overlay=$overlayExpr:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+        if (animType == 'typewriter') {
+          // True progressive character reveal wipe from left to right across animDur
+          txtFilter = '[$txtInputId:v]format=rgba,geq=r=\'r(X,Y)\':g=\'g(X,Y)\':b=\'b(X,Y)\':a=\'if(lte(X,W*min(1,T/${animDur.toStringAsFixed(2)})),alpha(X,Y),0)\',fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
+          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:$oy:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+        } else if (animType == 'circle_crop' || animType == 'circle') {
+          // Circular aperture reveal expanding outwards from center
+          txtFilter = '[$txtInputId:v]format=rgba,geq=r=\'r(X,Y)\':g=\'g(X,Y)\':b=\'b(X,Y)\':a=\'if(lte(hypot(X-W/2,Y-H/2),hypot(W/2,H/2)*min(1,T/${animDur.toStringAsFixed(2)})),alpha(X,Y),0)\',fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
+          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:$oy:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+        } else if (animType == 'slide' || animType == 'slide_up' || animType == 'slide_in') {
+          // Slide upwards smoothly into position with alpha fade
+          txtFilter = '[$txtInputId:v]format=rgba,fade=t=in:st=0:d=${animDur.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
+          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$oy+40*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$oy)\':enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+        } else {
+          // Default: clean cinematic alpha fade-in and fade-out
+          txtFilter = '[$txtInputId:v]format=rgba,fade=t=in:st=0:d=${fi.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
+          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:$oy:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+        }
 
         filterChains.add(txtFilter);
         filterChains.add(overlayFilter);
