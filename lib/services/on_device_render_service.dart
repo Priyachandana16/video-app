@@ -444,26 +444,23 @@ class OnDeviceRenderService {
             ? txtEl.animationDuration.clamp(0.2, dur)
             : fi.clamp(0.2, dur);
 
-        String txtFilter;
-        String overlayFilter;
-
-        if (animType == 'typewriter') {
-          // Typewriter: Width progressively expands from 1 to bw across animDur to reveal text character-by-character
-          txtFilter = '[$txtInputId:v]format=rgba,crop=w=\'min(iw,max(1,iw*(t/${animDur.toStringAsFixed(2)})))\':h=ih:x=0:y=0,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
-          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:$oy:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
-        } else if (animType == 'slide' || animType == 'slide_up' || animType == 'slide_in') {
-          // Slide: Moves upwards into target position with smooth alpha fade-in
-          txtFilter = '[$txtInputId:v]format=rgba,fade=t=in:st=0:d=${animDur.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
-          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$oy+45*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$oy)\':enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+        String overlayExpr;
+        if (animType == 'slide' || animType == 'slide_up' || animType == 'slide_in') {
+          // Slide upwards smoothly into position
+          overlayExpr = 'x=$ox:y=\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$oy+40*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$oy)\'';
+        } else if (animType == 'typewriter') {
+          // Smooth slide-in tracking
+          overlayExpr = 'x=\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$ox-50*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$ox)\':y=$oy';
         } else if (animType == 'circle_crop' || animType == 'circle' || animType == 'zoom') {
-          // Zoom / circle scale reveal
-          txtFilter = '[$txtInputId:v]format=rgba,scale=\'min(iw,iw*(0.85+0.15*min(1,t/${animDur.toStringAsFixed(2)})))\':\'min(ih,ih*(0.85+0.15*min(1,t/${animDur.toStringAsFixed(2)})))\',fade=t=in:st=0:d=${animDur.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
-          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:$oy:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+          // Micro dynamic diagonal drift entrance
+          overlayExpr = 'x=\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$ox-20*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$ox)\':y=\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$oy+20*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$oy)\'';
         } else {
-          // Default: clean cinematic alpha fade-in and fade-out
-          txtFilter = '[$txtInputId:v]format=rgba,fade=t=in:st=0:d=${fi.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
-          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:$oy:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+          // Default: steady position with alpha fade
+          overlayExpr = 'x=$ox:y=$oy';
         }
+
+        final txtFilter = '[$txtInputId:v]format=rgba,fade=t=in:st=0:d=${animDur.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
+        final overlayFilter = '[$currentStream][txt_timed_$i]overlay=$overlayExpr:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
 
         filterChains.add(txtFilter);
         filterChains.add(overlayFilter);

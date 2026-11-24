@@ -454,34 +454,21 @@ def render_dynamic_invitation(config_path):
         if anim_dur <= 0:
             anim_dur = fi
 
-        if anim_type == 'typewriter':
-            filter_chains.append(
-                f"[{txt_input_id}:v]format=rgba,crop=w='min(iw,max(1,iw*(t/{anim_dur:.2f})))':h=ih:x=0:y=0,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
-            )
-            filter_chains.append(
-                f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
-            )
-        elif anim_type in ['slide', 'slide_up', 'slide_in']:
-            filter_chains.append(
-                f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
-            )
-            filter_chains.append(
-                f"[{current_stream}][txt_timed_{idx}]overlay={ox}:'if(lt(t-{st:.2f},{anim_dur:.2f}),{oy}+45*(1-(t-{st:.2f})/{anim_dur:.2f}),{oy})':enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
-            )
+        if anim_type in ['slide', 'slide_up', 'slide_in']:
+            overlay_expr = f"x={ox}:y='if(lt(t-{st:.2f},{anim_dur:.2f}),{oy}+40*(1-(t-{st:.2f})/{anim_dur:.2f}),{oy})'"
+        elif anim_type == 'typewriter':
+            overlay_expr = f"x='if(lt(t-{st:.2f},{anim_dur:.2f}),{ox}-50*(1-(t-{st:.2f})/{anim_dur:.2f}),{ox})':y={oy}"
         elif anim_type in ['circle_crop', 'circle', 'zoom']:
-            filter_chains.append(
-                f"[{txt_input_id}:v]format=rgba,scale='min(iw,iw*(0.85+0.15*min(1,t/{anim_dur:.2f})))':'min(ih,ih*(0.85+0.15*min(1,t/{anim_dur:.2f})))',fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
-            )
-            filter_chains.append(
-                f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
-            )
+            overlay_expr = f"x='if(lt(t-{st:.2f},{anim_dur:.2f}),{ox}-20*(1-(t-{st:.2f})/{anim_dur:.2f}),{ox})':y='if(lt(t-{st:.2f},{anim_dur:.2f}),{oy}+20*(1-(t-{st:.2f})/{anim_dur:.2f}),{oy})'"
         else:
-            filter_chains.append(
-                f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={fi:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
-            )
-            filter_chains.append(
-                f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
-            )
+            overlay_expr = f"x={ox}:y={oy}"
+
+        filter_chains.append(
+            f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
+        )
+        filter_chains.append(
+            f"[{current_stream}][txt_timed_{idx}]overlay={overlay_expr}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
+        )
         current_stream = next_stream
 
     filter_complex = ';'.join(filter_chains)
