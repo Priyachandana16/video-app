@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 Future<bool> downloadVideoFile(String url, String filename) async {
   try {
@@ -28,9 +27,6 @@ Future<bool> downloadVideoFile(String url, String filename) async {
       final buffer = byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
       final targetFile = File(savePath);
       await targetFile.writeAsBytes(buffer);
-      if (Platform.isAndroid || Platform.isIOS) {
-        await Share.shareXFiles([XFile(savePath)], text: 'My Invitation Video');
-      }
       return true;
     }
 
@@ -39,9 +35,6 @@ Future<bool> downloadVideoFile(String url, String filename) async {
       final localFile = File(url);
       if (localFile.existsSync()) {
         await localFile.copy(savePath);
-        if (Platform.isAndroid || Platform.isIOS) {
-          await Share.shareXFiles([XFile(savePath)], text: 'My Invitation Video');
-        }
         return true;
       }
     }
@@ -55,9 +48,6 @@ Future<bool> downloadVideoFile(String url, String filename) async {
     if (res.statusCode == 200) {
       final targetFile = File(savePath);
       await targetFile.writeAsBytes(res.bodyBytes);
-      if (Platform.isAndroid || Platform.isIOS) {
-        await Share.shareXFiles([XFile(savePath)], text: 'My Invitation Video');
-      }
       return true;
     }
     return false;

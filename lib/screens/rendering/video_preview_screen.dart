@@ -185,7 +185,9 @@ class _VideoPreviewScreenState extends State<VideoPreviewScreen> {
 
   void _handleShare() {
     final provider = context.read<PersonalizationProvider>();
-    provider.shareRenderedVideo();
+    provider.shareRenderedVideo(
+      title: widget.template.title.isNotEmpty ? widget.template.title : null,
+    );
   }
 
   @override

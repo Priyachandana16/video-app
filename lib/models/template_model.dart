@@ -116,6 +116,8 @@ class TemplateImageElement {
   final double rotation;
   final bool chromaKey;
   final String chromaKeyColor;
+  final double chromaKeySimilarity;
+  final double chromaKeyBlend;
 
   TemplateImageElement({
     required this.id,
@@ -135,6 +137,8 @@ class TemplateImageElement {
     this.rotation = 0.0,
     this.chromaKey = false,
     this.chromaKeyColor = '#00FF00',
+    this.chromaKeySimilarity = 0.25,
+    this.chromaKeyBlend = 0.05,
   });
 
   factory TemplateImageElement.fromJson(Map<String, dynamic> json) {
@@ -156,6 +160,8 @@ class TemplateImageElement {
       rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
       chromaKey: json['chromaKey'] == true || json['animationType'] == 'chroma_key',
       chromaKeyColor: json['chromaKeyColor'] ?? '#00FF00',
+      chromaKeySimilarity: (json['chromaKeySimilarity'] as num?)?.toDouble() ?? 0.25,
+      chromaKeyBlend: (json['chromaKeyBlend'] as num?)?.toDouble() ?? 0.05,
     );
   }
 
@@ -178,6 +184,8 @@ class TemplateImageElement {
       'rotation': rotation,
       'chromaKey': chromaKey,
       'chromaKeyColor': chromaKeyColor,
+      'chromaKeySimilarity': chromaKeySimilarity,
+      'chromaKeyBlend': chromaKeyBlend,
     };
   }
 }

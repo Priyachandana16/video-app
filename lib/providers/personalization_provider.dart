@@ -421,8 +421,16 @@ class PersonalizationProvider extends ChangeNotifier {
     return await DownloadService.download(url);
   }
 
-  void shareRenderedVideo() {
-    debugPrint('Sharing invitation video: $_renderedVideoUrl');
+  Future<void> shareRenderedVideo({String? title}) async {
+    final videoPath = _renderedLocalPath ??
+        _renderedVideoUrl ??
+        'assets/templates/template_01_sample_result.mp4';
+    debugPrint('Sharing invitation video: $videoPath');
+    await StorageService.instance.shareVideo(
+      videoSource: videoPath,
+      coupleTitle: title ?? (_data.coupleTitle.isNotEmpty ? _data.coupleTitle : 'Wedding Invitation'),
+      isAsset: videoPath.startsWith('assets/'),
+    );
   }
 
   void reset() {

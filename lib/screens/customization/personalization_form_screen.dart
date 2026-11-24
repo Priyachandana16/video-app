@@ -978,73 +978,80 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
         const SizedBox(height: 14),
 
         // Photo Placement & Framing Action Card
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A24),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _openPhotoPlacementSheet(provider),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: AppColors.primaryGold.withValues(alpha: 0.35),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A24),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppColors.primaryGold.withValues(alpha: 0.35),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.crop_rotate_rounded, color: AppColors.primaryGold, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Photo Framing & Shapes',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  Row(
+                    children: [
+                      const Icon(Icons.crop_rotate_rounded, color: AppColors.primaryGold, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Photo Framing & Shapes',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: () => _openPhotoPlacementSheet(provider),
-                    icon: const Icon(Icons.tune_rounded, size: 15, color: AppColors.primaryGold),
-                    label: Text(
-                      'Adjust',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: AppColors.primaryGold,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
                       ),
-                    ),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      backgroundColor: AppColors.primaryGold.withValues(alpha: 0.12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      visualDensity: VisualDensity.compact,
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGold.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.primaryGold.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.tune_rounded, size: 13, color: AppColors.primaryGold),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Adjust',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: AppColors.primaryGold,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Adjust framing, zoom & shapes (Rectangle, Circle/Round, Oval) for all uploaded photos.',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppColors.champagne,
+                      fontSize: 11,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Adjust framing, zoom & shapes (Rectangle, Circle/Round, Oval) for all uploaded photos.',
-                style: GoogleFonts.plusJakartaSans(
-                  color: AppColors.champagne,
-                  fontSize: 11,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
         const SizedBox(height: 12),

@@ -377,8 +377,16 @@ def render_dynamic_invitation(config_path):
         img_input_id = input_idx
         input_idx += 1
 
+        img_filters = "format=rgba"
+        if img_el.get('chromaKey') or img_el.get('animationType') == 'chroma_key':
+            c_hex = (img_el.get('chromaKeyColor') or '#00FF00').replace('#', '').upper()
+            c_sim = float(img_el.get('chromaKeySimilarity', 0.25))
+            c_bld = float(img_el.get('chromaKeyBlend', 0.05))
+            img_filters += f",chromakey=0x{c_hex}:{c_sim:.2f}:{c_bld:.2f}"
+        img_filters += f",fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB"
+
         filter_chains.append(
-            f"[{img_input_id}:v]format=rgba,fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fade_out):.2f}:d={fade_out:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[img_timed_{idx}]"
+            f"[{img_input_id}:v]{img_filters}[img_timed_{idx}]"
         )
         next_stream = f"v_img_{idx}"
         filter_chains.append(f"[{current_stream}][img_timed_{idx}]overlay={x}:{y}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]")
@@ -435,16 +443,45 @@ def render_dynamic_invitation(config_path):
             ox = cx - (bw // 2)
         oy = cy - (bh // 2)
 
-        # Add text element with precise time offset and smooth fade transitions
+        # Add text element with precise time offset and smooth animations
         inputs.extend(['-thread_queue_size', '16', '-loop', '1', '-t', f"{dur:.2f}", '-i', out_txt_path])
         txt_input_id = input_idx
         input_idx += 1
-
-        filter_chains.append(
-            f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={fi:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
-        )
         next_stream = f"v_txt_{idx}"
-        filter_chains.append(f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]")
+
+        anim_type = str(txt_el.get('animationType', 'fade')).lower().strip()
+        anim_dur = float(txt_el.get('animationDuration', fi))
+        if anim_dur <= 0:
+            anim_dur = fi
+
+        if anim_type == 'typewriter':
+            filter_chains.append(
+                f"[{txt_input_id}:v]format=rgba,crop=w='min(iw,max(1,iw*(t/{anim_dur:.2f})))':h=ih:x=0:y=0,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
+            )
+            filter_chains.append(
+                f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
+            )
+        elif anim_type in ['slide', 'slide_up', 'slide_in']:
+            filter_chains.append(
+                f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
+            )
+            filter_chains.append(
+                f"[{current_stream}][txt_timed_{idx}]overlay={ox}:'if(lt(t-{st:.2f},{anim_dur:.2f}),{oy}+45*(1-(t-{st:.2f})/{anim_dur:.2f}),{oy})':enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
+            )
+        elif anim_type in ['circle_crop', 'circle', 'zoom']:
+            filter_chains.append(
+                f"[{txt_input_id}:v]format=rgba,scale='min(iw,iw*(0.85+0.15*min(1,t/{anim_dur:.2f})))':'min(ih,ih*(0.85+0.15*min(1,t/{anim_dur:.2f})))',fade=t=in:st=0:d={anim_dur:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
+            )
+            filter_chains.append(
+                f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
+            )
+        else:
+            filter_chains.append(
+                f"[{txt_input_id}:v]format=rgba,fade=t=in:st=0:d={fi:.2f}:alpha=1,fade=t=out:st={max(0, dur - fo):.2f}:d={fo:.2f}:alpha=1,setpts=PTS-STARTPTS+{st:.2f}/TB[txt_timed_{idx}]"
+            )
+            filter_chains.append(
+                f"[{current_stream}][txt_timed_{idx}]overlay={ox}:{oy}:enable='between(t,{st:.2f},{et:.2f})'[{next_stream}]"
+            )
         current_stream = next_stream
 
     filter_complex = ';'.join(filter_chains)

@@ -239,20 +239,27 @@ class OnDeviceRenderService {
       final List<String> filterChains = [];
 
       // Optional Master Video Chroma Key
-      if (activeTemplate.masterVideoChromaKey) {
+      final bool masterChromaEnabled = activeTemplate.masterVideoChromaKey;
+      String currentStream = 'v_canvas';
+      int inputIdx = 1;
+
+      if (masterChromaEnabled) {
         final hex = activeTemplate.masterVideoChromaKeyColor.replaceAll('#', '').toLowerCase();
         final sim = activeTemplate.masterVideoChromaKeySimilarity.clamp(0.01, 0.6);
         final blend = activeTemplate.masterVideoChromaKeyBlend.clamp(0.0, 0.3);
+        // 1. Scale and apply chromakey to master video
         filterChains.add(
-          '[0:v]scale=$canvasW:$canvasH:force_original_aspect_ratio=decrease,pad=$canvasW:$canvasH:(ow-iw)/2:(oh-ih)/2,setsar=1,colorkey=0x$hex:$sim:$blend[v_canvas]',
+          '[0:v]scale=$canvasW:$canvasH:force_original_aspect_ratio=decrease,pad=$canvasW:$canvasH:(ow-iw)/2:(oh-ih)/2,setsar=1,format=rgba,chromakey=0x$hex:$sim:$blend[v_master_keyed]',
         );
+        // 2. Base canvas for photos
+        filterChains.add('color=c=black:s=${canvasW}x$canvasH:d=${duration.toStringAsFixed(2)}[v_canvas]');
+        currentStream = 'v_canvas';
       } else {
         filterChains.add(
           '[0:v]scale=$canvasW:$canvasH:force_original_aspect_ratio=decrease,pad=$canvasW:$canvasH:(ow-iw)/2:(oh-ih)/2,setsar=1[v_canvas]',
         );
+        currentStream = 'v_canvas';
       }
-      String currentStream = 'v_canvas';
-      int inputIdx = 1;
 
       // 1. Process Uploaded Photos (Multi-Photo Slots)
       if (data.hasPhoto && activeTemplate.imageElements.isNotEmpty) {
@@ -315,7 +322,9 @@ class OnDeviceRenderService {
             if (imgEl.chromaKey) {
               final hex = imgEl.chromaKeyColor.replaceAll('#', '').toLowerCase();
               if (hex.length == 6) {
-                imgFilters += ',colorkey=0x$hex:0.3:0.1';
+                final sim = imgEl.chromaKeySimilarity > 0 ? imgEl.chromaKeySimilarity : 0.25;
+                final blend = imgEl.chromaKeyBlend > 0 ? imgEl.chromaKeyBlend : 0.05;
+                imgFilters += ',format=rgba,chromakey=0x$hex:$sim:$blend';
               }
             }
 
@@ -335,6 +344,14 @@ class OnDeviceRenderService {
             currentStream = nextStream;
           }
         }
+      }
+
+      if (masterChromaEnabled) {
+        // Overlay the keyed master green-screen video frame ON TOP OF the photos
+        // so photos reveal through the transparent green cutouts
+        final nextStream = 'v_chroma_composite';
+        filterChains.add('[$currentStream][v_master_keyed]overlay=0:0[$nextStream]');
+        currentStream = nextStream;
       }
 
       // 2. Process Dynamic Typography Overlays (Telugu & English)
@@ -422,12 +439,34 @@ class OnDeviceRenderService {
         final txtInputId = inputIdx++;
         final nextStream = 'v_txt_$i';
 
-        filterChains.add(
-          '[$txtInputId:v]format=rgba,fade=t=in:st=0:d=${fi.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]',
-        );
-        filterChains.add(
-          '[$currentStream][txt_timed_$i]overlay=$ox:$oy:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]',
-        );
+        final animType = txtEl.animationType.toLowerCase().trim();
+        final animDur = txtEl.animationDuration > 0
+            ? txtEl.animationDuration.clamp(0.2, dur)
+            : fi.clamp(0.2, dur);
+
+        String txtFilter;
+        String overlayFilter;
+
+        if (animType == 'typewriter') {
+          // Typewriter: Width progressively expands from 1 to bw across animDur to reveal text character-by-character
+          txtFilter = '[$txtInputId:v]format=rgba,crop=w=\'min(iw,max(1,iw*(t/${animDur.toStringAsFixed(2)})))\':h=ih:x=0:y=0,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
+          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:$oy:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+        } else if (animType == 'slide' || animType == 'slide_up' || animType == 'slide_in') {
+          // Slide: Moves upwards into target position with smooth alpha fade-in
+          txtFilter = '[$txtInputId:v]format=rgba,fade=t=in:st=0:d=${animDur.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
+          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$oy+45*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$oy)\':enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+        } else if (animType == 'circle_crop' || animType == 'circle' || animType == 'zoom') {
+          // Zoom / circle scale reveal
+          txtFilter = '[$txtInputId:v]format=rgba,scale=\'min(iw,iw*(0.85+0.15*min(1,t/${animDur.toStringAsFixed(2)})))\':\'min(ih,ih*(0.85+0.15*min(1,t/${animDur.toStringAsFixed(2)})))\',fade=t=in:st=0:d=${animDur.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
+          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:$oy:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+        } else {
+          // Default: clean cinematic alpha fade-in and fade-out
+          txtFilter = '[$txtInputId:v]format=rgba,fade=t=in:st=0:d=${fi.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
+          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:$oy:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+        }
+
+        filterChains.add(txtFilter);
+        filterChains.add(overlayFilter);
         currentStream = nextStream;
       }
 
