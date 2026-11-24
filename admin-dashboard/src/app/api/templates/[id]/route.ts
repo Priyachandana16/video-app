@@ -50,10 +50,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
       textElements: Array.isArray(cfg.textElements) ? cfg.textElements : [],
       imageElements: Array.isArray(cfg.imageElements) ? cfg.imageElements : [],
       timelineConfig: cfg.timelineConfig || null,
-      masterVideoChromaKey: cfg.masterVideoChromaKey || false,
-      masterVideoChromaKeyColor: cfg.masterVideoChromaKeyColor || '#00FF00',
-      masterVideoChromaKeySimilarity: cfg.masterVideoChromaKeySimilarity ?? 0.25,
-      masterVideoChromaKeyBlend: cfg.masterVideoChromaKeyBlend ?? 0.05,
+      masterVideoChromaKey: cfg.masterVideoChromaKey || cfg.chromaKey || false,
+      masterVideoChromaKeyColor: cfg.masterVideoChromaKeyColor || cfg.chromaKeyColor || '#0DAB0D',
+      masterVideoChromaKeySimilarity: cfg.masterVideoChromaKeySimilarity ?? cfg.chromaSimilarity ?? 0.38,
+      masterVideoChromaKeyBlend: cfg.masterVideoChromaKeyBlend ?? cfg.chromaBlend ?? 0.12,
       updatedAt: row.updated_at,
     };
 

@@ -192,6 +192,108 @@ class OnDeviceRenderService {
     return file;
   }
 
+  /// Render photo slot to transparent PNG with accurate scaling, offset positioning, and shape clipping
+  Future<File> _renderPhotoSlotToPng({
+    required String? photoPath,
+    required Uint8List? photoBytes,
+    required int targetW,
+    required int targetH,
+    required double scale,
+    required double offsetX,
+    required double offsetY,
+    required String shape,
+    required String outputPath,
+    double rotation = 0.0,
+  }) async {
+    ui.Image img;
+    try {
+      if (photoBytes != null && photoBytes.isNotEmpty) {
+        img = await decodeImageFromList(photoBytes);
+      } else if (photoPath != null && await File(photoPath).exists()) {
+        final bytes = await File(photoPath).readAsBytes();
+        img = await decodeImageFromList(bytes);
+      } else {
+        final byteData = await rootBundle.load('assets/candidate_logo1.png');
+        img = await decodeImageFromList(byteData.buffer.asUint8List());
+      }
+    } catch (e) {
+      debugPrint('[OnDeviceRender] Photo decode failed: $e, using asset fallback');
+      final byteData = await rootBundle.load('assets/candidate_logo1.png');
+      img = await decodeImageFromList(byteData.buffer.asUint8List());
+    }
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final rect = Rect.fromLTWH(0, 0, targetW.toDouble(), targetH.toDouble());
+
+    // 1. Shape clipping (matches in-app preview exactly)
+    final path = Path();
+    if (shape == 'circle') {
+      final minDim = math.min(targetW, targetH).toDouble();
+      final circleRect = Rect.fromCenter(
+        center: Offset(targetW / 2.0, targetH / 2.0),
+        width: minDim,
+        height: minDim,
+      );
+      path.addOval(circleRect);
+      canvas.clipPath(path);
+    } else if (shape == 'oval') {
+      path.addOval(rect);
+      canvas.clipPath(path);
+    } else if (shape == 'rounded') {
+      final radius = Radius.circular(math.min(targetW, targetH) * 0.18);
+      path.addRRect(RRect.fromRectAndRadius(rect, radius));
+      canvas.clipPath(path);
+    } else {
+      // Rectangle
+      path.addRect(rect);
+      canvas.clipPath(path);
+    }
+
+    // 2. Compute Cover Scaling & User Zoom
+    final double imgW = img.width.toDouble();
+    final double imgH = img.height.toDouble();
+    final double baseScale = math.max(targetW / imgW, targetH / imgH);
+    final double totalScale = baseScale * (scale > 0 ? scale : 1.0);
+
+    final double drawW = imgW * totalScale;
+    final double drawH = imgH * totalScale;
+
+    // Offset is calibrated to target slot size
+    final double drawX = (targetW - drawW) / 2.0 + (offsetX * (targetW / 130.0));
+    final double drawY = (targetH - drawH) / 2.0 + (offsetY * (targetH / 130.0));
+
+    if (rotation != 0.0) {
+      canvas.save();
+      canvas.translate(targetW / 2.0, targetH / 2.0);
+      canvas.rotate(rotation * math.pi / 180.0);
+      canvas.translate(-targetW / 2.0, -targetH / 2.0);
+    }
+
+    final paint = Paint()
+      ..isAntiAlias = true
+      ..filterQuality = FilterQuality.high;
+
+    canvas.drawImageRect(
+      img,
+      Rect.fromLTWH(0, 0, imgW, imgH),
+      Rect.fromLTWH(drawX, drawY, drawW, drawH),
+      paint,
+    );
+
+    if (rotation != 0.0) {
+      canvas.restore();
+    }
+
+    final picture = recorder.endRecording();
+    final renderedImg = await picture.toImage(targetW, targetH);
+    final byteData = await renderedImg.toByteData(format: ui.ImageByteFormat.png);
+
+    final outFile = File(outputPath);
+    await outFile.writeAsBytes(byteData!.buffer.asUint8List());
+    return outFile;
+  }
+
   /// Main On-Device Render Execution
   Future<Map<String, dynamic>> renderOnDevice(
     PersonalizationData data, {
@@ -246,10 +348,10 @@ class OnDeviceRenderService {
       if (masterChromaEnabled) {
         final hex = activeTemplate.masterVideoChromaKeyColor.replaceAll('#', '').toLowerCase();
         final rawSim = activeTemplate.masterVideoChromaKeySimilarity;
-        final sim = rawSim >= 0.20 ? rawSim.clamp(0.20, 0.65) : 0.38;
+        final sim = rawSim >= 0.15 ? rawSim.clamp(0.15, 0.60) : 0.38;
         final blend = activeTemplate.masterVideoChromaKeyBlend > 0
             ? activeTemplate.masterVideoChromaKeyBlend.clamp(0.01, 0.30)
-            : 0.10;
+            : 0.12;
         // 1. Scale and apply colorkey (RGB distance removal) to master video
         filterChains.add(
           '[0:v]scale=$canvasW:$canvasH:force_original_aspect_ratio=decrease,pad=$canvasW:$canvasH:(ow-iw)/2:(oh-ih)/2,setsar=1,format=rgba,colorkey=0x$hex:$sim:$blend[v_master_keyed]',
@@ -288,33 +390,21 @@ class OnDeviceRenderService {
               ? data.getSlotShape(fieldName)
               : imgEl.shape;
 
-          // Find picked photo path on device
+          // Find picked photo path or bytes on device
           String? photoPath = data.getSlotPhotoPath(fieldName);
-          if (photoPath == null || !File(photoPath).existsSync()) {
+          Uint8List? photoBytes = data.getSlotPhotoBytes(fieldName);
+          if ((photoPath == null || !File(photoPath).existsSync()) && photoBytes == null) {
             photoPath = data.primaryPhotoPath;
+            photoBytes = data.primaryPhotoBytes;
           }
 
-          // If no photo picked for this slot, use candidate logo fallback from assets
-          if (photoPath == null || !File(photoPath).existsSync()) {
-            final fallbackFile = File('${jobDir.path}/fallback_$i.png');
-            try {
-              final byteData = await rootBundle.load('assets/candidate_logo1.png');
-              await fallbackFile.writeAsBytes(
-                byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
-              );
-              photoPath = fallbackFile.path;
-            } catch (_) {}
-          }
+          final isVideo = photoPath != null && (
+              photoPath.toLowerCase().endsWith('.mp4') ||
+              photoPath.toLowerCase().endsWith('.mov') ||
+              photoPath.toLowerCase().endsWith('.webm'));
 
-          if (photoPath != null && File(photoPath).existsSync()) {
-            final isVideo = photoPath.toLowerCase().endsWith('.mp4') ||
-                photoPath.toLowerCase().endsWith('.mov') ||
-                photoPath.toLowerCase().endsWith('.webm');
-            if (isVideo) {
-              inputs.addAll(['-thread_queue_size', '16', '-stream_loop', '-1', '-t', dur.toStringAsFixed(2), '-i', photoPath]);
-            } else {
-              inputs.addAll(['-thread_queue_size', '16', '-loop', '1', '-t', dur.toStringAsFixed(2), '-i', photoPath]);
-            }
+          if (isVideo) {
+            inputs.addAll(['-thread_queue_size', '16', '-stream_loop', '-1', '-t', dur.toStringAsFixed(2), '-i', photoPath]);
             final photoInputId = inputIdx++;
             final nextStream = 'v_img_$i';
 
@@ -323,7 +413,7 @@ class OnDeviceRenderService {
             final ox = slotOffX.round();
             final oy = slotOffY.round();
 
-            String imgFilters = 'scale=$scaledW:$scaledH:force_original_aspect_ratio=increase,crop=$w:$h:(in_w-$w)/2+($ox):(in_h-$h)/2+($oy)';
+            String imgFilters = 'scale=$scaledW:$scaledH:force_original_aspect_ratio=increase,crop=$w:$h:max(0\\,min(in_w-$w\\,(in_w-$w)/2+($ox))):max(0\\,min(in_h-$h\\,(in_h-$h)/2+($oy)))';
 
             if (slotShape == 'circle' || slotShape == 'oval') {
               imgFilters += ',format=rgba,geq=r=\'r(X,Y)\':g=\'g(X,Y)\':b=\'b(X,Y)\':a=\'if(lte(pow((X-W/2)/(W/2),2)+pow((Y-H/2)/(H/2),2),1),255,0)\'';
@@ -332,8 +422,8 @@ class OnDeviceRenderService {
             if (imgEl.chromaKey) {
               final hex = imgEl.chromaKeyColor.replaceAll('#', '').toLowerCase();
               if (hex.length == 6) {
-                final sim = imgEl.chromaKeySimilarity > 0 ? imgEl.chromaKeySimilarity : 0.32;
-                final blend = imgEl.chromaKeyBlend > 0 ? imgEl.chromaKeyBlend : 0.10;
+                final sim = imgEl.chromaKeySimilarity > 0 ? imgEl.chromaKeySimilarity : 0.38;
+                final blend = imgEl.chromaKeyBlend > 0 ? imgEl.chromaKeyBlend : 0.12;
                 imgFilters += ',format=rgba,colorkey=0x$hex:$sim:$blend';
               }
             }
@@ -344,6 +434,45 @@ class OnDeviceRenderService {
             }
 
             imgFilters += ',format=rgba,fade=t=in:st=0:d=${animDur.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fadeOut).clamp(0, dur).toStringAsFixed(2)}:d=${fadeOut.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB';
+
+            filterChains.add(
+              '[$photoInputId:v]$imgFilters[img_timed_$i]',
+            );
+            filterChains.add(
+              '[$currentStream][img_timed_$i]overlay=$x:$y:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]',
+            );
+            currentStream = nextStream;
+          } else {
+            // High-fidelity pre-rendered photo slot with exact zoom, centering/offsets, and anti-aliased shape masking
+            final prepPngPath = '${jobDir.path}/prep_photo_$i.png';
+            await _renderPhotoSlotToPng(
+              photoPath: photoPath,
+              photoBytes: photoBytes,
+              targetW: w,
+              targetH: h,
+              scale: slotScale,
+              offsetX: slotOffX,
+              offsetY: slotOffY,
+              shape: slotShape,
+              outputPath: prepPngPath,
+              rotation: imgEl.rotation,
+            );
+
+            inputs.addAll(['-thread_queue_size', '16', '-framerate', '25', '-loop', '1', '-t', dur.toStringAsFixed(2), '-i', prepPngPath]);
+            final photoInputId = inputIdx++;
+            final nextStream = 'v_img_$i';
+
+            String imgFilters = 'format=rgba';
+            if (imgEl.chromaKey) {
+              final hex = imgEl.chromaKeyColor.replaceAll('#', '').toLowerCase();
+              if (hex.length == 6) {
+                final sim = imgEl.chromaKeySimilarity > 0 ? imgEl.chromaKeySimilarity : 0.38;
+                final blend = imgEl.chromaKeyBlend > 0 ? imgEl.chromaKeyBlend : 0.12;
+                imgFilters += ',colorkey=0x$hex:$sim:$blend';
+              }
+            }
+
+            imgFilters += ',fade=t=in:st=0:d=${animDur.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fadeOut).clamp(0, dur).toStringAsFixed(2)}:d=${fadeOut.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB';
 
             filterChains.add(
               '[$photoInputId:v]$imgFilters[img_timed_$i]',
@@ -445,7 +574,7 @@ class OnDeviceRenderService {
         }
         final oy = cy - (bh ~/ 2);
 
-        inputs.addAll(['-thread_queue_size', '16', '-loop', '1', '-t', dur.toStringAsFixed(2), '-i', txtPngPath]);
+        inputs.addAll(['-thread_queue_size', '16', '-framerate', '25', '-loop', '1', '-t', dur.toStringAsFixed(2), '-i', txtPngPath]);
         final txtInputId = inputIdx++;
         final nextStream = 'v_txt_$i';
 
@@ -458,17 +587,17 @@ class OnDeviceRenderService {
         String overlayFilter;
 
         if (animType == 'typewriter') {
-          // True progressive character reveal wipe from left to right across animDur
-          txtFilter = '[$txtInputId:v]format=rgba,geq=r=\'r(X,Y)\':g=\'g(X,Y)\':b=\'b(X,Y)\':a=\'if(lte(X,W*min(1,T/${animDur.toStringAsFixed(2)})),alpha(X,Y),0)\',fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
+          // True progressive character reveal wipe from left to right across animDur using frame counter N
+          txtFilter = '[$txtInputId:v]format=rgba,geq=r=\'r(X,Y)\':g=\'g(X,Y)\':b=\'b(X,Y)\':a=\'if(lte(X,W*min(1,N/(25*${animDur.toStringAsFixed(2)}))),alpha(X,Y),0)\',fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
           overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:$oy:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
         } else if (animType == 'circle_crop' || animType == 'circle') {
           // Circular aperture reveal expanding outwards from center
-          txtFilter = '[$txtInputId:v]format=rgba,geq=r=\'r(X,Y)\':g=\'g(X,Y)\':b=\'b(X,Y)\':a=\'if(lte(hypot(X-W/2,Y-H/2),hypot(W/2,H/2)*min(1,T/${animDur.toStringAsFixed(2)})),alpha(X,Y),0)\',fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
+          txtFilter = '[$txtInputId:v]format=rgba,geq=r=\'r(X,Y)\':g=\'g(X,Y)\':b=\'b(X,Y)\':a=\'if(lte(hypot(X-W/2,Y-H/2),hypot(W/2,H/2)*min(1,N/(25*${animDur.toStringAsFixed(2)}))),alpha(X,Y),0)\',fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
           overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:$oy:enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
         } else if (animType == 'slide' || animType == 'slide_up' || animType == 'slide_in') {
           // Slide upwards smoothly into position with alpha fade
           txtFilter = '[$txtInputId:v]format=rgba,fade=t=in:st=0:d=${animDur.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';
-          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$oy+40*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$oy)\':enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
+          overlayFilter = '[$currentStream][txt_timed_$i]overlay=$ox:\'if(lt(t-${st.toStringAsFixed(2)},${animDur.toStringAsFixed(2)}),$oy+50*(1-(t-${st.toStringAsFixed(2)})/${animDur.toStringAsFixed(2)}),$oy)\':enable=\'between(t,${st.toStringAsFixed(2)},${et.toStringAsFixed(2)})\'[$nextStream]';
         } else {
           // Default: clean cinematic alpha fade-in and fade-out
           txtFilter = '[$txtInputId:v]format=rgba,fade=t=in:st=0:d=${fi.toStringAsFixed(2)}:alpha=1,fade=t=out:st=${(dur - fo).clamp(0, dur).toStringAsFixed(2)}:d=${fo.toStringAsFixed(2)}:alpha=1,setpts=PTS-STARTPTS+${st.toStringAsFixed(2)}/TB[txt_timed_$i]';

@@ -325,10 +325,10 @@ def render_dynamic_invitation(config_path):
         master_chroma_enabled = master_chroma_enabled.lower() in ['true', '1', 'yes']
 
     if master_chroma_enabled:
-        chroma_color = (template.get('masterVideoChromaKeyColor') or '#00FF00').replace('#', '').upper()
-        raw_sim = float(template.get('masterVideoChromaKeySimilarity') or 0.38)
-        chroma_sim = 0.38 if raw_sim < 0.20 else min(0.65, max(0.20, raw_sim))
-        chroma_blend = float(template.get('masterVideoChromaKeyBlend') or 0.10)
+        chroma_color = (template.get('masterVideoChromaKeyColor') or template.get('chromaKeyColor') or template.get('chroma_key_color') or '#0DAB0D').replace('#', '').upper()
+        raw_sim = float(template.get('masterVideoChromaKeySimilarity') or template.get('chromaSimilarity') or template.get('chroma_similarity') or 0.38)
+        chroma_sim = 0.38 if raw_sim < 0.15 else min(0.60, max(0.15, raw_sim))
+        chroma_blend = float(template.get('masterVideoChromaKeyBlend') or template.get('chromaBlend') or 0.12)
         # 1. Scale and apply colorkey (RGB distance removal) to master video
         filter_chains.append(
             f"[0:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease,pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=rgba,colorkey=0x{chroma_color}:{chroma_sim:.2f}:{chroma_blend:.2f}[v_master_keyed]"

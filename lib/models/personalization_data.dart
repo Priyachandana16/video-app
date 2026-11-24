@@ -237,6 +237,10 @@ class PersonalizationData {
       slotPhotoPaths.forEach((k, v) {
         fields['${k}Path'] = v;
       });
+      slotPhotoScales.forEach((k, v) => fields['${k}Scale'] = v.toString());
+      slotPhotoOffsetsX.forEach((k, v) => fields['${k}OffsetX'] = v.toString());
+      slotPhotoOffsetsY.forEach((k, v) => fields['${k}OffsetY'] = v.toString());
+      slotPhotoShapes.forEach((k, v) => fields['${k}Shape'] = v);
 
       if (womanPhotoPath != null) fields['womanPhotoPath'] = womanPhotoPath!;
       if (manPhotoPath != null) fields['manPhotoPath'] = manPhotoPath!;

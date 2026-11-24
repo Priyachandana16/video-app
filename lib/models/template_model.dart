@@ -296,8 +296,13 @@ class TemplateModel {
     // Master Video Chroma Key Resolution
     bool resolvedMasterChroma = json['masterVideoChromaKey'] == true ||
         json['master_video_chroma_key'] == true ||
+        json['masterVideoChromaKeyEnabled'] == true ||
         config['masterVideoChromaKey'] == true ||
-        config['master_video_chroma_key'] == true;
+        config['master_video_chroma_key'] == true ||
+        config['masterVideoChromaKeyEnabled'] == true ||
+        config['chromaKey'] == true ||
+        config['chroma_key'] == true ||
+        config['chromaKeyEnabled'] == true;
 
     final String tid = (json['id'] ?? '').toString().toLowerCase();
     final String badge = (json['badgeText'] ?? json['badge_text'] ?? config['badgeText'] ?? '').toString().toLowerCase();
@@ -310,24 +315,39 @@ class TemplateModel {
 
     final String chromaColor = (config['masterVideoChromaKeyColor'] ??
         config['master_video_chroma_key_color'] ??
+        config['chromaKeyColor'] ??
+        config['chroma_key_color'] ??
+        config['chromaColor'] ??
         json['masterVideoChromaKeyColor'] ??
         json['master_video_chroma_key_color'] ??
-        '#00FF00').toString();
+        json['chromaKeyColor'] ??
+        json['chroma_key_color'] ??
+        '#0dab0d').toString();
 
     final double rawSim = (config['masterVideoChromaKeySimilarity'] ??
             config['master_video_chroma_key_similarity'] ??
+            config['chromaSimilarity'] ??
+            config['chroma_similarity'] ??
+            config['chromaKeySimilarity'] ??
             json['masterVideoChromaKeySimilarity'] ??
-            json['master_video_chroma_key_similarity'] as num?)
+            json['master_video_chroma_key_similarity'] ??
+            json['chromaSimilarity'] ??
+            json['chromaKeySimilarity'] as num?)
         ?.toDouble() ??
-        0.32;
-    final double chromaSim = rawSim < 0.15 ? 0.32 : rawSim.clamp(0.15, 0.60);
+        0.38;
+    final double chromaSim = rawSim < 0.15 ? 0.38 : rawSim.clamp(0.15, 0.60);
 
     final double chromaBlend = (config['masterVideoChromaKeyBlend'] ??
             config['master_video_chroma_key_blend'] ??
+            config['chromaBlend'] ??
+            config['chroma_blend'] ??
+            config['chromaKeyBlend'] ??
             json['masterVideoChromaKeyBlend'] ??
-            json['master_video_chroma_key_blend'] as num?)
+            json['master_video_chroma_key_blend'] ??
+            json['chromaBlend'] ??
+            json['chromaKeyBlend'] as num?)
         ?.toDouble() ??
-        0.10;
+        0.12;
 
     return TemplateModel(
       id: json['id'] ?? '',

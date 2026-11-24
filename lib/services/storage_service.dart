@@ -98,8 +98,8 @@ class StorageService {
     try {
       if (kIsWeb) {
         await Share.share(
-          'Cordially inviting you to the wedding celebrations of $coupleTitle! ✨ Made with My Invitation.',
-          subject: 'Wedding Invitation: $coupleTitle',
+          videoSource,
+          subject: coupleTitle.isNotEmpty ? coupleTitle : 'Wedding Invitation',
         );
         return;
       }
@@ -117,13 +117,11 @@ class StorageService {
       if (shareableFilePath != null && File(shareableFilePath).existsSync()) {
         await Share.shareXFiles(
           [XFile(shareableFilePath, mimeType: 'video/mp4')],
-          text: 'Cordially inviting you to the wedding celebrations of $coupleTitle! ✨ Made with My Invitation.',
-          subject: 'Wedding Invitation: $coupleTitle',
         );
       } else {
         await Share.share(
-          'Cordially inviting you to the wedding celebrations of $coupleTitle! ✨ Made with My Invitation.\n$videoSource',
-          subject: 'Wedding Invitation: $coupleTitle',
+          videoSource,
+          subject: coupleTitle.isNotEmpty ? coupleTitle : 'Wedding Invitation',
         );
       }
     } catch (e) {

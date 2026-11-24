@@ -655,23 +655,28 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                       child: GestureDetector(
                         onTap: onAdjust,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          constraints: const BoxConstraints(maxWidth: 75),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.primaryGold.withValues(alpha: 0.85), width: 1),
+                            color: Colors.black.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.primaryGold.withValues(alpha: 0.9), width: 1),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.tune_rounded, color: AppColors.primaryGold, size: 12),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Adjust',
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: AppColors.primaryGold,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                              const Icon(Icons.tune_rounded, color: AppColors.primaryGold, size: 11),
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  'Adjust',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: AppColors.primaryGold,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -997,19 +1002,27 @@ class _PersonalizationFormScreenState extends State<PersonalizationFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(Icons.crop_rotate_rounded, color: AppColors.primaryGold, size: 18),
-                      const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          'Photo Framing & Shapes',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.plusJakartaSans(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.crop_rotate_rounded, color: AppColors.primaryGold, size: 18),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Photo Framing & Shapes',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
