@@ -130,6 +130,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       ...body,
       id,
       currentVersion: nextVersion,
+      masterVideoChromaKey: body.masterVideoChromaKey || body.chromaKey || false,
+      masterVideoChromaKeyColor: body.masterVideoChromaKeyColor || body.chromaKeyColor || '#0DAB0D',
+      masterVideoChromaKeySimilarity: body.masterVideoChromaKeySimilarity ?? body.chromaSimilarity ?? 0.38,
+      masterVideoChromaKeyBlend: body.masterVideoChromaKeyBlend ?? body.chromaBlend ?? 0.12,
       updatedAt: new Date().toISOString(),
     };
 
@@ -159,6 +163,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+
+    // 1. Delete associated invitation generations (foreign key constraint)
+    await supabase.from('invitation_generations').delete().eq('template_id', id);
+
+    // 2. Delete associated template versions (foreign key constraint)
+    await supabase.from('template_versions').delete().eq('template_id', id);
+
+    // 3. Delete the template itself
     const { error } = await supabase.from('templates').delete().eq('id', id);
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

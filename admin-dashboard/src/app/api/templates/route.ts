@@ -128,10 +128,6 @@ export async function POST(request: Request) {
       photo_slots_count: imageElements.length,
       master_video_url: body.masterVideoPath || body.videoUrl || 'assets/templates/template_01_green_screen.mp4',
       thumbnail_url: body.thumbnailUrl || 'assets/templates/thumb_01_green.jpg',
-      master_video_chroma_key: body.masterVideoChromaKey || body.chromaKey || false,
-      master_video_chroma_key_color: body.masterVideoChromaKeyColor || body.chromaKeyColor || '#0DAB0D',
-      master_video_chroma_key_similarity: body.masterVideoChromaKeySimilarity ?? body.chromaSimilarity ?? 0.38,
-      master_video_chroma_key_blend: body.masterVideoChromaKeyBlend ?? body.chromaBlend ?? 0.12,
       is_published: body.isPublished !== undefined ? body.isPublished : true,
       current_version: 1,
       created_at: new Date().toISOString(),
@@ -149,6 +145,10 @@ export async function POST(request: Request) {
       currentVersion: 1,
       textElements,
       imageElements,
+      masterVideoChromaKey: body.masterVideoChromaKey || body.chromaKey || false,
+      masterVideoChromaKeyColor: body.masterVideoChromaKeyColor || body.chromaKeyColor || '#0DAB0D',
+      masterVideoChromaKeySimilarity: body.masterVideoChromaKeySimilarity ?? body.chromaSimilarity ?? 0.38,
+      masterVideoChromaKeyBlend: body.masterVideoChromaKeyBlend ?? body.chromaBlend ?? 0.12,
       updatedAt: new Date().toISOString(),
     };
 
